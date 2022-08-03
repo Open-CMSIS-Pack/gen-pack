@@ -2,6 +2,27 @@
 
 . "$(dirname "$0")/../lib/utilities"
 
+find() {
+  if [[ "$(uname)" == "Darwin"  ]]; then
+    args=()
+    while [[ $# -gt 0 ]]; do
+      arg=($1)
+      case "${arg[@]}" in
+        "-executable")
+          arg=("-perm" "+111")
+        ;;
+      esac
+      args+=("${arg[@]}") # save it in an array for later
+      unset arg
+      shift # past argument
+    done
+    command find "${args[@]}"
+    unset args
+  else
+    command find "$@"
+  fi
+}
+
 setUp() {
   TESTDIR="${SHUNIT_TMPDIR}/${_shunit_test_}"
   mkdir -p "${TESTDIR}"

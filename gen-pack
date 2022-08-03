@@ -2,12 +2,18 @@
 GEN_PACK_LIB_VERSION="0.1.0"
 GEN_PACK_LIB_SOURCE="$(readlink -f $(dirname ${BASH_SOURCE}))"
 
+shopt -s expand_aliases
+
+if [[ "$(uname)" == "Darwin"  ]]; then
+  alias "cp"="gcp"
+  alias "grep"="ggrep"
+fi
+
 . "${GEN_PACK_LIB_SOURCE}/lib/usage"
 . "${GEN_PACK_LIB_SOURCE}/lib/getopts"
 . "${GEN_PACK_LIB_SOURCE}/lib/utilities"
 . "${GEN_PACK_LIB_SOURCE}/lib/pdsc"
 . "${GEN_PACK_LIB_SOURCE}/lib/gittools"
-
 
 function add_dirs {
   # Add directories
