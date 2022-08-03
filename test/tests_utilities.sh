@@ -24,10 +24,33 @@ tearDown() {
   LOCALAPPDATA="${OLD_LOCALAPPDATA}"
 }
 
+remove_path() {
+  PATH=$(awk -v RS=: -v ORS=: '$0 != "'$1'"' <<<"$PATH" | sed 's/:$//')
+}
+
+add_path() {
+  PATH="$1:$PATH"
+}
+
 remove_from_path() {
   # Remove all command executables from PATH
   while which $1 1>/dev/null 2>/dev/null; do
-    PATH=$(awk -v RS=: -v ORS=: '$0 != "'$(dirname $(which $1))'"' <<<"$PATH" | sed 's/:$//')
+    local path="$(dirname $(which $1))"
+    # echo "Un'PATH'ing ${path}..." >&2
+    if [[ "${path}" == "/bin" || "${path}" == "/usr/bin" ]] ; then
+      if [[ ! -d "$(pwd)${path}" ]]; then
+        # echo "  Relocating ${path} to $(pwd)${path}..." >&2
+        mkdir -p "$(pwd)${path}"
+        find "${path}/" -executable -exec ln -s {} "$(pwd)${path}/" \;
+        add_path "$(pwd)${path}"
+      fi
+      remove_path "${path}"
+    elif [[ "${path}" == "$(pwd)/bin" || "${path}" == "$(pwd)/usr/bin" ]] ; then
+      # echo "  Removing $1 from ${path}..." >&2
+      rm "${path}/$1"
+    else
+      remove_path "${path}"
+    fi
   done
 }
 
@@ -181,4 +204,3 @@ EOF
 }
 
 . "$(dirname "$0")/shunit2/shunit2"
-
