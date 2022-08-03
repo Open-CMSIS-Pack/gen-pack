@@ -1,0 +1,147 @@
+
+function git_describe {
+  local PREFIX="$1"
+
+  if "${UTILITY_GIT}" rev-parse --git-dir 2>/dev/null >/dev/null; then
+    local gitversion=$("${UTILITY_GIT}" describe --tags --long --match "${PREFIX}*" --abbrev=7 || echo "0.0.0-dirty-1-g$("${UTILITY_GIT}" describe --tags --match "${PREFIX}*" --always --abbrev=7 2>/dev/null)")
+    local patch=$(sed -r -e 's/[0-9]+\.[0-9]+\.([0-9]+).*/\1/' <<< ${gitversion#${PREFIX}})
+    let patch+=1
+    local version=$(sed -r -e 's/-0-(g[0-9a-f]{7})//' <<< ${gitversion#${PREFIX}})
+    local version=$(sed -r -e "s/\.[0-9]+-([0-9]+)-(g[0-9a-f]{7})/.${patch}-dev\1+\2/" <<< ${version})
+    local version=$(sed -r -e "s/-([^0-9]+[0-9]+)-([0-9]+)-(g[0-9a-f]{7})/-\1+p\2+\3/" <<< ${version})
+    local version=$(sed -r -e "s/-([^0-9]+)-([0-9]+)-(g[0-9a-f]{7})/-\1\2+\3/" <<< ${version})
+    echo "Git version: '$version'" >&2
+    echo $version
+  else
+    echo "No Git repository: '0.0.0-nogit'" >&2
+    echo "0.0.0-nogit"
+  fi
+}
+
+function git_changelog_text_head {
+  true
+}
+
+function git_changelog_text {
+  if [ -z "$2" ]; then
+    echo "$1"
+  else
+    echo "$1 ($2)"
+  fi
+  
+  echo -e "$3"
+}
+
+function git_changelog_text_tail {
+  true
+}
+
+function git_changelog_pdsc_head {
+  echo "<releases>"
+}
+
+function git_changelog_pdsc {
+  echo -n "  <release version=\"$1\""
+  if [ -n "$2" ]; then
+    echo -n " date=\"$2\""
+  fi
+  if [ -n "$4" ]; then
+    echo -n " tag=\"$4\""
+  fi
+  echo ">"
+  echo -e "$3" | \
+    sed "s/^/    /" | \
+    sed "s/<br>//" | \
+    sed "s/<ul>//" | \
+    sed "s/<\/ul>//" | \
+    sed "s/<li>/- /" | \
+    sed "s/<\/li>//" | \
+    sed "s/[ ]*$//" | \
+    sed "/^$/d"
+  echo -e "  </release>"
+}
+
+function git_changelog_pdsc_tail {
+  echo "</releases>"
+}
+
+function git_changelog_dxy_head {
+  echo "Version     | Description"
+  echo ":-----------|:------------------------------------------"
+}
+
+function git_changelog_dxy {
+  printf "v%-10s | %s\n" "$1" "$3"
+}
+
+function git_changelog_dxy_tail {
+  echo ""
+}
+
+function git_changelog_html_head {
+  echo "<table class=\"cmtable\" summary=\"Revision History\">"
+  echo "<tr>"
+  echo "  <th>Version</th>"
+  echo "  <th>Description</th>"
+  echo "</tr>"
+}
+
+function git_changelog_html {
+  echo "<tr>"
+  echo "  <td>v$1</td>"
+  echo "  <td>"
+  echo -e "$3" | sed "s/^/    /"
+  echo "  </td>"
+  echo "</tr>"
+}
+
+function git_changelog_html_tail {
+  echo "</table>"
+  echo ""
+}
+
+function git_changelog {
+  local FORMAT="text"
+  local DEVDROP=0
+  local PREFIX=""
+
+  while [[ $# -gt 0 ]]; do
+    case $1 in
+      '-f'|'--format')
+        shift
+        FORMAT=$1
+      ;;
+      '-d'|'--devdrop')
+        DEVDROP=1
+      ;;
+      '-p'|'--prefix')
+        shift
+        PREFIX=$1
+      ;;
+      *)
+      ;;
+    esac
+    shift # past argument
+  done
+  
+  local TAGS=$("${UTILITY_GIT}" for-each-ref --format "%(refname)" --sort="-v:refname" "refs/tags/${PREFIX}*" 2>/dev/null)
+  local LATEST=$(git_describe "${PREFIX}")
+  
+  git_changelog_${FORMAT}_head
+
+  if [[ $DEVDROP != 0 ]] && !  "${UTILITY_GIT}" rev-list "${PREFIX}${LATEST}" 1>/dev/null 2>/dev/null; then
+    git_changelog_$FORMAT "${LATEST}" "" "Active development ..."
+  fi
+
+  for TAG in $TAGS; do
+    local TAG="${TAG#refs/tags/}" 
+    local DESC=$("${UTILITY_GIT}" tag -l -n99 --format "%(contents)" ${TAG} 2>/dev/null)
+    local DATE=$("${UTILITY_GIT}" tag -l -n99 --format "%(taggerdate:short)" ${TAG} 2>/dev/null)
+    if [[ -z "$DATE" ]]; then
+      local DATE=$( "${UTILITY_GIT}" tag -l -n99 --format "%(committerdate:short)" ${TAG} 2>/dev/null)
+    fi
+    git_changelog_$FORMAT "${TAG#${PREFIX}}" "${DATE}" "${DESC}" "${TAG}"      
+  done
+
+  git_changelog_${FORMAT}_tail
+}

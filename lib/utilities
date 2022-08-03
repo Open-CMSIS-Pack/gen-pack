@@ -1,0 +1,164 @@
+
+function report_utility {
+  echo "$1 is $2"
+}
+
+function get_os_type {
+  local OS=$(uname -s)
+  case $OS in
+    'Linux')
+      echo "Linux64"
+      ;;
+    'WindowsNT'|MINGW*|CYGWIN*)
+      echo "Win32"
+      ;;
+    'Darwin')
+      echo "Darwin64"
+      ;;
+    *)
+      echo "Error: unrecognized OS $OS"
+      exit 1
+      ;;
+  esac
+}
+
+function find_pack_root {
+  if [[ -z "${CMSIS_PACK_ROOT}" || ! -d "${CMSIS_PACK_ROOT}" ]]; then 
+    local OS=$(uname -s)
+    case $OS in
+      'Linux'|'Darwin')
+        local DEFAULT_CMSIS_PACK_ROOT="${HOME}/.arm/Packs"
+        ;;
+      'WindowsNT'|MINGW*|CYGWIN*)
+        local DEFAULT_CMSIS_PACK_ROOT="${LOCALAPPDATA//\\//}/Arm/Packs"
+        ;;
+      *)
+        echo "Error: unrecognized OS $OS"
+        exit 1
+        ;;
+    esac
+    if [[ -d "${DEFAULT_CMSIS_PACK_ROOT}" ]]; then 
+      CMSIS_PACK_ROOT="${DEFAULT_CMSIS_PACK_ROOT}"
+    else
+      echo "Error: Cannot find CMSIS_PACK_ROOT" >&2
+      echo "Action: Set CMSIS_PACK_ROOT to point to your pack folder" >&2
+      exit 1
+    fi
+  fi
+  echo "CMSIS-Pack root is ${CMSIS_PACK_ROOT}"
+}
+
+function find_packchk {
+  if type -a packchk 1>/dev/null 2>/dev/null; then
+    UTILITY_PACKCHK="$(which packchk)"
+    report_utility "PackChk" "$UTILITY_PACKCHK"
+    return 0
+  fi
+
+  CMSIS_TOOLSDIR="$(ls -drv ${CMSIS_PACK_ROOT}/ARM/CMSIS/* | head -1)/CMSIS/Utilities/$(get_os_type)"
+  if type -a "${CMSIS_TOOLSDIR}/packchk" 1>/dev/null 2>/dev/null; then
+    UTILITY_PACKCHK="${CMSIS_TOOLSDIR}/packchk"
+    report_utility "PackChk" "$UTILITY_PACKCHK"
+    return 0
+  fi
+
+  
+  echo "Error: No packchk utility found" >&2
+  echo "Action: Add packchk to your path" >&2
+  
+  echo "Hint: Included in CMSIS Pack:"
+  echo '${CMSIS_PACK_ROOT}/ARM/CMSIS/<version>/CMSIS/Utilities/<os>/'
+  echo " "
+  exit 1
+}
+
+function find_zip {
+  local programfiles="$(sed -e 's~\\~/~g' -e "s/\([CD]\):/\/\L\1/" <<<$PROGRAMFILES)"
+  if type -a 7z 1>/dev/null 2>/dev/null; then
+    UTILITY_ZIP_TYPE="7zip"
+    UTILITY_ZIP="$(which 7z)"
+    report_utility "Zip" "$UTILITY_ZIP"
+    return 0
+  elif type -a "${programfiles}/7-Zip/7z" 1>/dev/null 2>/dev/null; then
+    UTILITY_ZIP_TYPE="7zip"
+    UTILITY_ZIP="${programfiles}/7-Zip/7z"
+    report_utility "Zip" "$UTILITY_ZIP"
+    return 0  
+  elif type -a zip 1>/dev/null 2>/dev/null; then
+    UTILITY_ZIP_TYPE="zip"
+    UTILITY_ZIP="$(which zip)"
+    report_utility "Zip" "$UTILITY_ZIP"
+    return 0
+  fi
+  
+  echo "Error: No zip or 7zip utility found" >&2
+  echo "Action: Add zip or 7zip to your path" >&2
+  echo " "
+  exit 1
+}
+
+function find_xmllint {
+  if type -a xmllint 1>/dev/null 2>/dev/null; then
+    UTILITY_XMLLINT="$(which xmllint)"
+    report_utility "XML-Lint" "$UTILITY_XMLLINT"
+    return 0
+  fi
+  
+  echo "Info: No xmllint utility found" >&2
+  echo "Action: Add xmllint to your path" >&2
+  echo " "
+}
+
+function find_curl {
+  if type -a curl 1>/dev/null 2>/dev/null; then
+    UTILITY_CURL="$(which curl)"
+    report_utility "Curl" "$UTILITY_CURL"
+    return 0
+  fi
+  
+  echo "Info: No curl utility found" >&2
+  echo "Action: Add curl to your path" >&2
+  echo " "
+}
+
+function find_git {
+  if type -a git 1>/dev/null 2>/dev/null; then
+    UTILITY_GIT="$(which git)"
+    report_utility "Git" "$UTILITY_GIT"
+    return 0
+  fi
+  
+  echo "Info: No git utility found" >&2
+  echo "Action: Add git to your path" >&2
+  echo " "
+}
+
+function find_sha1sum {
+  if type -a  sha1sum 1>/dev/null 2>/dev/null; then
+    UTILITY_SHA1SUM="$(which sha1sum)"
+    report_utility "sha1sum" "$UTILITY_SHA1SUM"
+    return 0
+  fi
+  
+  echo "Info: No git utility found" >&2
+  echo "Action: Add git to your path" >&2
+  echo " "
+}
+
+function archive_7zip {
+  rm -f "$2"
+  echo "pushd \"$1\"; \"${UTILITY_ZIP}\" a -tzip \"$2\" ."
+  pushd "$1" 2>&1 >/dev/null
+  "${UTILITY_ZIP}" a -tzip "$2" .
+  popd 2>&1 >/dev/null
+}
+
+function archive_zip {
+  echo "zip not implemented!"
+  exit 1
+  "${UTILITY_ZIP}"
+}
+
+function archive {
+  archive_$UTILITY_ZIP_TYPE "$1" "$2"
+}

@@ -1,0 +1,166 @@
+
+GEN_PACK_LIB_VERSION="0.1.0"
+GEN_PACK_LIB_SOURCE="$(readlink -f $(dirname ${BASH_SOURCE}))"
+
+. "${GEN_PACK_LIB_SOURCE}/lib/usage"
+. "${GEN_PACK_LIB_SOURCE}/lib/getopts"
+. "${GEN_PACK_LIB_SOURCE}/lib/utilities"
+. "${GEN_PACK_LIB_SOURCE}/lib/pdsc"
+. "${GEN_PACK_LIB_SOURCE}/lib/gittools"
+
+
+function add_dirs {
+  # Add directories
+  echo Adding directories to pack:
+  echo "${PACK_DIRS}"
+  echo " "
+  for d in ${PACK_DIRS}; do
+    cp -r --parents "$d" "$1"
+  done
+}
+
+function add_files {
+  # Add files
+  echo Adding files to pack:
+  echo "${PACK_BASE_FILES}"
+  echo " "
+  if [ ! -x ${PACK_BASE_FILES+x} ]; then
+    for f in ${PACK_BASE_FILES}; do
+      cp -f --parents "$f" "$1/"
+    done
+  fi
+}
+
+function delete_files {
+  # Delete files
+  echo Deleting files from pack:
+  echo "${PACK_DELETE_FILES}"
+  echo " "
+  if [ ! -x ${PACK_DELETE_FILES+x} ]; then
+    for f in ${PACK_DELETE_FILES}; do
+      find "$1/$(dirname "$f")" -name "$(basename "$f")" -exec rm -rf {} \;
+    done
+  fi
+}
+
+function apply_patches {
+  # Apply patches
+  echo Applying patches to pack:
+  echo "${PACK_PATCH_FILES}"
+  echo " "
+  if [ ! -x ${PACK_PATCH_FILES+x} ]; then
+    local CWD=$(pwd)
+    pushd "$1" > /dev/null
+    for f in ${PACK_PATCH_FILES}; do
+      patch -p0 -t -i "${CWD}/${f}"
+    done
+    popd > /dev/null
+  fi
+}
+
+function check_schema {
+  if [ -n ${UTILITY_XMLLINT+x} ]; then
+    echo "Running schema check for ${PACK_VENDOR}.${PACK_NAME}.pdsc"
+    local SCHEMA=$(realpath -m "${CMSIS_TOOLSDIR}/../PACK.xsd")
+    if [ ! -f "$SCHEMA" ]; then
+      echo "Fetching schema file..."
+      local SCHEMAURL=$(grep -Pio "xs:noNamespaceSchemaLocation=\"\K[^\"]+" "$1")
+      local SCHEMA="${TEMP}/PACK.xsd"
+      echo "\"${UTILITY_CURL}\" -sL $SCHEMAURL --output \"${SCHEMA}\""
+      "${UTILITY_CURL}" -sL $SCHEMAURL --output "${SCHEMA}"
+    fi
+    echo "\"${UTILITY_XMLLINT}\" --noout --schema \"${SCHEMA}\" \"$1\""
+    "${UTILITY_XMLLINT}" --noout --schema "${SCHEMA}" "$1"
+    local errorlevel=$?
+    if [ $errorlevel -ne 0 ]; then
+      echo "build aborted: Schema check of $PACK_VENDOR.$PACK_NAME.pdsc against PACK.xsd failed"
+      echo " "
+      exit 1
+    fi
+  else
+    echo "Use MDK PackInstaller to run schema validation for $PACK_VENDOR.$PACK_NAME.pdsc"
+  fi
+}
+
+function check_pack {
+  echo "\"${UTILITY_PACKCHK}\" \"$1\" -i \"${CMSIS_PACK_ROOT}/.Web/ARM.CMSIS.pdsc\" -n PackName.txt"
+  "${UTILITY_PACKCHK}" "$1" -i "${CMSIS_PACK_ROOT}/.Web/ARM.CMSIS.pdsc" -n PackName.txt
+  local errorlevel=$?
+  if [ $errorlevel -ne 0 ]; then
+    echo "build aborted: pack check failed"
+    echo " "
+    exit 1
+  fi
+}
+
+function create_sha1 {
+  pushd "$1" > /dev/null
+  find . -type f -exec "${UTILITY_SHA1SUM}" -b {} + > "$TEMP/$2.$3.sha1"
+  mv "$TEMP/$2.$3.sha1" "$2.$3.sha1"
+  popd > /dev/null
+}
+
+function gen_pack {
+  getopts "$@"
+  set -- "${POSITIONAL[@]}" # restore positional parameters
+
+  echo "Starting CMSIS-Pack Generation: $(date)"
+
+  find_pack_root
+  find_zip
+  find_packchk
+  find_xmllint
+  if [ -n "${UTILITY_XMLLINT}" ]; then 
+    find_curl
+  fi
+  
+  if [ -n "${CHANGELOG+x}" ]; then
+    find_git
+  fi
+  
+  echo " "
+  
+  PACK_DESCRIPTION_FILE=$(locate_pdsc $@)
+  echo "PDSC is ${PACK_DESCRIPTION_FILE}"
+  echo " "
+  
+  PACK_BASEDIR=$(dirname ${PACK_DESCRIPTION_FILE})
+  PACK_VENDOR=$(pdsc_vendor "${PACK_DESCRIPTION_FILE}")
+  PACK_NAME=$(pdsc_name "${PACK_DESCRIPTION_FILE}")
+  echo "Generating Pack for $PACK_VENDOR.$PACK_NAME"
+  
+  PACK_BUILD=$(readlink -f "${PACK_BASEDIR}/${PACK_BUILD}")
+  PACK_OUTPUT=$(readlink -f "${PACK_BASEDIR}/${PACK_OUTPUT}")
+  PACK_BUILD_DESCRIPTION_FILE="${PACK_BUILD}/$(basename ${PACK_DESCRIPTION_FILE})"
+  
+  echo " via $PACK_BUILD"
+  echo " to $PACK_OUTPUT"
+  echo ""
+  
+  if [ -d "$PACK_BUILD" ]; then
+    rm -r "$PACK_BUILD"
+  fi
+  mkdir -p "$PACK_BUILD"
+  mkdir -p "$PACK_OUTPUT"
+  
+  if [ -n "${CHANGELOG+x}" ]; then
+    pdsc_update_releases "${PACK_DESCRIPTION_FILE}" "${PACK_BUILD_DESCRIPTION_FILE}" "${CHANGELOG}"
+  else
+    cp "${PACK_DESCRIPTION_FILE}" "${PACK_BUILD_DESCRIPTION_FILE}"
+  fi
+  
+  add_dirs "${PACK_BUILD}"
+  add_files "${PACK_BUILD}"
+  delete_files "${PACK_BUILD}"
+  apply_patches "${PACK_BUILD}"
+  
+  check_schema "${PACK_BUILD_DESCRIPTION_FILE}"
+  check_pack "${PACK_BUILD_DESCRIPTION_FILE}"
+  create_sha1 "$PACK_BUILD" $PACK_VENDOR $PACK_NAME
+  archive "$PACK_BUILD" "$PACK_OUTPUT/$(cat PackName.txt)"
+  
+  if [[ $KEEP != 0 ]]; then 
+    echo "Cleaning up $PACK_BUILD..."
+    rm -rf "$PACK_BUILD"
+  fi
+}
