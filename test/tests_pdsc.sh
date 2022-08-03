@@ -1,4 +1,6 @@
-#!/bin/sh
+#!/bin/bash
+
+shopt -s expand_aliases
 
 git_changelog_mock() {
 
@@ -27,7 +29,7 @@ test_locate_pdsc_auto() {
 
   local pdsc=$(locate_pdsc)
   
-  assertEquals "$(pwd)/ARM.GenPack.pdsc" "$pdsc"
+  assertEquals "$(readlink -f "$(pwd)/ARM.GenPack.pdsc")" "$pdsc"
 }
 
 test_locate_pdsc_specific() {
@@ -36,7 +38,7 @@ test_locate_pdsc_specific() {
 
   local pdsc=$(locate_pdsc "ARM.GenPack.pdsc")
   
-  assertEquals "$(pwd)/ARM.GenPack.pdsc" "$pdsc"
+  assertEquals "$(readlink -f "$(pwd)/ARM.GenPack.pdsc")" "$pdsc"
 }
 
 test_pdsc_vendor() {

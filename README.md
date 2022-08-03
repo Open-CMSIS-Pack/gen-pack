@@ -82,6 +82,40 @@ exit 0
 
 ```
 
+## Prerequisites
+
+This library is written for Bash v5 or later and uses a couple of standard
+\*nix commands:
+
+- basename
+- cp
+- curl
+- dirname
+- echo
+- find
+- grep
+- mkdir
+- mv
+- sed
+- test
+
+
+### Linux
+
+This library shall be well prepared to run on any standard Linux with Bash v5 or later.
+
+### Windows
+
+This library requires Bash for Windows v5 or later.
+
+### MacOS
+
+This library requires Bash and some additional GNU tools:
+
+```bash
+$ brew install coreutils grep 
+```
+
 ## License
 
 This library is made available as-is under Apache-2.0 license.
