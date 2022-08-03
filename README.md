@@ -54,7 +54,7 @@ function install_lib() {
   local URL="https://github.com/Open-CMSIS-Pack/gen-pack/archive/refs/tags/v$1.tar.gz"
   echo "Downloading gen-pack lib to '$2'"
   mkdir -p "$2"
-  curl -L "${URL}" -s | tar -xf - -C "$2" || exit 1
+  curl -L "${URL}" -s | tar -xzf - --strip-components 1 -C "$2" || exit 1
 }
 
 function load_lib() {
@@ -115,6 +115,24 @@ This library requires Bash and some additional GNU tools:
 ```bash
 $ brew install coreutils grep 
 ```
+
+## Get Started
+
+In order to use this Bash library for your `gen_pack.sh` script you can use
+the [template](template/gen_pack.sh) as a starting point.
+
+1. Put the [template](template/gen_pack.sh) into the root of your package source.
+2. Replace `<pin lib version here>` with the version of the library you want to use, e.g. `1.0.0`.
+3. Replace `<list directories here>` with a list of directories that shall be included in the pack.
+   The directories are included recursively with all contained files.
+4. Replace `<list files here>` with a list of files that shall be included in the pack.
+   This can be used as an alternative to including whole directories.
+5. Replace `<list files here>` with a list of files to be removed again.
+   This can be used to copy whole directories and remove files afterwards.
+6. Replace `<list patches here>` with a list of patches that shall be applied.
+7. Add any required default command line arguments to the line `DEFAULT_ARGS=()`.
+   For example, add `-c [<prefix>]` here to force creating release history from Git.
+   The `<prefix>` is the version prefixed used for release tags if any.
 
 ## License
 

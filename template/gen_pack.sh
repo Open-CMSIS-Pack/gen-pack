@@ -46,7 +46,7 @@ function install_lib() {
   local URL="https://github.com/Open-CMSIS-Pack/gen-pack/archive/refs/tags/v$1.tar.gz"
   echo "Downloading gen-pack lib to '$2'"
   mkdir -p "$2"
-  curl -L "${URL}" -s | tar -xf - -C "$2" || exit 1
+  curl -L "${URL}" -s | tar -xzf - --strip-components 1 -C "$2" || exit 1
 }
 
 function load_lib() {
