@@ -1,4 +1,6 @@
-#!/bin/sh
+#!/bin/bash
+
+shopt -s expand_aliases
 
 git_changelog_mock() {
 

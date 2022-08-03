@@ -65,7 +65,7 @@ function check_schema {
     if [ ! -f "$SCHEMA" ]; then
       echo "Fetching schema file..."
       local SCHEMAURL=$(grep -Pio "xs:noNamespaceSchemaLocation=\"\K[^\"]+" "$1")
-      local SCHEMA="${TEMP}/PACK.xsd"
+      local SCHEMA="${TEMP:-/tmp}/PACK.xsd"
       echo "\"${UTILITY_CURL}\" -sL $SCHEMAURL --output \"${SCHEMA}\""
       "${UTILITY_CURL}" -sL $SCHEMAURL --output "${SCHEMA}"
     fi
@@ -95,8 +95,8 @@ function check_pack {
 
 function create_sha1 {
   pushd "$1" > /dev/null
-  find . -type f -exec "${UTILITY_SHA1SUM}" -b {} + > "$TEMP/$2.$3.sha1"
-  mv "$TEMP/$2.$3.sha1" "$2.$3.sha1"
+  find . -type f -exec "${UTILITY_SHA1SUM}" -b {} + > "${TEMP:-/tmp}/$2.$3.sha1"
+  mv "${TEMP:-/tmp}/$2.$3.sha1" "$2.$3.sha1"
   popd > /dev/null
 }
 
