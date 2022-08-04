@@ -156,11 +156,15 @@ EOF
   UTILITY_CURL="curl_mock"
   UTILITY_CURL_RESULT=6
   UTILITY_XMLLINT="xmllint_mock"
+    
+  result=$(check_schema test.pdsc 2>&1)
+  errorlevel=$?
   
-  check_schema test.pdsc
+  echo "$result"
   
-  assertContains "${CURL_MOCK_ARGS[@]}" "PACK.xsd"
-  assertNotContains "${XMLLINT_MOCK_ARGS[@]:-empty}" "test.pdsc"
+  assertNotEquals 0 $errorlevel
+  assertContains "${result}" "Failed downloading schema from 'PACK.xsd'"
+  assertNotContains "${result}" "xmllint_mock"
 }
 
 packchk_mock() {

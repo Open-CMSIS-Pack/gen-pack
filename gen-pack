@@ -65,31 +65,27 @@ function apply_patches {
 }
 
 function check_schema {
-  if [ -n ${UTILITY_XMLLINT+x} ]; then
-    echo "Running schema check for $1"
-    local SCHEMA=$(realpath -m "${CMSIS_TOOLSDIR}/../PACK.xsd")
-    if [ ! -f "$SCHEMA" ]; then
-      echo "Fetching schema file..."
-      local SCHEMAURL=$(grep -Pio "xs:noNamespaceSchemaLocation=\"\K[^\"]+" "$1")
-      local SCHEMA="${TEMP:-/tmp}/PACK.xsd"
-      echo "\"${UTILITY_CURL}\" -sL $SCHEMAURL --output \"${SCHEMA}\""
-      "${UTILITY_CURL}" -sL $SCHEMAURL --output "${SCHEMA}"
-      local errorlevel=$?
-      if [ $errorlevel -ne 0 ]; then
-        echo "Failed downloading schema from '$SCHEMAURL'. Skipping schema check." >&2
-        return 1
-      fi
-    fi
-    echo "\"${UTILITY_XMLLINT}\" --noout --schema \"${SCHEMA}\" \"$1\""
-    "${UTILITY_XMLLINT}" --noout --schema "${SCHEMA}" "$1"
+  echo "Running schema check for $1"
+  local SCHEMA=$(realpath -m "${CMSIS_TOOLSDIR}/../PACK.xsd")
+  if [ ! -f "$SCHEMA" ]; then
+    echo "Fetching schema file..."
+    local SCHEMAURL=$(grep -Pio "xs:noNamespaceSchemaLocation=\"\K[^\"]+" "$1")
+    local SCHEMA="${TEMP:-/tmp}/PACK.xsd"
+    echo "\"${UTILITY_CURL}\" -sL $SCHEMAURL --output \"${SCHEMA}\""
+    "${UTILITY_CURL}" -sL $SCHEMAURL --output "${SCHEMA}"
     local errorlevel=$?
     if [ $errorlevel -ne 0 ]; then
-      echo "build aborted: Schema check of $1 against ${SCHEMA} failed!" >&2
-      echo " " >&2
+      echo "Failed downloading schema from '$SCHEMAURL'. Skipping schema check." >&2
       exit 1
     fi
-  else
-    echo "Use MDK PackInstaller to run schema validation for $1"
+  fi
+  echo "\"${UTILITY_XMLLINT}\" --noout --schema \"${SCHEMA}\" \"$1\""
+  "${UTILITY_XMLLINT}" --noout --schema "${SCHEMA}" "$1"
+  local errorlevel=$?
+  if [ $errorlevel -ne 0 ]; then
+    echo "build aborted: Schema check of $1 against ${SCHEMA} failed!" >&2
+    echo " " >&2
+    exit 1
   fi
 }
 
