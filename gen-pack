@@ -1,5 +1,5 @@
 
-GEN_PACK_LIB_VERSION="0.1.0"
+GEN_PACK_LIB_VERSION="0.2.0"
 GEN_PACK_LIB_SOURCE="$(readlink -f $(dirname ${BASH_SOURCE}))"
 
 shopt -s expand_aliases
@@ -17,6 +17,10 @@ fi
 
 function add_dirs {
   # Add directories
+  if [ -z "${PACK_DIRS}" ]; then
+    echo "PACK_DIRS is empty, defaulting to all folders." >&2
+    PACK_DIRS=$(OIFS="$IFS"; IFS='\n'; find . -maxdepth 1 -type d -not -name ".*" -not -path "./$(realpath --relative-to="$(pwd)" "$PACK_BUILD")" -not -path "./$(realpath --relative-to="$(pwd)" "$PACK_OUTPUT")"; IFS="$OIFS")
+  fi
   echo Adding directories to pack:
   echo "${PACK_DIRS}"
   echo " "
@@ -27,40 +31,46 @@ function add_dirs {
 
 function add_files {
   # Add files
-  echo Adding files to pack:
-  echo "${PACK_BASE_FILES}"
-  echo " "
-  if [ ! -x ${PACK_BASE_FILES+x} ]; then
+  if [ -n "${PACK_BASE_FILES}" ]; then
+    echo Adding files to pack:
+    echo "${PACK_BASE_FILES}"
+    echo " "
     for f in ${PACK_BASE_FILES}; do
       cp -f --parents "$f" "$1/"
     done
+  else
+    echo "PACK_BASE_FILES is empty, no additional files to be copied." >&2
   fi
 }
 
 function delete_files {
   # Delete files
-  echo Deleting files from pack:
-  echo "${PACK_DELETE_FILES}"
-  echo " "
-  if [ ! -x ${PACK_DELETE_FILES+x} ]; then
+  if [ -n "${PACK_DELETE_FILES}" ]; then
+    echo Deleting files from pack:
+    echo "${PACK_DELETE_FILES}"
+    echo " "
     for f in ${PACK_DELETE_FILES}; do
       find "$1/$(dirname "$f")" -name "$(basename "$f")" -exec rm -rf {} \;
     done
+  else
+    echo "PACK_DELETE_FILES is empty, no files to be removed." >&2
   fi
 }
 
 function apply_patches {
   # Apply patches
-  echo Applying patches to pack:
-  echo "${PACK_PATCH_FILES}"
-  echo " "
-  if [ ! -x ${PACK_PATCH_FILES+x} ]; then
+  if [ -n "${PACK_PATCH_FILES}" ]; then
+    echo Applying patches to pack:
+    echo "${PACK_PATCH_FILES}"
+    echo " "
     local CWD=$(pwd)
     pushd "$1" > /dev/null
     for f in ${PACK_PATCH_FILES}; do
       patch -p0 -t -i "${CWD}/${f}"
     done
     popd > /dev/null
+  else
+    echo "PACK_PATCH_FILES is empty, no patches to be applied." >&2
   fi
 }
 
@@ -135,8 +145,8 @@ function gen_pack {
   PACK_NAME=$(pdsc_name "${PACK_DESCRIPTION_FILE}")
   echo "Generating Pack for $PACK_VENDOR.$PACK_NAME"
   
-  PACK_BUILD=$(readlink -f "${PACK_BASEDIR}/${PACK_BUILD}")
-  PACK_OUTPUT=$(readlink -f "${PACK_BASEDIR}/${PACK_OUTPUT}")
+  PACK_BUILD=$(readlink -f "${PACK_BASEDIR}/${PACK_BUILD:-build}")
+  PACK_OUTPUT=$(readlink -f "${PACK_BASEDIR}/${PACK_OUTPUT:-output}")
   PACK_BUILD_DESCRIPTION_FILE="${PACK_BUILD}/$(basename ${PACK_DESCRIPTION_FILE})"
   
   echo " via $PACK_BUILD"
@@ -148,7 +158,9 @@ function gen_pack {
   fi
   mkdir -p "$PACK_BUILD"
   mkdir -p "$PACK_OUTPUT"
-  
+
+  pushd ${PACK_BASEDIR} >/dev/null
+   
   if [ -n "${CHANGELOG+x}" ]; then
     pdsc_update_releases "${PACK_DESCRIPTION_FILE}" "${PACK_BUILD_DESCRIPTION_FILE}" "${CHANGELOG}"
   else
@@ -164,7 +176,9 @@ function gen_pack {
   check_pack "${PACK_BUILD_DESCRIPTION_FILE}"
   create_sha1 "$PACK_BUILD" $PACK_VENDOR $PACK_NAME
   archive "$PACK_BUILD" "$PACK_OUTPUT/$(cat PackName.txt)"
-  
+
+  popd >/dev/null
+ 
   if [[ $KEEP != 0 ]]; then 
     echo "Cleaning up $PACK_BUILD..."
     rm -rf "$PACK_BUILD"
