@@ -25,7 +25,7 @@ jobs:
           - os: windows-2022
             target: windows64
             archiveext: zip
-            unarcmd: unzip
+            unarcmd: 7z x
     env:
        CMSIS_PACK_ROOT: ${{ github.workspace }}/.packs/
     steps:
@@ -38,7 +38,6 @@ jobs:
         if: ${{ startsWith(matrix.os, 'ubuntu') }}
         run: |
           sudo apt install \
-            curl \
             libxml2-utils
 
       - name: Install MacOS deps
@@ -49,8 +48,9 @@ jobs:
             grep
 
       - name: Install CMSIS-Toolbox
+        shell: bash
         run: |
-          wget https://github.com/Open-CMSIS-Pack/devtools/releases/download/tools%2Ftoolbox%2F1.0.0/cmsis-toolbox-${{ matrix.target }}.${{ matrix.archiveext }}
+          curl -L https://github.com/Open-CMSIS-Pack/devtools/releases/download/tools%2Ftoolbox%2F1.0.0/cmsis-toolbox-${{ matrix.target }}.${{ matrix.archiveext }} -o cmsis-toolbox-${{ matrix.target }}.${{ matrix.archiveext }}
           ${{ matrix.unarcmd }} cmsis-toolbox-${{ matrix.target }}.${{ matrix.archiveext }}
           echo "$(pwd)/cmsis-toolbox-${{ matrix.target }}/bin" >> $GITHUB_PATH
 
