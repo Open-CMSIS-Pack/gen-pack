@@ -13,6 +13,21 @@ jobs:
       fail-fast: true
       matrix:
         os: [ macos-12, ubuntu-20.04, windows-2022 ]
+        include:
+          - os: macos-12
+            target: darwin64
+            archiveext: tar.gz
+            unarcmd: tar -xzf
+          - os: ubuntu-20.04
+            target: linux64
+            archiveext: tar.gz
+            unarcmd: tar -xzf
+          - os: windows-2022
+            target: windows64
+            archiveext: zip
+            unarcmd: unzip
+    env:
+       CMSIS_PACK_ROOT: ${{ github.workspace }}/.packs/
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -26,6 +41,17 @@ jobs:
             coreutils \
             grep
 
+      - name: Install CMSIS-Toolbox
+        run: |
+          wget https://github.com/Open-CMSIS-Pack/devtools/releases/download/tools%2Ftoolbox%2F1.0.0/cmsis-toolbox-${{ matrix.target }}.${{ matrix.archiveext }}
+          ${{ matrix.unarcmd }} cmsis-toolbox-${{ matrix.target }}.${{ matrix.archiveext }}
+          echo "$(pwd)/cmsis-toolbox-${{ matrix.target }}/bin" >> $GITHUB_PATH
+
+      - name: Install pack ARM.CMSIS
+        run: |
+          cpackget init https://www.keil.com/pack/index.pidx
+          cpackget pack add ARM.CMSIS
+          
       - name: Run unit tests
         run: |
           ./test/run_all.sh
