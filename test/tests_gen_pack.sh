@@ -6,6 +6,9 @@ setUp() {
   TESTDIR="${SHUNIT_TMPDIR}/${_shunit_test_}"
   mkdir -p "${TESTDIR}"
   pushd "${TESTDIR}" >/dev/null
+  
+  PACK_BUILD="$(realpath ./build)"
+  PACK_OUTPUT="$(realpath ./output)"  
 }
 
 tearDown() {
@@ -30,7 +33,7 @@ createTestData() {
   echo "File 33" > input3/file33.txt
 
   # create a target folder
-  mkdir output  
+  mkdir -p "${PACK_BUILD}"
 }
 
 test_add_dirs() {
@@ -41,18 +44,40 @@ test_add_dirs() {
     input1
     input2
   "
-  add_dirs "output"
+  add_dirs "${PACK_BUILD}"
   
-  assertTrue  "[ -d output/input1 ]"
-  assertTrue  "[ -f output/input1/file11.txt ]"
-  assertTrue  "[ -f output/input1/file12.txt ]"
-  assertTrue  "[ -f output/input1/file13.txt ]"
-  assertTrue  "[ -d output/input2 ]"
-  assertTrue  "[ -f output/input2/file21.txt ]"
-  assertTrue  "[ -f output/input2/file22.txt ]"
-  assertTrue  "[ -f output/input2/file23.txt ]" 
-  assertFalse "[ -d output/input3 ]"
+  assertTrue  "[ -d \"${PACK_BUILD}/input1\" ]"
+  assertTrue  "[ -f \"${PACK_BUILD}/input1/file11.txt\" ]"
+  assertTrue  "[ -f \"${PACK_BUILD}/input1/file12.txt\" ]"
+  assertTrue  "[ -f \"${PACK_BUILD}/input1/file13.txt\" ]"
+  assertTrue  "[ -d \"${PACK_BUILD}/input2\" ]"
+  assertTrue  "[ -f \"${PACK_BUILD}/input2/file21.txt\" ]"
+  assertTrue  "[ -f \"${PACK_BUILD}/input2/file22.txt\" ]"
+  assertTrue  "[ -f \"${PACK_BUILD}/input2/file23.txt\" ]" 
+  assertFalse "[ -d \"${PACK_BUILD}/input3\" ]"
 }
+
+test_add_dirs_default() {
+  createTestData
+  
+  # run add_dirs
+  PACK_DIRS=""
+  add_dirs "${PACK_BUILD}"
+  
+  assertTrue  "[ -d \"${PACK_BUILD}/input1\" ]"
+  assertTrue  "[ -f \"${PACK_BUILD}/input1/file11.txt\" ]"
+  assertTrue  "[ -f \"${PACK_BUILD}/input1/file12.txt\" ]"
+  assertTrue  "[ -f \"${PACK_BUILD}/input1/file13.txt\" ]"
+  assertTrue  "[ -d \"${PACK_BUILD}/input2\" ]"
+  assertTrue  "[ -f \"${PACK_BUILD}/input2/file21.txt\" ]"
+  assertTrue  "[ -f \"${PACK_BUILD}/input2/file22.txt\" ]"
+  assertTrue  "[ -f \"${PACK_BUILD}/input2/file23.txt\" ]" 
+  assertTrue  "[ -d \"${PACK_BUILD}/input3\" ]"
+  assertTrue  "[ -f \"${PACK_BUILD}/input3/file31.txt\" ]"
+  assertTrue  "[ -f \"${PACK_BUILD}/input3/file32.txt\" ]"
+  assertTrue  "[ -f \"${PACK_BUILD}/input3/file33.txt\" ]" 
+}
+
 
 test_add_files() {
   createTestData
@@ -62,47 +87,47 @@ test_add_files() {
     input1/file12.txt
     input3/file31.txt
   "
-  add_files "output"
+  add_files "${PACK_BUILD}"
   
-  assertFalse "[ -f output/input1/file11.txt ]"
-  assertTrue  "[ -f output/input1/file12.txt ]"
-  assertFalse "[ -f output/input1/file13.txt ]"
-  assertFalse "[ -d output/input2 ]"
-  assertTrue  "[ -f output/input3/file31.txt ]"
-  assertFalse "[ -f output/input3/file32.txt ]"
-  assertFalse "[ -f output/input3/file33.txt ]"
+  assertFalse "[ -f \"${PACK_BUILD}/input1/file11.txt\" ]"
+  assertTrue  "[ -f \"${PACK_BUILD}/input1/file12.txt\" ]"
+  assertFalse "[ -f \"${PACK_BUILD}/input1/file13.txt\" ]"
+  assertFalse "[ -d \"${PACK_BUILD}/input2\" ]"
+  assertTrue  "[ -f \"${PACK_BUILD}/input3/file31.txt\" ]"
+  assertFalse "[ -f \"${PACK_BUILD}/input3/file32.txt\" ]"
+  assertFalse "[ -f \"${PACK_BUILD}/input3/file33.txt\" ]"
   
 }
 
 test_delete_files() {
   createTestData
   
-  cp -r --parents "input1" "output"
-  cp -r --parents "input2" "output"
-  cp -r --parents "input3" "output"
+  cp -r --parents "input1" "${PACK_BUILD}"
+  cp -r --parents "input2" "${PACK_BUILD}"
+  cp -r --parents "input3" "${PACK_BUILD}"
   
   PACK_DELETE_FILES="
     input1/file11.txt
     input2/file22.txt
     input3/file33.txt
   "
-  delete_files "output"
+  delete_files "${PACK_BUILD}"
 
-  assertFalse "[ -f output/input1/file11.txt ]"
-  assertTrue  "[ -f output/input1/file12.txt ]"
-  assertTrue  "[ -f output/input1/file13.txt ]"
-  assertTrue  "[ -f output/input2/file21.txt ]"
-  assertFalse "[ -f output/input2/file22.txt ]"
-  assertTrue  "[ -f output/input2/file23.txt ]"
-  assertTrue  "[ -f output/input3/file31.txt ]"
-  assertTrue  "[ -f output/input3/file32.txt ]"
-  assertFalse "[ -f output/input3/file33.txt ]"
+  assertFalse "[ -f \"${PACK_BUILD}/input1/file11.txt\" ]"
+  assertTrue  "[ -f \"${PACK_BUILD}/input1/file12.txt\" ]"
+  assertTrue  "[ -f \"${PACK_BUILD}/input1/file13.txt\" ]"
+  assertTrue  "[ -f \"${PACK_BUILD}/input2/file21.txt\" ]"
+  assertFalse "[ -f \"${PACK_BUILD}/input2/file22.txt\" ]"
+  assertTrue  "[ -f \"${PACK_BUILD}/input2/file23.txt\" ]"
+  assertTrue  "[ -f \"${PACK_BUILD}/input3/file31.txt\" ]"
+  assertTrue  "[ -f \"${PACK_BUILD}/input3/file32.txt\" ]"
+  assertFalse "[ -f \"${PACK_BUILD}/input3/file33.txt\" ]"
 }
 
 test_apply_patches() {
   createTestData
 
-  cp -r --parents "input1" "output"
+  cp -r --parents "input1" "${PACK_BUILD}"
 
   cat > file11.patch <<EOF
 --- input1/file11.txt
@@ -115,10 +140,10 @@ EOF
   PACK_PATCH_FILES="
     file11.patch
   "
-  apply_patches "output"
+  apply_patches "${PACK_BUILD}"
   
-  assertEquals "$(cat "output/input1/file11.txt")" "File 11 extended version"
-  assertEquals "$(cat "output/input1/file12.txt")" "File 12"
+  assertEquals "$(cat "${PACK_BUILD}/input1/file11.txt")" "File 11 extended version"
+  assertEquals "$(cat "${PACK_BUILD}/input1/file12.txt")" "File 12"
 }
 
 curl_mock() {
@@ -186,18 +211,18 @@ test_check_pack() {
 test_create_sha1() {
   createTestData
 
-  cp -r --parents "input1" "output"
+  cp -r --parents "input1" "${PACK_BUILD}"
 
   UTILITY_SHA1SUM="sha1sum"
     
-  create_sha1 "output" "ARM" "GenPack"
+  create_sha1 "${PACK_BUILD}" "ARM" "GenPack"
   
-  assertTrue     "[ -f output/ARM.GenPack.sha1 ]"
-  assertContains "$(cat "output/ARM.GenPack.sha1")" "./input1/file11.txt"
-  assertContains "$(cat "output/ARM.GenPack.sha1")" "./input1/file12.txt"
-  assertContains "$(cat "output/ARM.GenPack.sha1")" "./input1/file13.txt"
-  assertNotContains "$(cat "output/ARM.GenPack.sha1")" "./input2"
-  assertNotContains "$(cat "output/ARM.GenPack.sha1")" "./input3"
+  assertTrue     "[ -f \"${PACK_BUILD}/ARM.GenPack.sha1\" ]"
+  assertContains "$(cat "${PACK_BUILD}/ARM.GenPack.sha1")" "./input1/file11.txt"
+  assertContains "$(cat "${PACK_BUILD}/ARM.GenPack.sha1")" "./input1/file12.txt"
+  assertContains "$(cat "${PACK_BUILD}/ARM.GenPack.sha1")" "./input1/file13.txt"
+  assertNotContains "$(cat "${PACK_BUILD}/ARM.GenPack.sha1")" "./input2"
+  assertNotContains "$(cat "${PACK_BUILD}/ARM.GenPack.sha1")" "./input3"
 }
 
 . "$(dirname "$0")/shunit2/shunit2"

@@ -93,11 +93,13 @@ This library is written for Bash v5 or later and uses a couple of standard
 - dirname
 - echo
 - find
+- git (optional)
 - grep
 - mkdir
 - mv
 - sed
 - test
+- xmllint
 
 
 ### Linux
@@ -121,10 +123,14 @@ $ brew install coreutils grep
 In order to use this Bash library for your `gen_pack.sh` script you can use
 the [template](template/gen_pack.sh) as a starting point.
 
+All file references are evaluated relative to the pdsc directory, i.e. you
+can use the same relative file names as within the pdsc file.
+
 1. Put the [template](template/gen_pack.sh) into the root of your package source.
 2. Replace `<pin lib version here>` with the version of the library you want to use, e.g. `1.0.0`.
 3. Replace `<list directories here>` with a list of directories that shall be included in the pack.
-   The directories are included recursively with all contained files.
+   The directories are included recursively with all contained files. If left empty (i.e. `PACK_DIRS=""`),
+   all folders next to the pdsc file are copied.
 4. Replace `<list files here>` with a list of files that shall be included in the pack.
    This can be used as an alternative to including whole directories.
 5. Replace `<list files here>` with a list of files to be removed again.
