@@ -8,6 +8,12 @@ setUp() {
   pushd "${TESTDIR}" >/dev/null
 }
 
+tearDown() {
+  unset UTILITY_CURL_RESULT
+  unset CURL_MOCK_ARGS
+  unset XMLLINT_MOCK_ARGS
+}
+
 createTestData() {
   # prepare a folder structure
   mkdir input1
@@ -117,7 +123,7 @@ EOF
 
 curl_mock() {
   CURL_MOCK_ARGS="$@"
-  return 0
+  return ${UTILITY_CURL_RESULT:-0}
 }
 
 xmllint_mock() {
@@ -138,6 +144,27 @@ EOF
   
   assertContains "${CURL_MOCK_ARGS[@]}" "https://url.to/schema/PACK.xsd"
   assertContains "${XMLLINT_MOCK_ARGS[@]}" "test.pdsc"
+}
+
+test_check_schema_nourl() {
+  cat > test.pdsc <<EOF
+<?xml version="1.0" encoding="UTF-8"?>
+<package schemaVersion="1.7.7" xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocation="PACK.xsd">
+</package>
+EOF
+
+  UTILITY_CURL="curl_mock"
+  UTILITY_CURL_RESULT=6
+  UTILITY_XMLLINT="xmllint_mock"
+    
+  result=$(check_schema test.pdsc 2>&1)
+  errorlevel=$?
+  
+  echo "$result"
+  
+  assertNotEquals 0 $errorlevel
+  assertContains "${result}" "Failed downloading schema from 'PACK.xsd'"
+  assertNotContains "${result}" "xmllint_mock"
 }
 
 packchk_mock() {

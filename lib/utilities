@@ -61,11 +61,9 @@ function find_packchk {
     report_utility "PackChk" "$UTILITY_PACKCHK"
     return 0
   fi
-
   
   echo "Error: No packchk utility found" >&2
   echo "Action: Add packchk to your path" >&2
-  
   echo "Hint: Included in CMSIS Pack:"
   echo '${CMSIS_PACK_ROOT}/ARM/CMSIS/<version>/CMSIS/Utilities/<os>/'
   echo " "
