@@ -34,7 +34,14 @@ jobs:
         with:
           submodules: recursive
           
-      - name: Install macos deps
+      - name: Install Ubuntu deps
+        if: ${{ startsWith(matrix.os, 'ubuntu') }}
+        run: |
+          sudo apt install \
+            curl \
+            libxml2-utils
+
+      - name: Install MacOS deps
         if: ${{ startsWith(matrix.os, 'macos') }}
         run: |
           brew install \

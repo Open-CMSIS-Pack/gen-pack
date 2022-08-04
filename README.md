@@ -108,6 +108,11 @@ This library is written for Bash v5 or later and uses a couple of standard
 
 This library shall be well prepared to run on any standard Linux with Bash v5 or later.
 
+```sh
+$ sudo apt install \
+    curl \
+    libxml2-utils
+```
 ### Windows
 
 This library requires Bash for Windows v5 or later.
@@ -116,8 +121,10 @@ This library requires Bash for Windows v5 or later.
 
 This library requires Bash and some additional GNU tools:
 
-```bash
-$ brew install coreutils grep 
+```sh
+$ brew install \
+    coreutils \
+    grep 
 ```
 
 ## Get Started
