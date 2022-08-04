@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<package schemaVersion="1.7.7" xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocation="https://raw.githubusercontent.com/Open-CMSIS-Pack/Open-CMSIS-Pack-Spec/v1.7.7/schema/PACK.xsd">
+  <vendor>ARM</vendor>
+  <name>GenPack</name>
+  <description>Test pack for gen-pack library</description>
+  <url>http://www.keil.com/pack/</url>
+  <license>LICENSE</license>
+  
+  <releases>
+    <release version="1.0.1-dev1">
+      Active development ...
+    </release>
+    <release version="1.0.0" date="2022-08-04" tag="v1.0.0">
+      Initial release 1.0.0
+    </release>
+  </releases>
+
+  <components>
+    <component Cvendor="ARM" Cclass="Compiler" Cgroup="GenPack" Cversion="1.0.0">
+      <description>Test component for gen-pack library</description>
+      <files>
+        <file category="header" name="inc/test.h"/>
+        <file category="source" name="src/test.c"/>
+      </files>
+    </component>
+  </components>
+
+</package>

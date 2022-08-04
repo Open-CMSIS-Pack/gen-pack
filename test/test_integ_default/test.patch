@@ -1,0 +1,10 @@
+--- inc/test.h
++++ inc/test.h
+@@ -0,0 +1,1 @@
++void test();
+--- src/test.c
++++ src/test.c
+@@ -0,0 +1,3 @@
++void test() {
++  /* some additional code */   
++}

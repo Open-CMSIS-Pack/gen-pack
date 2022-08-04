@@ -97,7 +97,9 @@ This library is written for Bash v5 or later and uses a couple of standard
 - grep
 - mkdir
 - mv
+- realpath
 - sed
+- sha1sum
 - test
 - xmllint
 
