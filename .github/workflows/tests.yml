@@ -33,7 +33,7 @@ jobs:
         uses: actions/checkout@v3
         with:
           submodules: recursive
-          
+
       - name: Install Ubuntu deps
         if: ${{ startsWith(matrix.os, 'ubuntu') }}
         run: |
@@ -55,10 +55,11 @@ jobs:
           echo "$(pwd)/cmsis-toolbox-${{ matrix.target }}/bin" >> $GITHUB_PATH
 
       - name: Install pack ARM.CMSIS
+        shell: bash
         run: |
           cpackget init https://www.keil.com/pack/index.pidx
           cpackget pack add ARM.CMSIS
-          
+
       - name: Run unit tests
         run: |
           ./test/run_all.sh
