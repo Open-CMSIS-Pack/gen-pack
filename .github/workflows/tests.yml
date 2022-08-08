@@ -37,7 +37,8 @@ jobs:
       - name: Install Ubuntu deps
         if: ${{ startsWith(matrix.os, 'ubuntu') }}
         run: |
-          sudo apt install \
+          sudo apt-get update
+          sudo apt-get install \
             libxml2-utils
 
       - name: Install MacOS deps
