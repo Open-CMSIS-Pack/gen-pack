@@ -1,6 +1,6 @@
 #!/bin/bash
-# Version: 2.0
-# Date: 2022-07-28
+# Version: 2.1
+# Date: 2022-08-09
 # This bash script generates a CMSIS Software Pack:
 #
 
@@ -39,6 +39,9 @@ PACK_DELETE_FILES="
 PACK_PATCH_FILES="
     <list patches here>
 "
+
+# Specify addition argument to packchk
+PACKCHK_ARGS=()
 
 ############ DO NOT EDIT BELOW ###########
 
