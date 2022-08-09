@@ -20,7 +20,9 @@ This library is written for Bash v5 or later and uses a couple of standard
 - grep
 - mkdir
 - mv
+- realpath
 - sed
+- sha1sum
 - test
 - xmllint
 
@@ -29,12 +31,20 @@ This library is written for Bash v5 or later and uses a couple of standard
 
 This library shall be well prepared to run on any standard Linux with Bash v5 or later.
 
+```sh
+$ sudo apt install \
+    curl \
+    libxml2-utils
+```
+
 ### MacOS
 
 This library requires Bash and some additional GNU tools to be installed using [Homebrew](https://brew.sh/):
 
-```bash
-$ brew install coreutils grep 
+```sh
+$ brew install \
+    coreutils \
+    grep 
 ```
 
 ### Windows

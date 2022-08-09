@@ -4,9 +4,7 @@ function getopts {
   POSITIONAL=()
   while [[ $# -gt 0 ]]
   do
-    key="$1"
-
-    case $key in
+    case $1 in
       '-h'|'--help')
         usage
         exit 1
@@ -20,8 +18,8 @@ function getopts {
       ;;
       *)    # unknown option
         POSITIONAL+=("$1") # save it in an array for later
-        shift # past argument
       ;;
     esac
+    shift # past argument
   done
 }

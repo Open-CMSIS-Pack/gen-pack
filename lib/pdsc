@@ -4,8 +4,8 @@ function locate_pdsc {
   # check whether there is more than one pdsc file
   local NUM_PDSCS=$(ls -1 *.pdsc | wc -l)
   local PACK_DESCRIPTION_FILE=$(ls *.pdsc)
-  if [[ -n $1 && -f $1 ]]; then
-    readlink -f "$1"
+  if [[ -n "$1" && -f "$1" ]]; then
+    realpath "$1"
     return 0
   elif [ ${NUM_PDSCS} -lt 1 ]; then
     echo "Error: No *.pdsc file found in current directory" >&2
@@ -19,7 +19,7 @@ function locate_pdsc {
     echo " " >&2
     exit 1
   fi
-  readlink -f "${PACK_DESCRIPTION_FILE}"
+  realpath "${PACK_DESCRIPTION_FILE}"
   return 0
 }
 
