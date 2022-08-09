@@ -3,84 +3,7 @@
 ## About
 
 This repository contains a library with helper function to assemble a
-`gen_pack.sh` script like this:
-
-```sh
-#!/bin/bash
-# Version: 2.0
-# Date: 2022-07-28
-# This bash script generates a CMSIS Software Pack:
-#
-
-set -o pipefail
-
-# Set version of gen pack library
-REQUIRED_GEN_PACK_LIB="<pin lib version here>"
-
-
-# Set default command line arguments
-DEFAULT_ARGS=()
-
-# Pack warehouse directory - destination
-PACK_OUTPUT=./output
-
-# Temporary pack build directory
-PACK_BUILD=./build
-
-# Specify directory names to be added to pack base directory
-PACK_DIRS="
-    <list directories here>
-"
-
-# Specify file names to be added to pack base directory
-PACK_BASE_FILES="
-  LICENSE
-  <list files here>
-"
-
-# Specify file names to be deleted from pack build directory
-PACK_DELETE_FILES="
-    <list files here>
-"
-
-# Specify patches to be applied
-PACK_PATCH_FILES="
-    <list patches here>
-"
-
-############ DO NOT EDIT BELOW ###########
-
-function install_lib() {
-  local URL="https://github.com/Open-CMSIS-Pack/gen-pack/archive/refs/tags/v$1.tar.gz"
-  echo "Downloading gen-pack lib to '$2'"
-  mkdir -p "$2"
-  curl -L "${URL}" -s | tar -xzf - --strip-components 1 -C "$2" || exit 1
-}
-
-function load_lib() {
-  local GLOBAL_LIB="/usr/local/share/gen-pack/${REQUIRED_GEN_PACK_LIB}"
-  local USER_LIB="${HOME}/.local/share/gen-pack/${REQUIRED_GEN_PACK_LIB}"
-  if [[ ! -d "${GLOBAL_LIB}" && ! -d "${USER_LIB}" ]]; then
-    echo "Required gen_pack lib not found!" >&2
-    install_lib "${REQUIRED_GEN_PACK_LIB}" "${USER_LIB}"
-  fi 
-  
-  if [[ -d "${GLOBAL_LIB}" ]]; then
-    . "${GLOBAL_LIB}/gen-pack"
-  elif [[ -d "${USER_LIB}" ]]; then
-    . "${USER_LIB}/gen-pack"
-  else
-    echo "Required gen-pack lib is not installed!" >&2
-    exit 1
-  fi
-}
-
-load_lib
-gen_pack "${DEFAULT_ARGS[@]}" "$@"
-
-exit 0
-
-```
+[`gen_pack.sh`](./template/gen_pack.sh) script that creates a [Open-CMSIS-Pack](https://open-cmsis-pack.github.io/Open-CMSIS-Pack-Spec/main/html/index.html).
 
 ## Prerequisites
 
@@ -113,19 +36,46 @@ $ sudo apt install \
     curl \
     libxml2-utils
 ```
-### Windows
-
-This library requires Bash for Windows v5 or later.
 
 ### MacOS
 
-This library requires Bash and some additional GNU tools:
+This library requires Bash and some additional GNU tools to be installed using [Homebrew](https://brew.sh/):
 
 ```sh
 $ brew install \
     coreutils \
     grep 
 ```
+
+### Windows
+
+The following tools need to be installed on Windows machines.
+
+#### Bash v5
+
+- [git for Windows](https://gitforwindows.org/) offers a Bash v5 compliant shell.
+- Alternatively, you may use a [Windows Subsystem for Linux](https://docs.microsoft.com/en-us/windows/wsl/).
+
+#### xmllint
+
+[xmllint](http://xmlsoft.org/xmllint.html) can be installed using the [libxml library](https://www.zlatkovic.com/pub/libxml/). Download the following ZIP files:
+
+- iconv-1.9.2.win32.zip
+- libxml2-2.7.8.win32.zip
+- libxmlsec-1.2.18.win32.zip
+- zlib-1.2.5.win32.zip
+
+Extract the /bin directory of each ZIP file to a directory, for example C:\xmllint and add this directory to the Windows PATH environment variable.
+
+Alternatively, xmllint is also provided by the [Chocolatey xsltproc package](https://chocolatey.org/packages/xsltproc):
+
+```
+> choco install xsltproc
+```
+
+#### 7-Zip
+
+The compression tool [7-Zip](http://www.7-zip.org/) supports command line calls and can be used in generation scripts like gen_pack.sh for automated pack file creation. Download the appropriate installer for your Windows system. Use defaults for your installation.
 
 ## Get Started
 
