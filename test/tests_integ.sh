@@ -1,6 +1,6 @@
 #!/bin/bash
 
-DIRNAME="$(dirname "$0")"
+DIRNAME="$(realpath "$(dirname "$0")")"
 
 test_integ_default() {
   cd "${DIRNAME}/test_integ_default"
@@ -32,8 +32,8 @@ test_integ_with_git_release() {
   test -d "${DIRNAME}/test_integ_with_git" || tar -xjf "${DIRNAME}/test_integ_with_git.tbz2" -C "${DIRNAME}"
   cd "${DIRNAME}/test_integ_with_git"
   
-  git --git-dir=$(pwd)/.git clean -fdx
-  git --git-dir=$(pwd)/.git checkout -f v1.0.0
+  git --git-dir=$(pwd)/.git clean -fdxq
+  git --git-dir=$(pwd)/.git checkout -fq v1.0.0
   
   ./gen_pack.sh -k
 
@@ -59,8 +59,8 @@ test_integ_with_git_devdrop() {
   test -d "${DIRNAME}/test_integ_with_git" || tar -xjf "${DIRNAME}/test_integ_with_git.tbz2" -C "${DIRNAME}"
   cd "${DIRNAME}/test_integ_with_git"
   
-  git --git-dir=$(pwd)/.git clean -fdx
-  git --git-dir=$(pwd)/.git checkout -f main
+  git --git-dir=$(pwd)/.git clean -fdxq
+  git --git-dir=$(pwd)/.git checkout -fq main
   
   ./gen_pack.sh -k
 
