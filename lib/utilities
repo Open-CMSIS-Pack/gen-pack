@@ -102,9 +102,10 @@ function find_xmllint {
     return 0
   fi
   
-  echo "Info: No xmllint utility found" >&2
+  echo "Error: No xmllint utility found" >&2
   echo "Action: Add xmllint to your path" >&2
   echo " "
+  exit 1
 }
 
 function find_curl {
@@ -114,9 +115,10 @@ function find_curl {
     return 0
   fi
   
-  echo "Info: No curl utility found" >&2
+  echo "Error: No curl utility found" >&2
   echo "Action: Add curl to your path" >&2
   echo " "
+  exit 1
 }
 
 function find_git {
@@ -126,22 +128,50 @@ function find_git {
     return 0
   fi
   
-  echo "Info: No git utility found" >&2
+  echo "Error: No git utility found" >&2
   echo "Action: Add git to your path" >&2
+  echo " "
+  exit 1
+}
+
+function find_ghcli {
+  if type -a gh 1>/dev/null 2>/dev/null; then
+    UTILITY_GHCLI="$(which gh)"
+    report_utility "GitHub CLI" "$UTILITY_GHCLI"
+    return 0
+  fi
+  
+  echo "Info: No GitHub CLI utility found" >&2
+  echo "Action: Add gh to your path" >&2
   echo " "
 }
 
 function find_sha1sum {
-  if type -a  sha1sum 1>/dev/null 2>/dev/null; then
+  if type -a sha1sum 1>/dev/null 2>/dev/null; then
     UTILITY_SHA1SUM="$(which sha1sum)"
     report_utility "sha1sum" "$UTILITY_SHA1SUM"
     return 0
   fi
   
-  echo "Info: No git utility found" >&2
+  echo "Error: No git utility found" >&2
   echo "Action: Add git to your path" >&2
   echo " "
+  exit 1
 }
+
+function find_linkchecker {
+  if type -a linkchecker 1>/dev/null 2>/dev/null; then
+    UTILITY_LINKCHECKER="$(which linkchecker)"
+    report_utility "linkchecker" "$UTILITY_LINKCHECKER"
+    return 0
+  fi
+  
+  echo "Error: No linkchecker utility found" >&2
+  echo "Action: Add linkchecker to your path" >&2
+  echo " "
+  exit 1
+}
+
 
 function archive_7zip {
   rm -f "$2"
@@ -159,4 +189,51 @@ function archive_zip {
 
 function archive {
   archive_$UTILITY_ZIP_TYPE "$1" "$2"
+}
+
+#
+# Usage: check_links <index> <src>
+#  <index>  Index.html file to start link scanning at."
+#  <src>    Directory with doxygen source files."
+#
+function check_links {
+  if [ ! -f "$1" ]; then
+    if [ -z "$1" ]; then
+      echo "No index file provided!" >&2
+    else
+      echo "Index file not found: '$1'" >&2
+    fi
+    return 1
+  fi
+
+  if [ ! -d "$2" ]; then
+    if [ -z "$2" ]; then
+      echo "No source directory provided!" >&2
+    else
+      echo "Source dir not found: '$2'" >&2
+    fi
+    return 1
+  fi
+  
+  "${UTILITY_LINKCHECKER}" -F csv --timeout 3 --check-extern "$1"
+
+  OFS=$IFS
+  IFS=$'\n'
+
+  for line in $(grep -E '^[^#]' linkchecker-out.csv | tail -n +2); do
+    link=$(cut -d';' -f 1 <<<$line)
+    msg=$(cut -d';' -f 4 <<<$line)
+    origin=$(grep -Ern "href=['\"]${link}['\"]" "$2")
+    for o in $origin; do
+      ofile=$(cut -d':' -f 1  <<<$o)
+      oline=$(cut -d':' -f 2  <<<$o)
+      match=$(cut -d':' -f 3- <<<$o)
+      rest="${match#*$link}"
+      ocolumn=$((${#match} - ${#rest} - ${#link}))
+      echo "$(realpath $ofile):${oline}:${ocolumn};${link};${msg};URL '${link}' results to '${msg}'" >&2
+    done
+  done
+
+  IFS=$OFS
+  return 0
 }

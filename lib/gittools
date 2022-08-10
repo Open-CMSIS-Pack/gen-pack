@@ -79,6 +79,8 @@ function git_changelog_dxy_tail {
 }
 
 function git_changelog_html_head {
+  echo "/**"
+  echo "\page rev_hist Revision History"
   echo "<table class=\"cmtable\" summary=\"Revision History\">"
   echo "<tr>"
   echo "  <th>Version</th>"
@@ -97,7 +99,7 @@ function git_changelog_html {
 
 function git_changelog_html_tail {
   echo "</table>"
-  echo ""
+  echo "*/"
 }
 
 function git_changelog {
@@ -124,7 +126,7 @@ function git_changelog {
     shift # past argument
   done
   
-  local TAGS=$("${UTILITY_GIT}" for-each-ref --format "%(refname)" --sort="-v:refname" "refs/tags/${PREFIX}*" 2>/dev/null)
+  local TAGS=$("${UTILITY_GIT}" for-each-ref --format "%(refname)" --sort="-v:refname" "refs/tags/${PREFIX}*")
   local LATEST=$(git_describe "${PREFIX}")
   
   git_changelog_${FORMAT}_head
@@ -134,11 +136,19 @@ function git_changelog {
   fi
 
   for TAG in $TAGS; do
-    local TAG="${TAG#refs/tags/}" 
-    local DESC=$("${UTILITY_GIT}" tag -l -n99 --format "%(contents)" ${TAG} 2>/dev/null)
-    local DATE=$("${UTILITY_GIT}" tag -l -n99 --format "%(taggerdate:short)" ${TAG} 2>/dev/null)
+    local TYPE=$("${UTILITY_GIT}" for-each-ref --format "%(objecttype)" ${TAG})
+    local TAG="${TAG#refs/tags/}"
+    local DESC=$("${UTILITY_GIT}" tag -l -n99 --format "%(contents)" ${TAG})
+    local DATE=$("${UTILITY_GIT}" tag -l -n99 --format "%(taggerdate:short)" ${TAG})
     if [[ -z "$DATE" ]]; then
-      local DATE=$( "${UTILITY_GIT}" tag -l -n99 --format "%(committerdate:short)" ${TAG} 2>/dev/null)
+      local DATE=$( "${UTILITY_GIT}" tag -l -n99 --format "%(committerdate:short)" ${TAG})
+    fi
+    if [[ $TYPE == "commit" ]] && "${UTILITY_GHCLI}" release view ${TAG} >/dev/null 2>/dev/null; then
+      local RELEASE=$("${UTILITY_GHCLI}" release view ${TAG} --json "body" -t "{{ .body }}")
+      if [ -n "$RELEASE" ]; then
+        local DESC="$RELEASE"
+      fi
+      local DATE=$("${UTILITY_GHCLI}" release view ${TAG} --json "publishedAt" -t "{{ timefmt \"2006-01-02\" .publishedAt }}")
     fi
     git_changelog_$FORMAT "${TAG#${PREFIX}}" "${DATE}" "${DESC}" "${TAG}"      
   done

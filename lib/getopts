@@ -12,9 +12,15 @@ function getopts {
       '-k'|'--keep')
         KEEP=1
       ;;
+      '--no-keep')
+        KEEP=0
+      ;;
       '-c'|'--changelog')
         shift
         CHANGELOG=$1
+      ;;
+      '--no-changelog')
+        unset CHANGELOG
       ;;
       *)    # unknown option
         POSITIONAL+=("$1") # save it in an array for later
