@@ -147,6 +147,8 @@ test_git_changelog_html() {
   changelog=$(git_changelog -f html -p v)
 
   read -r -d '' expected <<EOF
+/**
+\page rev_hist Revision History
 <table class="cmtable" summary="Revision History">
 <tr>
   <th>Version</th>
@@ -177,6 +179,7 @@ test_git_changelog_html() {
   </td>
 </tr>
 </table>
+*/
 EOF
 
   assertEquals "${expected}" "${changelog}"
