@@ -208,6 +208,20 @@ test_check_pack() {
   assertContains "${PACKCHK_MOCK_ARGS[@]}" "path/to/packs/.Web/ARM.CMSIS.pdsc"  
 }
 
+test_check_pack_with_args() {
+  touch test.pdsc
+  
+  CMSIS_PACK_ROOT="path/to/packs"
+  UTILITY_PACKCHK="packchk_mock"
+  PACKCHK_ARGS=(-x M300)
+  check_pack test.pdsc
+  
+  assertContains "${PACKCHK_MOCK_ARGS[@]}" "test.pdsc"  
+  assertContains "${PACKCHK_MOCK_ARGS[@]}" "path/to/packs/.Web/ARM.CMSIS.pdsc"  
+  assertContains "${PACKCHK_MOCK_ARGS[@]}" "-x"  
+  assertContains "${PACKCHK_MOCK_ARGS[@]}" "M300"  
+}
+
 test_create_sha1() {
   createTestData
 

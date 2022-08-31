@@ -1,5 +1,5 @@
 
-GEN_PACK_LIB_VERSION="0.2.0"
+GEN_PACK_LIB_VERSION="0.2.1"
 GEN_PACK_LIB_SOURCE="$(realpath $(dirname ${BASH_SOURCE}))"
 
 shopt -s expand_aliases
@@ -101,7 +101,7 @@ function check_schema {
 
 function check_pack {
   echo "\"${UTILITY_PACKCHK}\" \"$1\" -i \"${CMSIS_PACK_ROOT}/.Web/ARM.CMSIS.pdsc\" -n \"${PACK_OUTPUT}/PackName.txt\"" ${PACKCHK_ARGS[@]}
-  "${UTILITY_PACKCHK}" "$1" -i "${CMSIS_PACK_ROOT}/.Web/ARM.CMSIS.pdsc" -n "${PACK_OUTPUT}/PackName.txt"
+  "${UTILITY_PACKCHK}" "$1" -i "${CMSIS_PACK_ROOT}/.Web/ARM.CMSIS.pdsc" -n "${PACK_OUTPUT}/PackName.txt" ${PACKCHK_ARGS[@]}
   local errorlevel=$?
   if [ $errorlevel -ne 0 ]; then
     echo "build aborted: pack check failed" >&2
