@@ -249,7 +249,7 @@ EOF
   assertContains "${LINKCHECKER_MOCK_ARGS[*]}" "index.html"
   assertContains "${LINKCHECKER_MOCK_ARGS[*]}" "--timeout 10"
   assertEquals \
-    "$(pwd)/src/index.txt:1:9;https://url.to/file;\"SSLError: HTTPSConnectionPool(host='url.to', port=443): Max retries exceeded with url: /file\";URL 'https://url.to/file' results to '\"SSLError: HTTPSConnectionPool(host='url.to', port=443): Max retries exceeded with url: /file\"'" \
+    "$(realpath $(pwd))/src/index.txt:1:9;https://url.to/file;\"SSLError: HTTPSConnectionPool(host='url.to', port=443): Max retries exceeded with url: /file\";URL 'https://url.to/file' results to '\"SSLError: HTTPSConnectionPool(host='url.to', port=443): Max retries exceeded with url: /file\"'" \
     "$(cat results.csv)"
 }
 
