@@ -192,11 +192,28 @@ function archive {
 }
 
 #
-# Usage: check_links <index> <src>
+# Usage: check_links [--timeout <sec>] <index> <src>
 #  <index>  Index.html file to start link scanning at."
 #  <src>    Directory with doxygen source files."
-#
+#  <sec>    Timeout in seconds (default: 10)
 function check_links {
+  local args=()
+  local timeout=10
+  while [[ $# -gt 0 ]]
+  do
+    case $1 in
+      '-t'|'--timeout')
+        shift
+        timeout=$1
+      ;;
+      *)
+        args+=("$1") # save it in an array for later
+      ;;
+    esac
+    shift # past argument
+  done
+  set -- "${args[@]}"
+  
   if [ ! -f "$1" ]; then
     if [ -z "$1" ]; then
       echo "No index file provided!" >&2
@@ -215,7 +232,7 @@ function check_links {
     return 1
   fi
   
-  "${UTILITY_LINKCHECKER}" -F csv --timeout 3 --check-extern "$1"
+  "${UTILITY_LINKCHECKER}" -F csv --timeout $timeout --check-extern "$1"
 
   OFS=$IFS
   IFS=$'\n'

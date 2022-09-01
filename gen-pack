@@ -1,5 +1,5 @@
 
-GEN_PACK_LIB_VERSION="0.2.1"
+GEN_PACK_LIB_VERSION="0.2.2"
 GEN_PACK_LIB_SOURCE="$(realpath $(dirname ${BASH_SOURCE}))"
 
 shopt -s expand_aliases
