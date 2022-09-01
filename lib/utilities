@@ -1,6 +1,34 @@
 
 function report_utility {
-  echo "$1 is $2"
+  if [[ -n "$3" && $3 != 0 ]]; then
+    echo "Error: No $1 utility found" >&2
+    echo "Action: Add $1 to your path" >&2
+    echo " "
+    exit $3
+  else
+    echo "$1 is $2"
+  fi
+}
+
+function find_utility {
+  local UTILS=($(type -a "$1" 2>/dev/null | cut -d" " -f3))
+  local retval=$?
+  if [[ $retval != 0 ]]; then
+    return $retval
+  fi
+  if [[ -n "$2" && -n "$3" ]]; then
+    for executable in ${UTILS[@]}; do
+      local VERSION=$(${executable} $2)
+      if [[ "$VERSION" == "$3" ]]; then
+        realpath -q "$executable"
+        return $?
+      fi
+    done
+    return 1
+  else
+    realpath -q "$UTILS"
+    return $?
+  fi
 }
 
 function get_os_type {
@@ -172,6 +200,10 @@ function find_linkchecker {
   exit 1
 }
 
+function find_doxygen {
+  UTILITY_DOXYGEN=$(find_utility doxygen "-v | cut -d' ' -f1" "$1")
+  report_utility "doxygen" "$UTILITY_DOXYGEN" $?
+}
 
 function archive_7zip {
   rm -f "$2"

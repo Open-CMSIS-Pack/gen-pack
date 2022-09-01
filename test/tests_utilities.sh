@@ -253,4 +253,65 @@ EOF
     "$(cat results.csv)"
 }
 
+test_find_utility() {
+  mkdir util-1.0
+  mkdir util-2.0
+  
+  cat > util-1.0/util <<EOF
+#!/bin/sh
+echo "1.0.0"
+EOF
+
+  cat > util-2.0/util <<EOF
+#!/bin/sh
+echo "2.0.3"
+EOF
+
+  chmod +x util-1.0/util
+  chmod +x util-2.0/util
+
+  PATH="$(pwd)/util-1.0:$(pwd)/util-2.0:$PATH"
+    
+  UTIL=$(find_utility "util")
+  assertEquals 0 $?
+  assertEquals "$(realpath $(pwd))/util-1.0/util" "$UTIL"
+  
+  UTIL=$(find_utility "util" "-v" "1.0.0")
+  assertEquals 0 $?
+  assertEquals "$(realpath $(pwd))/util-1.0/util" "$UTIL"
+
+  UTIL=$(find_utility "util" "-v" "2.0.3")
+  assertEquals 0 $?
+  assertEquals "$(realpath $(pwd))/util-2.0/util" "$UTIL"
+}
+
+test_find_utility_version_na() {
+  mkdir util-1.0
+  mkdir util-2.0
+  
+  cat > util-1.0/util <<EOF
+#!/bin/sh
+echo "1.0.0"
+EOF
+
+  cat > util-2.0/util <<EOF
+#!/bin/sh
+echo "2.0.3"
+EOF
+
+  chmod +x util-1.0/util
+  chmod +x util-2.0/util
+
+  PATH="$(pwd)/util-1.0:$(pwd)/util-2.0:$PATH"
+    
+  UTIL=$(find_utility "util" "-v" "3.0.0")
+  assertNotEquals "find_utility did not fail" 0 $?
+}
+
+test_find_utility_na() {
+  UTIL=$(find_utility "utilX")
+  assertNotEquals "find_utility did not fail" 0 $?
+}
+
+
 . "$(dirname "$0")/shunit2/shunit2"
