@@ -1,12 +1,13 @@
 
 function usage {
 cat << EOF
-Usage: $(basename $0) [-h] [-k] [-c <prefix>] [<pdsc>]
+Usage: $(basename $0) [-h] [-k] [-c <prefix>] [-v] [<pdsc>]
 
 Arguments:
   -h, --help                 Print this usage message and exit.
   -k, --keep                 Keep build directory.
-  -c, --changelog <prefix>   Generate changelog. Tags are filterd for <prefix>
+  -c, --changelog <prefix>   Generate changelog. Tags are filtered for <prefix>.
+  -v, --verbose              Print verbose log output.
   <pdsc>                     The pack description to generate the pack for.
 EOF
 }

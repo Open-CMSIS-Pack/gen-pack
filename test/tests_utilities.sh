@@ -1,5 +1,6 @@
 #!/bin/bash
 
+. "$(dirname "$0")/../lib/logging"
 . "$(dirname "$0")/../lib/utilities"
 
 find() {
@@ -24,6 +25,7 @@ find() {
 }
 
 setUp() {
+  VERBOSE=1
   TESTDIR="${SHUNIT_TMPDIR}/${_shunit_test_}"
   mkdir -p "${TESTDIR}"
   pushd "${TESTDIR}" >/dev/null  

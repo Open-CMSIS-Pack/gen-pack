@@ -1,0 +1,6 @@
+
+function echo_v {
+  if [[ $VERBOSE == 1 ]]; then 
+    echo $*
+  fi
+}
