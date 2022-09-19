@@ -1,5 +1,5 @@
 
-GEN_PACK_LIB_VERSION="0.2.2"
+GEN_PACK_LIB_VERSION="0.3.0"
 GEN_PACK_LIB_SOURCE="$(realpath $(dirname ${BASH_SOURCE}))"
 
 shopt -s expand_aliases
@@ -14,6 +14,7 @@ fi
 . "${GEN_PACK_LIB_SOURCE}/lib/utilities"
 . "${GEN_PACK_LIB_SOURCE}/lib/pdsc"
 . "${GEN_PACK_LIB_SOURCE}/lib/gittools"
+. "${GEN_PACK_LIB_SOURCE}/lib/logging"
 
 function add_dirs {
   # Add directories
@@ -76,20 +77,38 @@ function apply_patches {
 
 function check_schema {
   echo "Running schema check for $1"
-  local SCHEMA=$(realpath -m "${CMSIS_TOOLSDIR}/../PACK.xsd")
+  local CMSISSCHEMA=$(realpath -m "${CMSIS_TOOLSDIR:-.}/../PACK.xsd")
+  local SCHEMA="${CMSISSCHEMA}"
   if [ ! -f "$SCHEMA" ]; then
     echo "Fetching schema file..."
     local SCHEMAURL=$(grep -Pio "xs:noNamespaceSchemaLocation=\"\K[^\"]+" "$1")
+    local SCHEMAVERSION=$(grep -Pio "schemaVersion=\"\K[^\"]+" "$1")
     local SCHEMA="${TEMP:-/tmp}/PACK.xsd"
-    echo "\"${UTILITY_CURL}\" -sL $SCHEMAURL --output \"${SCHEMA}\""
-    "${UTILITY_CURL}" -sL $SCHEMAURL --output "${SCHEMA}"
+    curl_download "${SCHEMAURL}" "${SCHEMA}"
     local errorlevel=$?
     if [ $errorlevel -ne 0 ]; then
-      echo "Failed downloading schema from '$SCHEMAURL'. Skipping schema check." >&2
-      exit 1
+        echo "Schema referenced in PDSC file not found. Looking for schema with version '${SCHEMAVERSION}' ..." >&2
+        curl_download "https://github.com/Open-CMSIS-Pack/Open-CMSIS-Pack-Spec/blob/v${SCHEMAVERSION}/schema/PACK.xsd" "${SCHEMA}"
+        errorlevel=$?
+    fi
+    if [ $errorlevel -ne 0 ]; then
+        echo "Schema referenced by PDSC file's schema version not found. Looking for latest schema ..." >&2
+        curl_download "https://github.com/Open-CMSIS-Pack/Open-CMSIS-Pack-Spec/blob/main/schema/PACK.xsd" "${SCHEMA}"
+        errorlevel=$?
+    fi
+    if [ $errorlevel -ne 0 ]; then
+        echo "build aborted: No schema file could be found!" >&2
+        echo " " >&2
+        echo "  Hint: Assure one of the following to get the schema check working." >&2
+        echo "        - Provide PACK.XSD into '${CMSISSCHEMA}'." >&2
+        echo "        - Provide schema URL in PDSC file's xs:noNamespaceSchemaLocation attribute." >&2
+        echo "        - Provide schema release tag version in PDSC file's schemaVersion attribute." >&2        
+        echo "        Available schema releases are listed on https://github.com/Open-CMSIS-Pack/Open-CMSIS-Pack-Spec/tags." >&2        
+        echo " " >&2
+        exit $errorlevel
     fi
   fi
-  echo "\"${UTILITY_XMLLINT}\" --noout --schema \"${SCHEMA}\" \"$1\""
+  echo_v "\"${UTILITY_XMLLINT}\" --noout --schema \"${SCHEMA}\" \"$1\""
   "${UTILITY_XMLLINT}" --noout --schema "${SCHEMA}" "$1"
   local errorlevel=$?
   if [ $errorlevel -ne 0 ]; then
@@ -100,7 +119,7 @@ function check_schema {
 }
 
 function check_pack {
-  echo "\"${UTILITY_PACKCHK}\" \"$1\" -i \"${CMSIS_PACK_ROOT}/.Web/ARM.CMSIS.pdsc\" -n \"${PACK_OUTPUT}/PackName.txt\"" ${PACKCHK_ARGS[@]}
+  echo_v "\"${UTILITY_PACKCHK}\" \"$1\" -i \"${CMSIS_PACK_ROOT}/.Web/ARM.CMSIS.pdsc\" -n \"${PACK_OUTPUT}/PackName.txt\"" ${PACKCHK_ARGS[@]}
   "${UTILITY_PACKCHK}" "$1" -i "${CMSIS_PACK_ROOT}/.Web/ARM.CMSIS.pdsc" -n "${PACK_OUTPUT}/PackName.txt" ${PACKCHK_ARGS[@]}
   local errorlevel=$?
   if [ $errorlevel -ne 0 ]; then

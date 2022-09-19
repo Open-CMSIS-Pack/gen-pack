@@ -207,7 +207,7 @@ function find_doxygen {
 
 function archive_7zip {
   rm -f "$2"
-  echo "pushd \"$1\"; \"${UTILITY_ZIP}\" a -tzip \"$2\" ."
+  echo_v "pushd \"$1\"; \"${UTILITY_ZIP}\" a -tzip \"$2\" ."
   pushd "$1" 2>&1 >/dev/null
   "${UTILITY_ZIP}" a -tzip "$2" .
   popd 2>&1 >/dev/null
@@ -285,4 +285,19 @@ function check_links {
 
   IFS=$OFS
   return 0
+}
+
+#
+# Usage: curl_download <url> <dest>
+#  <url>   URL to download file from
+#  <dest>  Path to download file to
+function curl_download {
+    echo_v "\"${UTILITY_CURL}\" -sL $1 --output \"$2\""
+    "${UTILITY_CURL}" -sL $1 --output "$2"
+    local errorlevel=$?
+    if [ $errorlevel -ne 0 ]; then
+      echo "Failed downloading file from URL '$1'." >&2
+      return $errorlevel
+    fi
+    return 0
 }

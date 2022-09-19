@@ -148,11 +148,15 @@ EOF
 
 curl_mock() {
   CURL_MOCK_ARGS="$@"
-  return ${UTILITY_CURL_RESULT:-0}
+  echo "curl_mock $@"
+  local result=${UTILITY_CURL_RESULT[0]:-0}
+  UTILITY_CURL_RESULT=(${UTILITY_CURL_RESULT[@]:1})
+  return $result
 }
 
 xmllint_mock() {
   XMLLINT_MOCK_ARGS="$@"
+  echo "xmllint_mock $@"
   return 0
 }
 
@@ -171,7 +175,7 @@ EOF
   assertContains "${XMLLINT_MOCK_ARGS[@]}" "test.pdsc"
 }
 
-test_check_schema_nourl() {
+test_check_schema_nourl_version() {
   cat > test.pdsc <<EOF
 <?xml version="1.0" encoding="UTF-8"?>
 <package schemaVersion="1.7.7" xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocation="PACK.xsd">
@@ -179,7 +183,54 @@ test_check_schema_nourl() {
 EOF
 
   UTILITY_CURL="curl_mock"
-  UTILITY_CURL_RESULT=6
+  UTILITY_CURL_RESULT=(6 0)
+  UTILITY_XMLLINT="xmllint_mock"
+    
+  result=$(check_schema test.pdsc 2>&1)
+  errorlevel=$?
+
+  echo "$result"
+
+  assertEquals 0 $errorlevel
+  assertContains "${result}" "Failed downloading file from URL 'PACK.xsd'."
+  assertContains "${result}" "curl_mock -sL https://github.com/Open-CMSIS-Pack/Open-CMSIS-Pack-Spec/blob/v1.7.7/schema/PACK.xsd"
+  assertNotContains "${result}" "Failed downloading file from URL 'https://github.com/Open-CMSIS-Pack/Open-CMSIS-Pack-Spec/blob/v1.7.7/schema/PACK.xsd'."
+  assertContains "${result}" "xmllint_mock" 
+}
+
+test_check_schema_nourl_main() {
+  cat > test.pdsc <<EOF
+<?xml version="1.0" encoding="UTF-8"?>
+<package schemaVersion="1.7.7" xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocation="PACK.xsd">
+</package>
+EOF
+
+  UTILITY_CURL="curl_mock"
+  UTILITY_CURL_RESULT=(6 6 0)
+  UTILITY_XMLLINT="xmllint_mock"
+    
+  result=$(check_schema test.pdsc 2>&1)
+  errorlevel=$?
+
+  echo "$result"
+
+  assertEquals 0 $errorlevel
+  assertContains "${result}" "Failed downloading file from URL 'PACK.xsd'."
+  assertContains "${result}" "Failed downloading file from URL 'https://github.com/Open-CMSIS-Pack/Open-CMSIS-Pack-Spec/blob/v1.7.7/schema/PACK.xsd'."
+  assertContains "${result}" "curl_mock -sL https://github.com/Open-CMSIS-Pack/Open-CMSIS-Pack-Spec/blob/main/schema/PACK.xsd"
+  assertNotContains "${result}" "Failed downloading file from URL 'https://github.com/Open-CMSIS-Pack/Open-CMSIS-Pack-Spec/blob/main/schema/PACK.xsd'."
+  assertContains "${result}" "xmllint_mock" 
+}
+
+test_check_schema_noschema() {
+  cat > test.pdsc <<EOF
+<?xml version="1.0" encoding="UTF-8"?>
+<package schemaVersion="1.7.7" xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocation="PACK.xsd">
+</package>
+EOF
+
+  UTILITY_CURL="curl_mock"
+  UTILITY_CURL_RESULT=(6 6 6)
   UTILITY_XMLLINT="xmllint_mock"
     
   result=$(check_schema test.pdsc 2>&1)
@@ -188,7 +239,9 @@ EOF
   echo "$result"
   
   assertNotEquals 0 $errorlevel
-  assertContains "${result}" "Failed downloading schema from 'PACK.xsd'"
+  assertContains "${result}" "Failed downloading file from URL 'PACK.xsd'."
+  assertContains "${result}" "Failed downloading file from URL 'https://github.com/Open-CMSIS-Pack/Open-CMSIS-Pack-Spec/blob/v1.7.7/schema/PACK.xsd'."
+  assertContains "${result}" "Failed downloading file from URL 'https://github.com/Open-CMSIS-Pack/Open-CMSIS-Pack-Spec/blob/main/schema/PACK.xsd'."
   assertNotContains "${result}" "xmllint_mock"
 }
 
