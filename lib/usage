@@ -4,10 +4,12 @@ cat << EOF
 Usage: $(basename $0) [-h] [-k] [-c <prefix>] [-v] [<pdsc>]
 
 Arguments:
-  -h, --help                 Print this usage message and exit.
-  -k, --keep                 Keep build directory.
-  -c, --changelog <prefix>   Generate changelog. Tags are filtered for <prefix>.
-  -v, --verbose              Print verbose log output.
-  <pdsc>                     The pack description to generate the pack for.
+  -h, --help                      Print this usage message and exit.
+  -k, --keep                      Keep build directory.
+  -c, --[no-]changelog <prefix>   Generate changelog. Tags are filtered for <prefix>.
+  --[no-]preprocess               Run custom preprocess function if implemented.
+  --[no-]postproces               Run custom postprocess function if implemented.
+  -v, --verbose                   Print verbose log output.
+  <pdsc>                          The pack description to generate the pack for.
 EOF
 }
