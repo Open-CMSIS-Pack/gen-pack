@@ -1,6 +1,6 @@
 #!/bin/bash
-# Version: 2.1
-# Date: 2022-08-09
+# Version: 2.2
+# Date: 2022-09-26
 # This bash script generates a CMSIS Software Pack:
 #
 
@@ -8,7 +8,6 @@ set -o pipefail
 
 # Set version of gen pack library
 REQUIRED_GEN_PACK_LIB="<pin lib version here>"
-
 
 # Set default command line arguments
 DEFAULT_ARGS=()
@@ -43,6 +42,19 @@ PACK_PATCH_FILES="
 # Specify addition argument to packchk
 PACKCHK_ARGS=()
 
+# custom pre-processing steps
+function preprocess() {
+  # add custom steps here to be executed
+  # before populating the pack build folder
+}
+
+# custom post-processing steps
+function postprocess() {
+  # add custom steps here to be executed
+  # after populating the pack build folder
+  # but before archiving the pack into output folder
+}
+
 ############ DO NOT EDIT BELOW ###########
 
 function install_lib() {
@@ -53,13 +65,17 @@ function install_lib() {
 }
 
 function load_lib() {
+  if [[ -d ${GEN_PACK_LIB} ]]; then
+    . "${GEN_PACK_LIB}/gen-pack"
+    return 0
+  fi
   local GLOBAL_LIB="/usr/local/share/gen-pack/${REQUIRED_GEN_PACK_LIB}"
   local USER_LIB="${HOME}/.local/share/gen-pack/${REQUIRED_GEN_PACK_LIB}"
   if [[ ! -d "${GLOBAL_LIB}" && ! -d "${USER_LIB}" ]]; then
     echo "Required gen_pack lib not found!" >&2
     install_lib "${REQUIRED_GEN_PACK_LIB}" "${USER_LIB}"
-  fi 
-  
+  fi
+
   if [[ -d "${GLOBAL_LIB}" ]]; then
     . "${GLOBAL_LIB}/gen-pack"
   elif [[ -d "${USER_LIB}" ]]; then

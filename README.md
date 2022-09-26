@@ -102,6 +102,8 @@ can use the same relative file names as within the `.pdsc` file.
 7. Add any required default command line arguments to the line `DEFAULT_ARGS=()`.
    For example, add `-c [<prefix>]` here to force creating release history from Git.
    The `<prefix>` is the version prefixed used for release tags if any.
+8. Put custom commands to be executed before/after populating the pack build folder
+   into the `preprocess` and `postprocess` functions.
 
 ## Usage
 
@@ -109,9 +111,11 @@ A `gen_pack.sh` script accepts the following command line flags and arguments:
 
 - `-h, --help`: Prints below usage message end exits with error level 1.
 - `-k, --keep`: Prevents the temporary build directory from being automatically deleted.
-- `-c, --changelog <prefix>`: Update the `<releases>` section in the `.pdsc` file with a generated history. The
-                              versions, dates and descriptions are inferred from Git tags. The `<prefix>` can be
-                              used to filter tags for release tags by the given string.
+- `-c, --[no-]changelog <prefix>`: Update the `<releases>` section in the `.pdsc` file with a generated history. The
+                                   versions, dates and descriptions are inferred from Git tags. The `<prefix>` can be
+                                   used to filter tags for release tags by the given string.
+- `--[no-]preprocess`: Run custom preprocess function if implemented.
+- `--[no-]postproces`: Run custom postprocess function if implemented.
 - `-v, --verbose`: Enable verbose log output such as full sub-commands being issues.
 
 ```sh
@@ -120,11 +124,13 @@ $ ./gen_pack.sh -h
 Usage: gen_pack.sh [-h] [-k] [-c <prefix>] [<pdsc>]
 
 Arguments:
-  -h, --help                 Print this usage message and exit.
-  -k, --keep                 Keep build directory.
-  -c, --changelog <prefix>   Generate changelog. Tags are filtered for <prefix>.
-  -v, --verbose              Print verbose log output.
-  <pdsc>                     The pack description to generate the pack for.
+  -h, --help                      Print this usage message and exit.
+  -k, --keep                      Keep build directory.
+  -c, --[no-]changelog <prefix>   Generate changelog. Tags are filtered for <prefix>.
+  --[no-]preprocess               Run the preprocess function if implemented in the enclosing script.
+  --[no-]postproces               Run the postprocess function if implemented in the enclosing script.
+  -v, --verbose                   Print verbose log output.
+  <pdsc>                          The pack description to generate the pack for.
 ```
 
 ## License

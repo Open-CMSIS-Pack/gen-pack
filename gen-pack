@@ -1,5 +1,5 @@
 
-GEN_PACK_LIB_VERSION="0.3.0"
+GEN_PACK_LIB_VERSION="0.4.0"
 GEN_PACK_LIB_SOURCE="$(realpath $(dirname ${BASH_SOURCE}))"
 
 shopt -s expand_aliases
@@ -102,8 +102,8 @@ function check_schema {
         echo "  Hint: Assure one of the following to get the schema check working." >&2
         echo "        - Provide PACK.XSD into '${CMSISSCHEMA}'." >&2
         echo "        - Provide schema URL in PDSC file's xs:noNamespaceSchemaLocation attribute." >&2
-        echo "        - Provide schema release tag version in PDSC file's schemaVersion attribute." >&2        
-        echo "        Available schema releases are listed on https://github.com/Open-CMSIS-Pack/Open-CMSIS-Pack-Spec/tags." >&2        
+        echo "        - Provide schema release tag version in PDSC file's schemaVersion attribute." >&2
+        echo "        Available schema releases are listed on https://github.com/Open-CMSIS-Pack/Open-CMSIS-Pack-Spec/tags." >&2
         echo " " >&2
         exit $errorlevel
     fi
@@ -147,33 +147,33 @@ function gen_pack {
   find_packchk
   find_xmllint
   find_sha1sum
-  if [ -n "${UTILITY_XMLLINT}" ]; then 
+  if [ -n "${UTILITY_XMLLINT}" ]; then
     find_curl
   fi
   if [ -n "${CHANGELOG+x}" ]; then
     find_git
     find_ghcli
   fi
-  
+
   echo " "
-  
+
   PACK_DESCRIPTION_FILE=$(locate_pdsc $@)
   echo "PDSC is ${PACK_DESCRIPTION_FILE}"
   echo " "
-  
+
   PACK_BASEDIR=$(dirname ${PACK_DESCRIPTION_FILE})
   PACK_VENDOR=$(pdsc_vendor "${PACK_DESCRIPTION_FILE}")
   PACK_NAME=$(pdsc_name "${PACK_DESCRIPTION_FILE}")
   echo "Generating Pack for $PACK_VENDOR.$PACK_NAME"
-  
+
   PACK_BUILD=$(realpath "${PACK_BASEDIR}/${PACK_BUILD}")
   PACK_OUTPUT=$(realpath "${PACK_BASEDIR}/${PACK_OUTPUT}")
   PACK_BUILD_DESCRIPTION_FILE="${PACK_BUILD}/$(basename ${PACK_DESCRIPTION_FILE})"
-  
+
   echo " via $PACK_BUILD"
   echo " to $PACK_OUTPUT"
   echo ""
-  
+
   if [ -d "$PACK_BUILD" ]; then
     rm -r "$PACK_BUILD"
   fi
@@ -181,24 +181,29 @@ function gen_pack {
   mkdir -p "$PACK_OUTPUT"
 
   pushd ${PACK_BASEDIR} >/dev/null
-   
+
+  [[ ${PREPROCESS} == 1 && "$(type -t preprocess)" == "function" ]] && preprocess
+
   if [ -n "${CHANGELOG+x}" ]; then
     pdsc_update_releases "${PACK_DESCRIPTION_FILE}" "${PACK_BUILD_DESCRIPTION_FILE}" "${CHANGELOG}"
   else
     cp "${PACK_DESCRIPTION_FILE}" "${PACK_BUILD_DESCRIPTION_FILE}"
   fi
-  
+
   add_dirs "${PACK_BUILD}"
   add_files "${PACK_BUILD}"
   delete_files "${PACK_BUILD}"
   apply_patches "${PACK_BUILD}"
-  
+
   check_schema "${PACK_BUILD_DESCRIPTION_FILE}"
   check_pack "${PACK_BUILD_DESCRIPTION_FILE}"
   create_sha1 "$PACK_BUILD" $PACK_VENDOR $PACK_NAME
+
+  [[ ${POSTPROCESS} == 1 && "$(type -t postprocess)" == "function" ]] && postprocess
+
   archive "$PACK_BUILD" "$PACK_OUTPUT/$(cat "$PACK_OUTPUT/PackName.txt")"
-  
-  if [[ $KEEP == 0 ]]; then 
+
+  if [[ $KEEP == 0 ]]; then
     echo "Cleaning up $PACK_BUILD..."
     rm -rf "$PACK_BUILD"
     rm -f "$PACK_OUTPUT/PackName.txt"

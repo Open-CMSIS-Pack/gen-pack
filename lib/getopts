@@ -1,6 +1,8 @@
 
 function getopts {
   KEEP=0
+  PREPROCESS=1
+  POSTPROCESS=1
   POSITIONAL=()
   while [[ $# -gt 0 ]]
   do
@@ -24,6 +26,18 @@ function getopts {
       ;;
       '-v','--verbose')
         VERBOSE=1
+      ;;
+      '--preprocess')
+        PREPROCESS=1
+      ;;
+      '--no-preprocess')
+        PREPROCESS=0
+      ;;
+      '--postprocess')
+        POSTPROCESS=1
+      ;;
+      '--no-postprocess')
+        POSTPROCESS=0
       ;;
       *)    # unknown option
         POSITIONAL+=("$1") # save it in an array for later
