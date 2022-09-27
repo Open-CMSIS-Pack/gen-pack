@@ -5,7 +5,7 @@ Usage: $(basename $0) [-h] [-k] [-c <prefix>] [-v] [<pdsc>]
 
 Arguments:
   -h, --help                      Print this usage message and exit.
-  -k, --keep                      Keep build directory.
+  -k, --[no-]keep                 Keep build directory.
   -c, --[no-]changelog <prefix>   Generate changelog. Tags are filtered for <prefix>.
   --[no-]preprocess               Run custom preprocess function if implemented.
   --[no-]postproces               Run custom postprocess function if implemented.

@@ -1,8 +1,9 @@
 
 function getopts {
-  KEEP=0
-  PREPROCESS=1
-  POSTPROCESS=1
+  KEEP=${KEEP:-0}
+  VERBOSE=${VERBOSE:-0}
+  PREPROCESS=${PREPROCESS:-1}
+  POSTPROCESS=${POSTPROCESS:-1}
   POSITIONAL=()
   while [[ $# -gt 0 ]]
   do
@@ -24,7 +25,7 @@ function getopts {
       '--no-changelog')
         unset CHANGELOG
       ;;
-      '-v','--verbose')
+      '-v'|'--verbose')
         VERBOSE=1
       ;;
       '--preprocess')

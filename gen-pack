@@ -1,5 +1,5 @@
 
-GEN_PACK_LIB_VERSION="0.4.0"
+GEN_PACK_LIB_VERSION="0.5.0"
 GEN_PACK_LIB_SOURCE="$(realpath $(dirname ${BASH_SOURCE}))"
 
 shopt -s expand_aliases
@@ -119,8 +119,22 @@ function check_schema {
 }
 
 function check_pack {
-  echo_v "\"${UTILITY_PACKCHK}\" \"$1\" -i \"${CMSIS_PACK_ROOT}/.Web/ARM.CMSIS.pdsc\" -n \"${PACK_OUTPUT}/PackName.txt\"" ${PACKCHK_ARGS[@]}
-  "${UTILITY_PACKCHK}" "$1" -i "${CMSIS_PACK_ROOT}/.Web/ARM.CMSIS.pdsc" -n "${PACK_OUTPUT}/PackName.txt" ${PACKCHK_ARGS[@]}
+  PACKCHK_DEPS="${PACKCHK_DEPS:-ARM.CMSIS.pdsc}"
+  local dependencies=$(grep -Pio "<package\s+\Kvendor=\"[^\"]+\"\s+name=\"[^\"]+\"" "$1" \
+   | sed -E 's/vendor="([^"]*)"[ ]*name="([^"]*)"/\1.\2.pdsc/')
+  local include=""
+  local webdir="${CMSIS_PACK_ROOT}/.Web"
+  if [ ! -d "${webdir}" ]; then
+    mkdir -p "${webdir}"
+  fi
+  for dep in ${PACKCHK_DEPS} ${dependencies}; do
+    if [ ! -f "${webdir}/${dep}" ]; then
+      curl_download "https://www.keil.com/pack/${dep}" "${webdir}/${dep}"
+    fi
+    include="${include} -i ${webdir}/${dep}"
+  done
+  echo_v "\"${UTILITY_PACKCHK}\" \"$1\" ${include} -n \"${PACK_OUTPUT}/PackName.txt\"" ${PACKCHK_ARGS[@]}
+  "${UTILITY_PACKCHK}" "$1" ${include} -n "${PACK_OUTPUT}/PackName.txt" ${PACKCHK_ARGS[@]}
   local errorlevel=$?
   if [ $errorlevel -ne 0 ]; then
     echo "build aborted: pack check failed" >&2
@@ -157,7 +171,7 @@ function gen_pack {
 
   echo " "
 
-  PACK_DESCRIPTION_FILE=$(locate_pdsc $@)
+  PACK_DESCRIPTION_FILE=$(locate_pdsc "$1")
   echo "PDSC is ${PACK_DESCRIPTION_FILE}"
   echo " "
 
@@ -170,15 +184,15 @@ function gen_pack {
   PACK_OUTPUT=$(realpath "${PACK_BASEDIR}/${PACK_OUTPUT}")
   PACK_BUILD_DESCRIPTION_FILE="${PACK_BUILD}/$(basename ${PACK_DESCRIPTION_FILE})"
 
-  echo " via $PACK_BUILD"
-  echo " to $PACK_OUTPUT"
+  echo " via ${PACK_BUILD}"
+  echo " to ${PACK_OUTPUT}"
   echo ""
 
-  if [ -d "$PACK_BUILD" ]; then
-    rm -r "$PACK_BUILD"
+  if [ -d "${PACK_BUILD}" ]; then
+    rm -r "${PACK_BUILD}"
   fi
-  mkdir -p "$PACK_BUILD"
-  mkdir -p "$PACK_OUTPUT"
+  mkdir -p "${PACK_BUILD}"
+  mkdir -p "${PACK_OUTPUT}"
 
   pushd ${PACK_BASEDIR} >/dev/null
 
@@ -197,15 +211,15 @@ function gen_pack {
 
   check_schema "${PACK_BUILD_DESCRIPTION_FILE}"
   check_pack "${PACK_BUILD_DESCRIPTION_FILE}"
-  create_sha1 "$PACK_BUILD" $PACK_VENDOR $PACK_NAME
+  create_sha1 "${PACK_BUILD}" "${PACK_VENDOR}" "${PACK_NAME}"
 
   [[ ${POSTPROCESS} == 1 && "$(type -t postprocess)" == "function" ]] && postprocess
 
-  archive "$PACK_BUILD" "$PACK_OUTPUT/$(cat "$PACK_OUTPUT/PackName.txt")"
+  archive "${PACK_BUILD}" "${PACK_OUTPUT}/$(cat "${PACK_OUTPUT}/PackName.txt")"
 
   if [[ $KEEP == 0 ]]; then
-    echo "Cleaning up $PACK_BUILD..."
-    rm -rf "$PACK_BUILD"
-    rm -f "$PACK_OUTPUT/PackName.txt"
+    echo "Cleaning up ${PACK_BUILD}..."
+    rm -rf "${PACK_BUILD}"
+    rm -f "${PACK_OUTPUT}/PackName.txt"
   fi
 }
