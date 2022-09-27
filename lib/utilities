@@ -25,10 +25,9 @@ function find_utility {
       fi
     done
     return 1
-  else
-    realpath -q "$UTILS"
-    return $?
   fi
+  realpath -q "$UTILS"
+  return $?
 }
 
 function get_os_type {
@@ -51,7 +50,7 @@ function get_os_type {
 }
 
 function find_pack_root {
-  if [[ -z "${CMSIS_PACK_ROOT}" || ! -d "${CMSIS_PACK_ROOT}" ]]; then 
+  if [[ -z "${CMSIS_PACK_ROOT}" || ! -d "${CMSIS_PACK_ROOT}" ]]; then
     local OS=$(uname -s)
     case $OS in
       'Linux'|'Darwin')
@@ -65,7 +64,7 @@ function find_pack_root {
         exit 1
         ;;
     esac
-    if [[ -d "${DEFAULT_CMSIS_PACK_ROOT}" ]]; then 
+    if [[ -d "${DEFAULT_CMSIS_PACK_ROOT}" ]]; then
       CMSIS_PACK_ROOT="${DEFAULT_CMSIS_PACK_ROOT}"
     else
       echo "Error: Cannot find CMSIS_PACK_ROOT" >&2
@@ -89,7 +88,7 @@ function find_packchk {
     report_utility "PackChk" "$UTILITY_PACKCHK"
     return 0
   fi
-  
+
   echo "Error: No packchk utility found" >&2
   echo "Action: Add packchk to your path" >&2
   echo "Hint: Included in CMSIS Pack:"
@@ -109,14 +108,14 @@ function find_zip {
     UTILITY_ZIP_TYPE="7zip"
     UTILITY_ZIP="${programfiles}/7-Zip/7z"
     report_utility "Zip" "$UTILITY_ZIP"
-    return 0  
+    return 0
   elif type -a zip 1>/dev/null 2>/dev/null; then
     UTILITY_ZIP_TYPE="zip"
     UTILITY_ZIP="$(which zip)"
     report_utility "Zip" "$UTILITY_ZIP"
     return 0
   fi
-  
+
   echo "Error: No zip or 7zip utility found" >&2
   echo "Action: Add zip or 7zip to your path" >&2
   echo " "
@@ -129,7 +128,7 @@ function find_xmllint {
     report_utility "XML-Lint" "$UTILITY_XMLLINT"
     return 0
   fi
-  
+
   echo "Error: No xmllint utility found" >&2
   echo "Action: Add xmllint to your path" >&2
   echo " "
@@ -142,7 +141,7 @@ function find_curl {
     report_utility "Curl" "$UTILITY_CURL"
     return 0
   fi
-  
+
   echo "Error: No curl utility found" >&2
   echo "Action: Add curl to your path" >&2
   echo " "
@@ -155,7 +154,7 @@ function find_git {
     report_utility "Git" "$UTILITY_GIT"
     return 0
   fi
-  
+
   echo "Error: No git utility found" >&2
   echo "Action: Add git to your path" >&2
   echo " "
@@ -164,14 +163,24 @@ function find_git {
 
 function find_ghcli {
   if type -a gh 1>/dev/null 2>/dev/null; then
-    UTILITY_GHCLI="$(which gh)"
+    UTILITY_GHCLI="$(find_utility gh)"
     report_utility "GitHub CLI" "$UTILITY_GHCLI"
-    return 0
+    status=$("${UTILITY_GHCLI}" auth status 2>&1)
+    result=$?
+    echo_v "$status"
+    if [[ $result == 0 ]]; then
+      return 0
+    fi
+    echo "Warning: GitHub CLI is not authenticated with GitHub!" >&2
+    echo "Action: Run gh auth login" >&2
+    echo " "
+    return 1
   fi
-  
+
   echo "Info: No GitHub CLI utility found" >&2
   echo "Action: Add gh to your path" >&2
   echo " "
+  return 1
 }
 
 function find_sha1sum {
@@ -180,7 +189,7 @@ function find_sha1sum {
     report_utility "sha1sum" "$UTILITY_SHA1SUM"
     return 0
   fi
-  
+
   echo "Error: No git utility found" >&2
   echo "Action: Add git to your path" >&2
   echo " "
@@ -193,7 +202,7 @@ function find_linkchecker {
     report_utility "linkchecker" "$UTILITY_LINKCHECKER"
     return 0
   fi
-  
+
   echo "Error: No linkchecker utility found" >&2
   echo "Action: Add linkchecker to your path" >&2
   echo " "
@@ -245,7 +254,7 @@ function check_links {
     shift # past argument
   done
   set -- "${args[@]}"
-  
+
   if [ ! -f "$1" ]; then
     if [ -z "$1" ]; then
       echo "No index file provided!" >&2
@@ -263,7 +272,7 @@ function check_links {
     fi
     return 1
   fi
-  
+
   "${UTILITY_LINKCHECKER}" -F csv --timeout $timeout --check-extern "$1"
 
   OFS=$IFS
