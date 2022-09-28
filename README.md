@@ -90,19 +90,25 @@ All file references are evaluated relative to the `.pdsc` files parent directory
 can use the same relative file names as within the `.pdsc` file.
 
 1. Put the [template](template/gen_pack.sh) into the root of your package source.
-2. Replace `<pin lib version here>` with the version of the library you want to use, e.g. `1.0.0`.
-3. Replace `<list directories here>` with a list of directories that shall be included in the pack.
-   The directories are included recursively with all contained files. If left empty (i.e. `PACK_DIRS=""`),
-   all folders next to the `.pdsc` file are copied.
-4. Replace `<list files here>` with a list of files that shall be included in the pack.
-   This can be used as an alternative to including whole directories.
-5. Replace `<list files here>` with a list of files to be removed again.
-   This can be used to copy whole directories and remove files afterwards.
-6. Replace `<list patches here>` with a list of patches that shall be applied.
-7. Add any required default command line arguments to the line `DEFAULT_ARGS=()`.
+1. Replace `<pin lib version here>` with the version of the library you want to use, e.g. `1.0.0`.
+1. Add any required default command line arguments to the line `DEFAULT_ARGS=()`.
    For example, add `-c [<prefix>]` here to force creating release history from Git.
    The `<prefix>` is the version prefixed used for release tags if any.
-8. Put custom commands to be executed before/after populating the pack build folder
+1. Replace `<list directories here>` with a list of directories that shall be included in the pack.
+   The directories are included recursively with all contained files. If left empty (i.e. `PACK_DIRS=""`),
+   all folders next to the `.pdsc` file are copied.
+1. Replace `<list files here>` with a list of files that shall be included in the pack.
+   This can be used as an alternative to including whole directories.
+1. Replace `<list files here>` with a list of files to be removed again.
+   This can be used to copy whole directories and remove files afterwards.
+1. Replace `<list patches here>` with a list of patches that shall be applied.
+1. Add additional required command line arguments for packchk to the line `PACKCHK_ARGS=()`.
+   For example, add `-x M353` to suppress this warning.
+1. Replace `<list pdsc files here>` with additional `.pdsc` files required to resolve references into other packs.
+   Packs specified in the `<requirements>` section are considered automatically and do not need to be listed.
+   For example, add `ARM.CMSIS.pdsc` to include this file during packchk. The `.pdsc` files are referenced from
+   `${CMSIS_PACK_ROOT}/.Web` folder. Missing files are downloaded.
+1. Put custom commands to be executed before/after populating the pack build folder
    into the `preprocess` and `postprocess` functions.
 
 ## Usage

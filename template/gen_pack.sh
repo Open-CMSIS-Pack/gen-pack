@@ -1,6 +1,6 @@
 #!/bin/bash
-# Version: 2.2
-# Date: 2022-09-26
+# Version: 2.3
+# Date: 2022-09-28
 # This bash script generates a CMSIS Software Pack:
 #
 
@@ -41,6 +41,11 @@ PACK_PATCH_FILES="
 
 # Specify addition argument to packchk
 PACKCHK_ARGS=()
+
+# Specify additional dependencies for packchk
+PACKCHK_DEPS="
+    <list pdsc files here>
+"
 
 # custom pre-processing steps
 function preprocess() {

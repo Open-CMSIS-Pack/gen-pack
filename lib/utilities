@@ -64,13 +64,14 @@ function find_pack_root {
         exit 1
         ;;
     esac
-    if [[ -d "${DEFAULT_CMSIS_PACK_ROOT}" ]]; then
-      CMSIS_PACK_ROOT="${DEFAULT_CMSIS_PACK_ROOT}"
-    else
-      echo "Error: Cannot find CMSIS_PACK_ROOT" >&2
-      echo "Action: Set CMSIS_PACK_ROOT to point to your pack folder" >&2
-      exit 1
-    fi
+    CMSIS_PACK_ROOT="${DEFAULT_CMSIS_PACK_ROOT}"
+  else
+    CMSIS_PACK_ROOT="${CMSIS_PACK_ROOT//\\//}"
+  fi
+  if [[ ! -d "${CMSIS_PACK_ROOT}" ]]; then
+    echo "Error: Cannot find CMSIS_PACK_ROOT" >&2
+    echo "Action: Set CMSIS_PACK_ROOT to point to your pack folder" >&2
+    exit 1
   fi
   echo "CMSIS-Pack root is ${CMSIS_PACK_ROOT}"
 }

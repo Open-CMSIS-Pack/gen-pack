@@ -6,9 +6,9 @@ setUp() {
   TESTDIR="${SHUNIT_TMPDIR}/${_shunit_test_}"
   mkdir -p "${TESTDIR}"
   pushd "${TESTDIR}" >/dev/null
-  
+
   PACK_BUILD="$(realpath ./build)"
-  PACK_OUTPUT="$(realpath ./output)"  
+  PACK_OUTPUT="$(realpath ./output)"
 }
 
 tearDown() {
@@ -38,14 +38,14 @@ createTestData() {
 
 test_add_dirs() {
   createTestData
-  
+
   # run add_dirs
   PACK_DIRS="
     input1
     input2
   "
   add_dirs "${PACK_BUILD}"
-  
+
   assertTrue  "[ -d \"${PACK_BUILD}/input1\" ]"
   assertTrue  "[ -f \"${PACK_BUILD}/input1/file11.txt\" ]"
   assertTrue  "[ -f \"${PACK_BUILD}/input1/file12.txt\" ]"
@@ -53,17 +53,17 @@ test_add_dirs() {
   assertTrue  "[ -d \"${PACK_BUILD}/input2\" ]"
   assertTrue  "[ -f \"${PACK_BUILD}/input2/file21.txt\" ]"
   assertTrue  "[ -f \"${PACK_BUILD}/input2/file22.txt\" ]"
-  assertTrue  "[ -f \"${PACK_BUILD}/input2/file23.txt\" ]" 
+  assertTrue  "[ -f \"${PACK_BUILD}/input2/file23.txt\" ]"
   assertFalse "[ -d \"${PACK_BUILD}/input3\" ]"
 }
 
 test_add_dirs_default() {
   createTestData
-  
+
   # run add_dirs
   PACK_DIRS=""
   add_dirs "${PACK_BUILD}"
-  
+
   assertTrue  "[ -d \"${PACK_BUILD}/input1\" ]"
   assertTrue  "[ -f \"${PACK_BUILD}/input1/file11.txt\" ]"
   assertTrue  "[ -f \"${PACK_BUILD}/input1/file12.txt\" ]"
@@ -71,24 +71,24 @@ test_add_dirs_default() {
   assertTrue  "[ -d \"${PACK_BUILD}/input2\" ]"
   assertTrue  "[ -f \"${PACK_BUILD}/input2/file21.txt\" ]"
   assertTrue  "[ -f \"${PACK_BUILD}/input2/file22.txt\" ]"
-  assertTrue  "[ -f \"${PACK_BUILD}/input2/file23.txt\" ]" 
+  assertTrue  "[ -f \"${PACK_BUILD}/input2/file23.txt\" ]"
   assertTrue  "[ -d \"${PACK_BUILD}/input3\" ]"
   assertTrue  "[ -f \"${PACK_BUILD}/input3/file31.txt\" ]"
   assertTrue  "[ -f \"${PACK_BUILD}/input3/file32.txt\" ]"
-  assertTrue  "[ -f \"${PACK_BUILD}/input3/file33.txt\" ]" 
+  assertTrue  "[ -f \"${PACK_BUILD}/input3/file33.txt\" ]"
 }
 
 
 test_add_files() {
   createTestData
-  
+
   # run add_dirs
   PACK_BASE_FILES="
     input1/file12.txt
     input3/file31.txt
   "
   add_files "${PACK_BUILD}"
-  
+
   assertFalse "[ -f \"${PACK_BUILD}/input1/file11.txt\" ]"
   assertTrue  "[ -f \"${PACK_BUILD}/input1/file12.txt\" ]"
   assertFalse "[ -f \"${PACK_BUILD}/input1/file13.txt\" ]"
@@ -96,16 +96,16 @@ test_add_files() {
   assertTrue  "[ -f \"${PACK_BUILD}/input3/file31.txt\" ]"
   assertFalse "[ -f \"${PACK_BUILD}/input3/file32.txt\" ]"
   assertFalse "[ -f \"${PACK_BUILD}/input3/file33.txt\" ]"
-  
+
 }
 
 test_delete_files() {
   createTestData
-  
+
   cp -r --parents "input1" "${PACK_BUILD}"
   cp -r --parents "input2" "${PACK_BUILD}"
   cp -r --parents "input3" "${PACK_BUILD}"
-  
+
   PACK_DELETE_FILES="
     input1/file11.txt
     input2/file22.txt
@@ -136,12 +136,12 @@ test_apply_patches() {
 -File 11
 +File 11 extended version
 EOF
-  
+
   PACK_PATCH_FILES="
     file11.patch
   "
   apply_patches "${PACK_BUILD}"
-  
+
   assertEquals "$(cat "${PACK_BUILD}/input1/file11.txt")" "File 11 extended version"
   assertEquals "$(cat "${PACK_BUILD}/input1/file12.txt")" "File 12"
 }
@@ -170,7 +170,7 @@ EOF
   UTILITY_CURL="curl_mock"
   UTILITY_XMLLINT="xmllint_mock"
   check_schema test.pdsc
-  
+
   assertContains "${CURL_MOCK_ARGS[@]}" "https://url.to/schema/PACK.xsd"
   assertContains "${XMLLINT_MOCK_ARGS[@]}" "test.pdsc"
 }
@@ -185,7 +185,7 @@ EOF
   UTILITY_CURL="curl_mock"
   UTILITY_CURL_RESULT=(6 0)
   UTILITY_XMLLINT="xmllint_mock"
-    
+
   result=$(check_schema test.pdsc 2>&1)
   errorlevel=$?
 
@@ -195,7 +195,7 @@ EOF
   assertContains "${result}" "Failed downloading file from URL 'PACK.xsd'."
   assertContains "${result}" "curl_mock -sL https://github.com/Open-CMSIS-Pack/Open-CMSIS-Pack-Spec/blob/v1.7.7/schema/PACK.xsd"
   assertNotContains "${result}" "Failed downloading file from URL 'https://github.com/Open-CMSIS-Pack/Open-CMSIS-Pack-Spec/blob/v1.7.7/schema/PACK.xsd'."
-  assertContains "${result}" "xmllint_mock" 
+  assertContains "${result}" "xmllint_mock"
 }
 
 test_check_schema_nourl_main() {
@@ -208,7 +208,7 @@ EOF
   UTILITY_CURL="curl_mock"
   UTILITY_CURL_RESULT=(6 6 0)
   UTILITY_XMLLINT="xmllint_mock"
-    
+
   result=$(check_schema test.pdsc 2>&1)
   errorlevel=$?
 
@@ -219,7 +219,7 @@ EOF
   assertContains "${result}" "Failed downloading file from URL 'https://github.com/Open-CMSIS-Pack/Open-CMSIS-Pack-Spec/blob/v1.7.7/schema/PACK.xsd'."
   assertContains "${result}" "curl_mock -sL https://github.com/Open-CMSIS-Pack/Open-CMSIS-Pack-Spec/blob/main/schema/PACK.xsd"
   assertNotContains "${result}" "Failed downloading file from URL 'https://github.com/Open-CMSIS-Pack/Open-CMSIS-Pack-Spec/blob/main/schema/PACK.xsd'."
-  assertContains "${result}" "xmllint_mock" 
+  assertContains "${result}" "xmllint_mock"
 }
 
 test_check_schema_noschema() {
@@ -232,12 +232,12 @@ EOF
   UTILITY_CURL="curl_mock"
   UTILITY_CURL_RESULT=(6 6 6)
   UTILITY_XMLLINT="xmllint_mock"
-    
+
   result=$(check_schema test.pdsc 2>&1)
   errorlevel=$?
-  
+
   echo "$result"
-  
+
   assertNotEquals 0 $errorlevel
   assertContains "${result}" "Failed downloading file from URL 'PACK.xsd'."
   assertContains "${result}" "Failed downloading file from URL 'https://github.com/Open-CMSIS-Pack/Open-CMSIS-Pack-Spec/blob/v1.7.7/schema/PACK.xsd'."
@@ -252,27 +252,66 @@ packchk_mock() {
 
 test_check_pack() {
   touch test.pdsc
-  
+
   CMSIS_PACK_ROOT="path/to/packs"
   UTILITY_PACKCHK="packchk_mock"
+  UTILITY_CURL="curl_mock"
   check_pack test.pdsc
-  
-  assertContains "${PACKCHK_MOCK_ARGS[@]}" "test.pdsc"  
-  assertContains "${PACKCHK_MOCK_ARGS[@]}" "path/to/packs/.Web/ARM.CMSIS.pdsc"  
+
+  assertContains "${PACKCHK_MOCK_ARGS[@]}" "test.pdsc"
+  assertContains "${PACKCHK_MOCK_ARGS[@]}" "path/to/packs/.Web/ARM.CMSIS.pdsc"
 }
 
 test_check_pack_with_args() {
   touch test.pdsc
-  
+
   CMSIS_PACK_ROOT="path/to/packs"
   UTILITY_PACKCHK="packchk_mock"
+  UTILITY_CURL="curl_mock"
   PACKCHK_ARGS=(-x M300)
   check_pack test.pdsc
-  
-  assertContains "${PACKCHK_MOCK_ARGS[@]}" "test.pdsc"  
-  assertContains "${PACKCHK_MOCK_ARGS[@]}" "path/to/packs/.Web/ARM.CMSIS.pdsc"  
-  assertContains "${PACKCHK_MOCK_ARGS[@]}" "-x"  
-  assertContains "${PACKCHK_MOCK_ARGS[@]}" "M300"  
+
+  assertContains "${PACKCHK_MOCK_ARGS[@]}" "test.pdsc"
+  assertContains "${PACKCHK_MOCK_ARGS[@]}" "path/to/packs/.Web/ARM.CMSIS.pdsc"
+  assertContains "${PACKCHK_MOCK_ARGS[@]}" "-x"
+  assertContains "${PACKCHK_MOCK_ARGS[@]}" "M300"
+}
+
+test_check_pack_with_reqs() {
+  cat > test.pdsc <<EOF
+    <package vendor="Keil" name="ARM_Compiler" version="1.6.2-0"/>
+EOF
+
+  CMSIS_PACK_ROOT="path/to/packs"
+  UTILITY_PACKCHK="packchk_mock"
+  UTILITY_CURL="curl_mock"
+  check_pack test.pdsc
+
+  assertContains "${PACKCHK_MOCK_ARGS[@]}" "test.pdsc"
+  assertContains "${PACKCHK_MOCK_ARGS[@]}" "path/to/packs/.Web/ARM.CMSIS.pdsc"
+  assertContains "${PACKCHK_MOCK_ARGS[@]}" "path/to/packs/.Web/Keil.ARM_Compiler.pdsc"
+
+  result=$(check_pack test.pdsc)
+  assertContains "${result}" "curl_mock -sL https://www.keil.com/pack/ARM.CMSIS.pdsc --output path/to/packs/.Web/ARM.CMSIS.pdsc"
+  assertContains "${result}" "curl_mock -sL https://www.keil.com/pack/Keil.ARM_Compiler.pdsc --output path/to/packs/.Web/Keil.ARM_Compiler.pdsc"
+}
+
+test_check_pack_with_deps() {
+  touch test.pdsc
+
+  CMSIS_PACK_ROOT="path/to/packs"
+  UTILITY_PACKCHK="packchk_mock"
+  UTILITY_CURL="curl_mock"
+  PACKCHK_DEPS="Keil.ARM_Compiler.pdsc"
+  check_pack test.pdsc
+
+  assertContains "${PACKCHK_MOCK_ARGS[@]}" "test.pdsc"
+  assertNotContains "${PACKCHK_MOCK_ARGS[@]}" "path/to/packs/.Web/ARM.CMSIS.pdsc"
+  assertContains "${PACKCHK_MOCK_ARGS[@]}" "path/to/packs/.Web/Keil.ARM_Compiler.pdsc"
+
+  result=$(check_pack test.pdsc)
+  assertNotContains "${result}" "curl_mock -sL https://www.keil.com/pack/ARM.CMSIS.pdsc --output path/to/packs/.Web/ARM.CMSIS.pdsc"
+  assertContains "${result}" "curl_mock -sL https://www.keil.com/pack/Keil.ARM_Compiler.pdsc --output path/to/packs/.Web/Keil.ARM_Compiler.pdsc"
 }
 
 test_create_sha1() {
@@ -281,9 +320,9 @@ test_create_sha1() {
   cp -r --parents "input1" "${PACK_BUILD}"
 
   UTILITY_SHA1SUM="sha1sum"
-    
+
   create_sha1 "${PACK_BUILD}" "ARM" "GenPack"
-  
+
   assertTrue     "[ -f \"${PACK_BUILD}/ARM.GenPack.sha1\" ]"
   assertContains "$(cat "${PACK_BUILD}/ARM.GenPack.sha1")" "./input1/file11.txt"
   assertContains "$(cat "${PACK_BUILD}/ARM.GenPack.sha1")" "./input1/file12.txt"
