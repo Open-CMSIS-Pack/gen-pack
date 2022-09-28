@@ -25,10 +25,9 @@ function find_utility {
       fi
     done
     return 1
-  else
-    realpath -q "$UTILS"
-    return $?
   fi
+  realpath -q "$UTILS"
+  return $?
 }
 
 function get_os_type {
@@ -165,14 +164,24 @@ function find_git {
 
 function find_ghcli {
   if type -a gh 1>/dev/null 2>/dev/null; then
-    UTILITY_GHCLI="$(which gh)"
+    UTILITY_GHCLI="$(find_utility gh)"
     report_utility "GitHub CLI" "$UTILITY_GHCLI"
-    return 0
+    status=$("${UTILITY_GHCLI}" auth status 2>&1)
+    result=$?
+    echo_v "$status"
+    if [[ $result == 0 ]]; then
+      return 0
+    fi
+    echo "Warning: GitHub CLI is not authenticated with GitHub!" >&2
+    echo "Action: Run gh auth login" >&2
+    echo " "
+    return 1
   fi
 
   echo "Info: No GitHub CLI utility found" >&2
   echo "Action: Add gh to your path" >&2
   echo " "
+  return 1
 }
 
 function find_sha1sum {

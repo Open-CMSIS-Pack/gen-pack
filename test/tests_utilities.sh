@@ -28,16 +28,16 @@ setUp() {
   VERBOSE=1
   TESTDIR="${SHUNIT_TMPDIR}/${_shunit_test_}"
   mkdir -p "${TESTDIR}"
-  pushd "${TESTDIR}" >/dev/null  
+  pushd "${TESTDIR}" >/dev/null
 
   OLD_PATH="$PATH"
   OLD_HOME="${HOME}"
   OLD_LOCALAPPDATA="${LOCALAPPDATA}"
-  
+
   PATH="$(pwd):$PATH"
   HOME="$(pwd)"
   LOCALAPPDATA="$(pwd)"
-  
+
   unset CMSIS_PACK_ROOT
 }
 
@@ -96,9 +96,9 @@ test_get_os_type() {
 test_find_pack_root_by_env() {
   CMSIS_PACK_ROOT="$(pwd)/.packs"
   mkdir -p "${CMSIS_PACK_ROOT}"
-  
+
   find_pack_root
-  
+
   assertEquals "${CMSIS_PACK_ROOT}" "$(pwd)/.packs"
 }
 
@@ -114,12 +114,12 @@ test_find_pack_root_by_default() {
       echo "Error: unrecognized OS $OS"
       exit 1
       ;;
-  esac  
-  
+  esac
+
   mkdir -p "${DEFAULT_CMSIS_PACK_ROOT}"
-  
+
   find_pack_root
-  
+
   assertEquals "${DEFAULT_CMSIS_PACK_ROOT}" "${CMSIS_PACK_ROOT}"
 }
 
@@ -131,14 +131,14 @@ EOF
   chmod +x packchk
 
   find_packchk
-  
+
   assertEquals "$(pwd)/packchk" "${UTILITY_PACKCHK}"
 }
 
 test_find_packchk_by_pack() {
   CMSIS_PACK_ROOT="$(pwd)/.arm/Packs"
   local toolsdir="${CMSIS_PACK_ROOT}/ARM/CMSIS/5.9.0/CMSIS/Utilities/$(get_os_type)"
-  
+
   mkdir -p "${toolsdir}"
 
   cat > "${toolsdir}/packchk" <<EOF
@@ -148,9 +148,9 @@ EOF
   chmod +x "${toolsdir}/packchk"
 
   remove_from_path "packchk"
-  
+
   find_packchk
-  
+
   assertEquals "${toolsdir}/packchk" "${UTILITY_PACKCHK}"
 }
 
@@ -163,9 +163,9 @@ test_find_zip_7zip_env() {
 echo "7z \$*"
 EOF
   chmod +x "7z"
-  
+
   find_zip
-  
+
   assertEquals "$(pwd)/7z" "${UTILITY_ZIP}"
   assertEquals "7zip" "${UTILITY_ZIP_TYPE}"
 }
@@ -184,9 +184,9 @@ test_find_zip_7zip_default() {
 echo "7z \$*"
 EOF
   chmod +x "${zipdir}/7z"
-      
+
   find_zip
-  
+
   assertEquals "${zipdir}/7z" "${UTILITY_ZIP}"
   assertEquals "7zip" "${UTILITY_ZIP_TYPE}"
 }
@@ -203,7 +203,7 @@ EOF
   chmod +x "zip"
 
   find_zip
-  
+
   assertEquals "$(pwd)/zip" "${UTILITY_ZIP}"
   assertEquals "zip" "${UTILITY_ZIP_TYPE}"
 }
@@ -217,11 +217,11 @@ test_archive_7zip() {
 echo "7z \$*"
 EOF
   chmod +x "7z"
-  
+
   mkdir "input"
-  
+
   output=$(archive "$(pwd)/input" "$(pwd)/output/test.zip")
-  
+
   assertContains "$output" "$(pwd)/input"
   assertContains "$output" "7z a -tzip $(pwd)/output/test.zip"
 }
@@ -247,7 +247,7 @@ EOF
 
   UTILITY_LINKCHECKER="linkchecker_mock"
   check_links "index.html" "src" --timeout 10 2> results.csv
-    
+
   assertContains "${LINKCHECKER_MOCK_ARGS[*]}" "index.html"
   assertContains "${LINKCHECKER_MOCK_ARGS[*]}" "--timeout 10"
   assertEquals \
@@ -258,7 +258,7 @@ EOF
 test_find_utility() {
   mkdir util-1.0
   mkdir util-2.0
-  
+
   cat > util-1.0/util <<EOF
 #!/bin/sh
 echo "1.0.0"
@@ -273,11 +273,11 @@ EOF
   chmod +x util-2.0/util
 
   PATH="$(pwd)/util-1.0:$(pwd)/util-2.0:$PATH"
-    
+
   UTIL=$(find_utility "util")
   assertEquals 0 $?
   assertEquals "$(realpath $(pwd))/util-1.0/util" "$UTIL"
-  
+
   UTIL=$(find_utility "util" "-v" "1.0.0")
   assertEquals 0 $?
   assertEquals "$(realpath $(pwd))/util-1.0/util" "$UTIL"
@@ -290,7 +290,7 @@ EOF
 test_find_utility_version_na() {
   mkdir util-1.0
   mkdir util-2.0
-  
+
   cat > util-1.0/util <<EOF
 #!/bin/sh
 echo "1.0.0"
@@ -305,7 +305,7 @@ EOF
   chmod +x util-2.0/util
 
   PATH="$(pwd)/util-1.0:$(pwd)/util-2.0:$PATH"
-    
+
   UTIL=$(find_utility "util" "-v" "3.0.0")
   assertNotEquals "find_utility did not fail" 0 $?
 }
@@ -315,5 +315,41 @@ test_find_utility_na() {
   assertNotEquals "find_utility did not fail" 0 $?
 }
 
+test_find_ghcli() {
+  mkdir ghcli
+
+  cat > ghcli/gh <<EOF
+#!/bin/sh
+echo "gh-mock \$*"
+exit 0
+EOF
+
+  chmod +x ghcli/gh
+
+  PATH="$(pwd)/ghcli:$PATH"
+
+  find_ghcli
+  assertEquals 0 $?
+  assertEquals "$(realpath $(pwd))/ghcli/gh" "$UTILITY_GHCLI"
+}
+
+test_find_ghcli_unauth() {
+  mkdir ghcli
+
+  cat > ghcli/gh <<EOF
+#!/bin/sh
+echo "gh-mock \$*"
+exit 1
+EOF
+
+  chmod +x ghcli/gh
+
+  PATH="$(pwd)/ghcli:$PATH"
+
+  OUTPUT=$(find_ghcli 2>&1)
+  assertEquals 1 $?
+  assertContains "$OUTPUT" "gh-mock auth status"
+  assertContains "$OUTPUT" "Action: Run gh auth login"
+}
 
 . "$(dirname "$0")/shunit2/shunit2"
