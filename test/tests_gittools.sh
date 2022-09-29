@@ -67,6 +67,11 @@ git_mock() {
         return 0
       fi
       ;;
+    'log')
+      echo "Commit message A"
+      echo "Commit message B"
+      return 0
+      ;;
   esac
 
   echo "Error: unrecognized git command '$1'" >&2
@@ -120,6 +125,8 @@ test_git_changelog_pdsc() {
 <releases>
   <release version="1.5.1-dev3+g1abcdef">
     Active development ...
+    - Commit message A
+    - Commit message B
   </release>
   <release version="1.5.0" date="2022-08-03" tag="v1.5.0">
     Change log text for release version v1.5.0

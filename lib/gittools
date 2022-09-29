@@ -28,7 +28,7 @@ function git_changelog_text {
   else
     echo "$1 ($2)"
   fi
-  
+
   echo -e "$3"
 }
 
@@ -125,17 +125,18 @@ function git_changelog {
     esac
     shift # past argument
   done
-  
-  local TAGS=$("${UTILITY_GIT}" for-each-ref --format "%(refname)" --sort="-v:refname" "refs/tags/${PREFIX}*")
+
+  local TAGS=($("${UTILITY_GIT}" for-each-ref --format "%(refname)" --sort="-v:refname" "refs/tags/${PREFIX}*"))
   local LATEST=$(git_describe "${PREFIX}")
-  
+
   git_changelog_${FORMAT}_head
 
   if [[ $DEVDROP != 0 ]] && !  "${UTILITY_GIT}" rev-list "${PREFIX}${LATEST}" 1>/dev/null 2>/dev/null; then
-    git_changelog_$FORMAT "${LATEST}" "" "Active development ..."
+    local DESC=$("${UTILITY_GIT}" log --no-merges --pretty=format:%s ${TAGS[0]#refs/tags/}..HEAD | sed -E 's/^/- /')
+    git_changelog_$FORMAT "${LATEST}" "" "Active development ...\n${DESC}"
   fi
 
-  for TAG in $TAGS; do
+  for TAG in ${TAGS[@]}; do
     local TYPE=$("${UTILITY_GIT}" for-each-ref --format "%(objecttype)" ${TAG})
     local TAG="${TAG#refs/tags/}"
     local DESC=$("${UTILITY_GIT}" tag -l -n99 --format "%(contents)" ${TAG})
@@ -150,7 +151,7 @@ function git_changelog {
       fi
       local DATE=$("${UTILITY_GHCLI}" release view ${TAG} --json "publishedAt" -t "{{ timefmt \"2006-01-02\" .publishedAt }}")
     fi
-    git_changelog_$FORMAT "${TAG#${PREFIX}}" "${DATE}" "${DESC}" "${TAG}"      
+    git_changelog_$FORMAT "${TAG#${PREFIX}}" "${DATE}" "${DESC}" "${TAG}"
   done
 
   git_changelog_${FORMAT}_tail
