@@ -32,6 +32,17 @@ function pdsc_name {
 }
 
 function pdsc_update_releases {
+  local first=$(grep -n "<release " "$1" | cut -d: -f1)
+  local last=$(grep -n "</release>" "$1" | cut -d: -f1)
+  last=${last:-$first}
+  let first+=1
+  if [[ $first < $last ]]; then
+    let length=last-first
+    local DEV="$(tail -n +${first} "$1" | head -n ${length})"
+    local indent=$(head -n 1 <<< "${DEV}" | sed -E "s/([ ]*).*/\1/")
+    DEV=$(sed -E "s/^${indent}//" <<< "${DEV}")
+  fi
+
   local first=$(grep -n "<releases>" "$1" | cut -d: -f1)
   local last=$(grep -n "</releases>" "$1" | cut -d: -f1)
   let first-=1
@@ -41,6 +52,6 @@ function pdsc_update_releases {
   if [ -n "$3" ]; then
     local PREFIX="-p $3"
   fi
-  git_changelog ${PREFIX} -d -f pdsc | sed "s/^/  /" >> "$2"
+  git_changelog ${PREFIX} -d "${DEV}" -f pdsc | sed "s/^/  /" >> "$2"
   tail -n +${last} "$1" >> "$2"
 }

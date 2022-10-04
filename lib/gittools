@@ -104,21 +104,26 @@ function git_changelog_html_tail {
 
 function git_changelog {
   local FORMAT="text"
-  local DEVDROP=0
+  local DEVDROP=""
   local PREFIX=""
 
   while [[ $# -gt 0 ]]; do
     case $1 in
       '-f'|'--format')
         shift
-        FORMAT=$1
+        FORMAT="$1"
       ;;
       '-d'|'--devdrop')
-        DEVDROP=1
+        if [[ $2 != -* && -n "$2" ]]; then
+          shift
+          DEVDROP="$1"
+        else
+          DEVDROP="Active development ..."
+        fi
       ;;
       '-p'|'--prefix')
         shift
-        PREFIX=$1
+        PREFIX="$1"
       ;;
       *)
       ;;
@@ -131,9 +136,8 @@ function git_changelog {
 
   git_changelog_${FORMAT}_head
 
-  if [[ $DEVDROP != 0 ]] && !  "${UTILITY_GIT}" rev-list "${PREFIX}${LATEST}" 1>/dev/null 2>/dev/null; then
-    local DESC=$("${UTILITY_GIT}" log --no-merges --pretty=format:%s ${TAGS[0]#refs/tags/}..HEAD | sed -E 's/^/- /')
-    git_changelog_$FORMAT "${LATEST}" "" "Active development ...\n${DESC}"
+  if [[ -n "${DEVDROP}" ]] && !  "${UTILITY_GIT}" rev-list "${PREFIX}${LATEST}" 1>/dev/null 2>/dev/null; then
+    git_changelog_$FORMAT "${LATEST}" "" "${DEVDROP}"
   fi
 
   for TAG in ${TAGS[@]}; do

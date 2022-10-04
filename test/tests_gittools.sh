@@ -67,11 +67,6 @@ git_mock() {
         return 0
       fi
       ;;
-    'log')
-      echo "Commit message A"
-      echo "Commit message B"
-      return 0
-      ;;
   esac
 
   echo "Error: unrecognized git command '$1'" >&2
@@ -125,8 +120,66 @@ test_git_changelog_pdsc() {
 <releases>
   <release version="1.5.1-dev3+g1abcdef">
     Active development ...
-    - Commit message A
-    - Commit message B
+  </release>
+  <release version="1.5.0" date="2022-08-03" tag="v1.5.0">
+    Change log text for release version v1.5.0
+  </release>
+  <release version="1.2.4" date="2022-06-27" tag="v1.2.4">
+    Change log text for release version v1.2.4
+  </release>
+  <release version="1.2.3" date="2022-06-15" tag="v1.2.3">
+    Change log text for release version v1.2.3
+  </release>
+  <release version="0.9.0" date="2021-07-29" tag="v0.9.0">
+    Change log text for release version v0.9.0
+  </release>
+</releases>
+EOF
+
+  assertEquals "${expected}" "${changelog}"
+}
+
+test_git_changelog_pdsc_with_empty_devlog() {
+  UTILITY_GIT="git_mock"
+
+  GIT_MOCK_DESCRIBE="v1.5.0-3-g1abcdef"
+
+  changelog=$(git_changelog -f pdsc -d "" -p v)
+
+  read -r -d '' expected <<EOF
+<releases>
+  <release version="1.5.1-dev3+g1abcdef">
+    Active development ...
+  </release>
+  <release version="1.5.0" date="2022-08-03" tag="v1.5.0">
+    Change log text for release version v1.5.0
+  </release>
+  <release version="1.2.4" date="2022-06-27" tag="v1.2.4">
+    Change log text for release version v1.2.4
+  </release>
+  <release version="1.2.3" date="2022-06-15" tag="v1.2.3">
+    Change log text for release version v1.2.3
+  </release>
+  <release version="0.9.0" date="2021-07-29" tag="v0.9.0">
+    Change log text for release version v0.9.0
+  </release>
+</releases>
+EOF
+
+  assertEquals "${expected}" "${changelog}"
+}
+
+test_git_changelog_pdsc_with_devlog() {
+  UTILITY_GIT="git_mock"
+
+  GIT_MOCK_DESCRIBE="v1.5.0-3-g1abcdef"
+
+  changelog=$(git_changelog -f pdsc -d "Custom dev log" -p v)
+
+  read -r -d '' expected <<EOF
+<releases>
+  <release version="1.5.1-dev3+g1abcdef">
+    Custom dev log
   </release>
   <release version="1.5.0" date="2022-08-03" tag="v1.5.0">
     Change log text for release version v1.5.0
