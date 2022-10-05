@@ -1,5 +1,5 @@
 
-GEN_PACK_LIB_VERSION="0.5.0"
+GEN_PACK_LIB_VERSION="0.5.1"
 GEN_PACK_LIB_SOURCE="$(realpath $(dirname ${BASH_SOURCE}))"
 
 shopt -s expand_aliases
@@ -51,7 +51,7 @@ function delete_files {
     echo "${PACK_DELETE_FILES}"
     echo " "
     for f in ${PACK_DELETE_FILES}; do
-      find "$1/$(dirname "$f")" -name "$(basename "$f")" -exec rm -rf {} \;
+      find "$(dirname "$1/$f")" -name "$(basename "$1/$f")" -exec rm -rf "{}" +
     done
   else
     echo "PACK_DELETE_FILES is empty, no files to be removed." >&2

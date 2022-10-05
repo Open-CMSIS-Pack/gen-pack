@@ -5,7 +5,7 @@
 setUp() {
   TESTDIR="${SHUNIT_TMPDIR}/${_shunit_test_}"
   mkdir -p "${TESTDIR}"
-  pushd "${TESTDIR}" >/dev/null  
+  pushd "${TESTDIR}" >/dev/null
 }
 
 tearDown() {
@@ -16,7 +16,7 @@ tearDown() {
 
 git_mock() {
   echo "git $*" >&2
-  
+
   case $1 in
     'rev-parse')
       return ${GIT_MOCK_REVPARSE-0}
@@ -56,11 +56,11 @@ git_mock() {
           ;;
           "v1.2.3")
             echo "2022-06-15"
-          ;;  
+          ;;
           *)
             return 1
           ;;
-        esac        
+        esac
         return 0
       elif [[ " $* " =~ " %(committerdate:short) " ]]; then
         echo "2021-07-29"
@@ -75,8 +75,8 @@ git_mock() {
 
 test_git_describe() {
   UTILITY_GIT="git_mock"
-  
-  GIT_MOCK_DESCRIBE="v1.2.3-0-g1abcdef" 
+
+  GIT_MOCK_DESCRIBE="v1.2.3-0-g1abcdef"
   local version=$(git_describe v 2>/dev/null)
   assertEquals "1.2.3" "${version}"
 
@@ -84,19 +84,19 @@ test_git_describe() {
   local version=$(git_describe v 2>/dev/null)
   assertEquals "1.2.3-dev1" "${version}"
 
-  GIT_MOCK_DESCRIBE="v1.2.3-3-g1abcdef" 
+  GIT_MOCK_DESCRIBE="v1.2.3-3-g1abcdef"
   local version=$(git_describe v 2>/dev/null)
   assertEquals "1.2.4-dev3+g1abcdef" "${version}"
 
-  GIT_MOCK_DESCRIBE="1.2.3-rc2-3-g1abcdef" 
+  GIT_MOCK_DESCRIBE="1.2.3-rc2-3-g1abcdef"
   local version=$(git_describe 2>/dev/null)
-  assertEquals "1.2.3-rc2+p3+g1abcdef" "${version}"
+  assertEquals "1.2.3-rc2-p3+g1abcdef" "${version}"
 
-  GIT_MOCK_DESCRIBE="1.2.3-rc2-0-g1abcdef" 
+  GIT_MOCK_DESCRIBE="1.2.3-rc2-0-g1abcdef"
   local version=$(git_describe 2>/dev/null)
   assertEquals "1.2.3-rc2" "${version}"
 
-  GIT_MOCK_DESCRIBE="1.2.3-dev-3-g1abcdef" 
+  GIT_MOCK_DESCRIBE="1.2.3-dev-3-g1abcdef"
   local version=$(git_describe 2>/dev/null)
   assertEquals "1.2.3-dev3+g1abcdef" "${version}"
 
@@ -106,14 +106,14 @@ test_git_describe() {
 
   GIT_MOCK_REVPARSE=1
   local version=$(git_describe 2>/dev/null)
-  assertEquals "0.0.0-nogit" "${version}"  
+  assertEquals "0.0.0-nogit" "${version}"
 }
 
 test_git_changelog_pdsc() {
   UTILITY_GIT="git_mock"
-  
-  GIT_MOCK_DESCRIBE="v1.5.0-3-g1abcdef" 
-  
+
+  GIT_MOCK_DESCRIBE="v1.5.0-3-g1abcdef"
+
   changelog=$(git_changelog -f pdsc -d -p v)
 
   read -r -d '' expected <<EOF
@@ -141,9 +141,9 @@ EOF
 
 test_git_changelog_html() {
   UTILITY_GIT="git_mock"
-  
-  GIT_MOCK_DESCRIBE="v1.5.0-3-g1abcdef" 
-  
+
+  GIT_MOCK_DESCRIBE="v1.5.0-3-g1abcdef"
+
   changelog=$(git_changelog -f html -p v)
 
   read -r -d '' expected <<EOF
