@@ -90,7 +90,7 @@ test_git_describe() {
 
   GIT_MOCK_DESCRIBE="1.2.3-rc2-3-g1abcdef"
   local version=$(git_describe 2>/dev/null)
-  assertEquals "1.2.3-rc2-p3+g1abcdef" "${version}"
+  assertEquals "1.2.3-rc2.3+g1abcdef" "${version}"
 
   GIT_MOCK_DESCRIBE="1.2.3-rc2-0-g1abcdef"
   local version=$(git_describe 2>/dev/null)
@@ -99,6 +99,10 @@ test_git_describe() {
   GIT_MOCK_DESCRIBE="1.2.3-dev-3-g1abcdef"
   local version=$(git_describe 2>/dev/null)
   assertEquals "1.2.3-dev3+g1abcdef" "${version}"
+
+  GIT_MOCK_DESCRIBE="v1.1.0-preview1-67-g895850a"
+  local version=$(git_describe "v" 2>/dev/null)
+  assertEquals "1.1.0-preview1.67+g895850a" "${version}"
 
   unset GIT_MOCK_DESCRIBE
   local version=$(git_describe 2>/dev/null)
