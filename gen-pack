@@ -209,11 +209,11 @@ function gen_pack {
   delete_files "${PACK_BUILD}"
   apply_patches "${PACK_BUILD}"
 
+  [[ ${POSTPROCESS} == 1 && "$(type -t postprocess)" == "function" ]] && postprocess
+
   check_schema "${PACK_BUILD_DESCRIPTION_FILE}"
   check_pack "${PACK_BUILD_DESCRIPTION_FILE}"
   create_sha1 "${PACK_BUILD}" "${PACK_VENDOR}" "${PACK_NAME}"
-
-  [[ ${POSTPROCESS} == 1 && "$(type -t postprocess)" == "function" ]] && postprocess
 
   archive "${PACK_BUILD}" "${PACK_OUTPUT}/$(cat "${PACK_OUTPUT}/PackName.txt")"
 
