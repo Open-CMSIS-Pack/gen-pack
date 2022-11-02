@@ -8,15 +8,15 @@ function locate_pdsc {
     realpath "$1"
     return 0
   elif [ ${NUM_PDSCS} -lt 1 ]; then
-    echo "Error: No *.pdsc file found in current directory" >&2
-    echo " " >&2
+    echo_err "Error: No *.pdsc file found in current directory"
+    echo_err " "
     exit 1
   elif [ ${NUM_PDSCS} -gt 1 ]; then
-    echo "Error: Only one PDSC file allowed in directory structure:" >&2
-    echo "Found:" >&2
-    echo "$PACK_DESCRIPTION_FILE" >&2
-    echo "Action: Provide PDSC file explicitly!" >&2
-    echo " " >&2
+    echo_err "Error: Only one PDSC file allowed in directory structure:"
+    echo_log "Found:"
+    echo_log "$PACK_DESCRIPTION_FILE"
+    echo_log "Action: Provide PDSC file explicitly!"
+    echo_log " "
     exit 1
   fi
   realpath "${PACK_DESCRIPTION_FILE}"
