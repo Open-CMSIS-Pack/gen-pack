@@ -62,5 +62,6 @@ jobs:
           cpackget pack add ARM.CMSIS
 
       - name: Run unit tests
+        shell: bash
         run: |
           ./test/run_all.sh
