@@ -63,5 +63,8 @@ jobs:
 
       - name: Run unit tests
         shell: bash
+        env:
+          LANG: en_GB.UTF-8
+          LC_ALL: en_GB.UTF-8
         run: |
           ./test/run_all.sh
