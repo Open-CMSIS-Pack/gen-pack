@@ -1,45 +1,28 @@
-case "$TERM" in
-    xterm-color|*-256color) color_prompt=yes;;
-esac
+LOG_COLOR_NC=''
+LOG_COLOR_BLACK=''
+LOG_COLOR_RED=''
+LOG_COLOR_GREEN=''
+LOG_COLOR_YELLOW=''
+LOG_COLOR_BLUE=''
+LOG_COLOR_MAGENTA=''
+LOG_COLOR_CYAN=''
+LOG_COLOR_WHITE=''
 
-if [ "$color_prompt" = yes ]; then
-  LOG_COLOR_NC='\e[0m' # No Color
-  LOG_COLOR_BLACK='\e[0;30m'
-  LOG_COLOR_GRAY='\e[1;30m'
-  LOG_COLOR_RED='\e[0;31m'
-  LOG_COLOR_LIGHT_RED='\e[1;31m'
-  LOG_COLOR_GREEN='\e[0;32m'
-  LOG_COLOR_LIGHT_GREEN='\e[1;32m'
-  LOG_COLOR_BROWN='\e[0;33m'
-  LOG_COLOR_YELLOW='\e[1;33m'
-  LOG_COLOR_BLUE='\e[0;34m'
-  LOG_COLOR_LIGHT_BLUE='\e[1;34m'
-  LOG_COLOR_PURPLE='\e[0;35m'
-  LOG_COLOR_LIGHT_PURPLE='\e[1;35m'
-  LOG_COLOR_CYAN='\e[0;36m'
-  LOG_COLOR_LIGHT_CYAN='\e[1;36m'
-  LOG_COLOR_LIGHT_GRAY='\e[0;37m'
-  LOG_COLOR_WHITE='\e[1;37m'
-else
-  LOG_COLOR_NC=''
-  LOG_COLOR_BLACK=''
-  LOG_COLOR_GRAY=''
-  LOG_COLOR_RED=''
-  LOG_COLOR_LIGHT_RED=''
-  LOG_COLOR_GREEN=''
-  LOG_COLOR_LIGHT_GREEN=''
-  LOG_COLOR_BROWN=''
-  LOG_COLOR_YELLOW=''
-  LOG_COLOR_BLUE=''
-  LOG_COLOR_LIGHT_BLUE=''
-  LOG_COLOR_PURPLE=''
-  LOG_COLOR_LIGHT_PURPLE=''
-  LOG_COLOR_CYAN=''
-  LOG_COLOR_LIGHT_CYAN=''
-  LOG_COLOR_LIGHT_GRAY=''
-  LOG_COLOR_WHITE=''
+if test -t 1 && type tput >/dev/null; then
+  ncolors=$(tput colors)
+  if test -n "$ncolors" && test $ncolors -ge 8; then
+    LOG_COLOR_NC="$(tput sgr0)"
+    LOG_COLOR_BLACK="$(tput setaf 0)"
+    LOG_COLOR_RED="$(tput setaf 1)"
+    LOG_COLOR_GREEN="$(tput setaf 2)"
+    LOG_COLOR_YELLOW="$(tput setaf 3)"
+    LOG_COLOR_BLUE="$(tput setaf 4)"
+    LOG_COLOR_MAGENTA="$(tput setaf 5)"
+    LOG_COLOR_CYAN="$(tput setaf 6)"
+    LOG_COLOR_WHITE="$(tput setaf 7)"
+  fi
+  unset ncolors
 fi
-unset color_prompt
 
 function echo_v {
   if [[ $VERBOSE == 1 ]]; then
