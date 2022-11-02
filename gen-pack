@@ -9,6 +9,8 @@ if [[ "$(uname)" == "Darwin"  ]]; then
   alias "grep"="ggrep"
 fi
 
+echo "Loading gen-pack library ${GEN_PACK_LIB_VERSION} ..."
+
 . "${GEN_PACK_LIB_SOURCE}/lib/usage"
 . "${GEN_PACK_LIB_SOURCE}/lib/getopts"
 . "${GEN_PACK_LIB_SOURCE}/lib/utilities"
@@ -155,6 +157,8 @@ function gen_pack {
   set -- "${POSITIONAL[@]}" # restore positional parameters
 
   echo_log "Starting CMSIS-Pack Generation: $(date)"
+  echo_log "  in $(pwd)"
+  echo_log ""
 
   find_pack_root
   find_zip
