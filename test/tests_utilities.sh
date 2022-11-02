@@ -220,7 +220,7 @@ EOF
 
   mkdir "input"
 
-  output=$(archive "$(pwd)/input" "$(pwd)/output/test.zip")
+  output=$(archive "$(pwd)/input" "$(pwd)/output/test.zip" 2>&1)
 
   assertContains "$output" "$(pwd)/input"
   assertContains "$output" "7z a -tzip $(pwd)/output/test.zip"
@@ -313,6 +313,33 @@ EOF
 test_find_utility_na() {
   UTIL=$(find_utility "utilX")
   assertNotEquals "find_utility did not fail" 0 $?
+}
+
+test_find_utility_whitespace() {
+  mkdir "util 1.0"
+  mkdir "util 2.0"
+
+  cat > "util 1.0/util" <<EOF
+#!/bin/sh
+echo "1.0.0"
+EOF
+
+  cat > "util 2.0/util" <<EOF
+#!/bin/sh
+echo "2.0.3"
+EOF
+  chmod +x "util 1.0/util"
+  chmod +x "util 2.0/util"
+
+  PATH="$(pwd)/util 2.0:$(pwd)/util 1.0:$PATH"
+
+  UTIL=$(find_utility "util" "-v" "1.0.0")
+  assertEquals 0 $?
+  assertEquals "$(realpath $(pwd))/util 1.0/util" "$UTIL"
+
+  UTIL=$(find_utility "util" "-v" "2.0.3")
+  assertEquals 0 $?
+  assertEquals "$(realpath $(pwd))/util 2.0/util" "$UTIL"
 }
 
 test_find_ghcli() {
