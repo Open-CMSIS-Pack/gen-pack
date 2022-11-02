@@ -1,26 +1,29 @@
 
 function report_utility {
   if [[ -n "$3" && $3 != 0 ]]; then
-    echo "Error: No $1 utility found" >&2
-    echo "Action: Add $1 to your path" >&2
-    echo " "
+    echo_err "Error: No $1 utility found"
+    echo_log "Action: Add $1 to your path"
+    echo_log " "
     exit $3
   else
-    echo "$1 is $2"
+    echo_log "$1 is $2"
   fi
 }
 
 function find_utility {
-  local UTILS=($(type -a "$1" 2>/dev/null | cut -d" " -f3))
+  OFS="$IFS"
+  IFS=$'\n'
+  local UTILS=($(type -ap "$1" 2>/dev/null))
+  IFS="$OFS"
   local retval=$?
   if [[ $retval != 0 ]]; then
     return $retval
   fi
   if [[ -n "$2" && -n "$3" ]]; then
-    for executable in ${UTILS[@]}; do
-      local VERSION=$(${executable} $2)
+    for executable in "${UTILS[@]}"; do
+      local VERSION=$("${executable}" $2)
       if [[ "$VERSION" == "$3" ]]; then
-        realpath -q "$executable"
+        realpath -q "${executable}"
         return $?
       fi
     done
@@ -43,7 +46,7 @@ function get_os_type {
       echo "Darwin64"
       ;;
     *)
-      echo "Error: unrecognized OS $OS"
+      echo_err "Error: unrecognized OS $OS"
       exit 1
       ;;
   esac
@@ -60,7 +63,7 @@ function find_pack_root {
         local DEFAULT_CMSIS_PACK_ROOT="${LOCALAPPDATA//\\//}/Arm/Packs"
         ;;
       *)
-        echo "Error: unrecognized OS $OS"
+        echo_err "Error: unrecognized OS $OS"
         exit 1
         ;;
     esac
@@ -69,11 +72,11 @@ function find_pack_root {
     CMSIS_PACK_ROOT="${CMSIS_PACK_ROOT//\\//}"
   fi
   if [[ ! -d "${CMSIS_PACK_ROOT}" ]]; then
-    echo "Error: Cannot find CMSIS_PACK_ROOT" >&2
-    echo "Action: Set CMSIS_PACK_ROOT to point to your pack folder" >&2
+    echo_err "Error: Cannot find CMSIS_PACK_ROOT"
+    echo_log "Action: Set CMSIS_PACK_ROOT to point to your pack folder"
     exit 1
   fi
-  echo "CMSIS-Pack root is ${CMSIS_PACK_ROOT}"
+  echo_log "CMSIS-Pack root is ${CMSIS_PACK_ROOT}"
 }
 
 function find_packchk {
@@ -90,11 +93,11 @@ function find_packchk {
     return 0
   fi
 
-  echo "Error: No packchk utility found" >&2
-  echo "Action: Add packchk to your path" >&2
-  echo "Hint: Included in CMSIS Pack:"
-  echo '${CMSIS_PACK_ROOT}/ARM/CMSIS/<version>/CMSIS/Utilities/<os>/'
-  echo " "
+  echo_err "Error: No packchk utility found"
+  echo_log "Action: Add packchk to your path"
+  echo_v "Hint: Included in CMSIS Pack:"
+  echo_v '${CMSIS_PACK_ROOT}/ARM/CMSIS/<version>/CMSIS/Utilities/<os>/'
+  echo_log " "
   exit 1
 }
 
@@ -117,9 +120,9 @@ function find_zip {
     return 0
   fi
 
-  echo "Error: No zip or 7zip utility found" >&2
-  echo "Action: Add zip or 7zip to your path" >&2
-  echo " "
+  echo_err "Error: No zip or 7zip utility found"
+  echo_log "Action: Add zip or 7zip to your path"
+  echo_log " "
   exit 1
 }
 
@@ -130,9 +133,9 @@ function find_xmllint {
     return 0
   fi
 
-  echo "Error: No xmllint utility found" >&2
-  echo "Action: Add xmllint to your path" >&2
-  echo " "
+  echo_err "Error: No xmllint utility found"
+  echo_log "Action: Add xmllint to your path"
+  echo_log " "
   exit 1
 }
 
@@ -143,9 +146,9 @@ function find_curl {
     return 0
   fi
 
-  echo "Error: No curl utility found" >&2
-  echo "Action: Add curl to your path" >&2
-  echo " "
+  echo_err "Error: No curl utility found"
+  echo_log "Action: Add curl to your path"
+  echo_log " "
   exit 1
 }
 
@@ -156,9 +159,9 @@ function find_git {
     return 0
   fi
 
-  echo "Error: No git utility found" >&2
-  echo "Action: Add git to your path" >&2
-  echo " "
+  echo_err "Error: No git utility found"
+  echo_log "Action: Add git to your path"
+  echo_log " "
   exit 1
 }
 
@@ -172,15 +175,15 @@ function find_ghcli {
     if [[ $result == 0 ]]; then
       return 0
     fi
-    echo "Warning: GitHub CLI is not authenticated with GitHub!" >&2
-    echo "Action: Run gh auth login" >&2
-    echo " "
+    echo_err "Warning: GitHub CLI is not authenticated with GitHub!"
+    echo_log "Action: Run gh auth login"
+    echo_log " "
     return 1
   fi
 
-  echo "Info: No GitHub CLI utility found" >&2
-  echo "Action: Add gh to your path" >&2
-  echo " "
+  echo_log "Info: No GitHub CLI utility found"
+  echo_log "Action: Add gh to your path"
+  echo_log " "
   return 1
 }
 
@@ -191,9 +194,9 @@ function find_sha1sum {
     return 0
   fi
 
-  echo "Error: No git utility found" >&2
-  echo "Action: Add git to your path" >&2
-  echo " "
+  echo_err "Error: No git utility found"
+  echo_log "Action: Add git to your path"
+  echo_log " "
   exit 1
 }
 
@@ -204,9 +207,9 @@ function find_linkchecker {
     return 0
   fi
 
-  echo "Error: No linkchecker utility found" >&2
-  echo "Action: Add linkchecker to your path" >&2
-  echo " "
+  echo_err "Error: No linkchecker utility found"
+  echo_log "Action: Add linkchecker to your path"
+  echo_log " "
   exit 1
 }
 
@@ -224,7 +227,7 @@ function archive_7zip {
 }
 
 function archive_zip {
-  echo "zip not implemented!"
+  echo_err "zip not implemented!"
   exit 1
   "${UTILITY_ZIP}"
 }
@@ -258,18 +261,18 @@ function check_links {
 
   if [ ! -f "$1" ]; then
     if [ -z "$1" ]; then
-      echo "No index file provided!" >&2
+      echo_err "No index file provided!"
     else
-      echo "Index file not found: '$1'" >&2
+      echo_err "Index file not found: '$1'"
     fi
     return 1
   fi
 
   if [ ! -d "$2" ]; then
     if [ -z "$2" ]; then
-      echo "No source directory provided!" >&2
+      echo_err "No source directory provided!"
     else
-      echo "Source dir not found: '$2'" >&2
+      echo_err "Source dir not found: '$2'"
     fi
     return 1
   fi
@@ -306,7 +309,7 @@ function curl_download {
     "${UTILITY_CURL}" -sL $1 --output "$2"
     local errorlevel=$?
     if [ $errorlevel -ne 0 ]; then
-      echo "Failed downloading file from URL '$1'." >&2
+      echo_err "Failed downloading file from URL '$1'."
       return $errorlevel
     fi
     return 0
