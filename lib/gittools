@@ -104,21 +104,26 @@ function git_changelog_html_tail {
 
 function git_changelog {
   local FORMAT="text"
-  local DEVDROP=0
+  local DEVDROP=""
   local PREFIX=""
 
   while [[ $# -gt 0 ]]; do
     case $1 in
       '-f'|'--format')
         shift
-        FORMAT=$1
+        FORMAT="$1"
       ;;
       '-d'|'--devdrop')
-        DEVDROP=1
+        if [[ $2 != -* && -n "$2" ]]; then
+          shift
+          DEVDROP="$1"
+        else
+          DEVDROP="Active development ..."
+        fi
       ;;
       '-p'|'--prefix')
         shift
-        PREFIX=$1
+        PREFIX="$1"
       ;;
       *)
       ;;
@@ -126,16 +131,16 @@ function git_changelog {
     shift # past argument
   done
 
-  local TAGS=$("${UTILITY_GIT}" for-each-ref --format "%(refname)" --sort="-v:refname" "refs/tags/${PREFIX}*")
+  local TAGS=($("${UTILITY_GIT}" for-each-ref --format "%(refname)" --sort="-v:refname" "refs/tags/${PREFIX}*"))
   local LATEST=$(git_describe "${PREFIX}")
 
   git_changelog_${FORMAT}_head
 
-  if [[ $DEVDROP != 0 ]] && !  "${UTILITY_GIT}" rev-list "${PREFIX}${LATEST}" 1>/dev/null 2>/dev/null; then
-    git_changelog_$FORMAT "${LATEST}" "" "Active development ..."
+  if [[ -n "${DEVDROP}" ]] && !  "${UTILITY_GIT}" rev-list "${PREFIX}${LATEST}" 1>/dev/null 2>/dev/null; then
+    git_changelog_$FORMAT "${LATEST}" "" "${DEVDROP}"
   fi
 
-  for TAG in $TAGS; do
+  for TAG in ${TAGS[@]}; do
     local TYPE=$("${UTILITY_GIT}" for-each-ref --format "%(objecttype)" ${TAG})
     local TAG="${TAG#refs/tags/}"
     local DESC=$("${UTILITY_GIT}" tag -l -n99 --format "%(contents)" ${TAG})
