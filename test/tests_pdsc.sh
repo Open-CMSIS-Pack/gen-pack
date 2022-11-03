@@ -34,7 +34,7 @@ test_locate_pdsc_auto() {
 
   local pdsc=$(locate_pdsc)
 
-  assertEquals "$(realpath "$(pwd)/ARM.GenPack.pdsc")" "$pdsc"
+  assertEquals "$(realpath ARM.GenPack.pdsc)" "$pdsc"
 }
 
 test_locate_pdsc_specific() {
@@ -43,7 +43,7 @@ test_locate_pdsc_specific() {
 
   local pdsc=$(locate_pdsc "ARM.GenPack.pdsc")
 
-  assertEquals "$(realpath "$(pwd)/ARM.GenPack.pdsc")" "$pdsc"
+  assertEquals "$(realpath ARM.GenPack.pdsc)" "$pdsc"
 }
 
 test_pdsc_vendor() {
