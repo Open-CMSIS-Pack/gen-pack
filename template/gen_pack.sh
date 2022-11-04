@@ -47,6 +47,14 @@ PACKCHK_DEPS="
     <list pdsc files here>
 "
 
+# Optional: restrict fallback modes for changelog generation
+# Default: full
+# Values:
+# - full      Tag annotations, release descriptions, or commit messages (in order)
+# - release   Tag annotations, or release descriptions (in order)
+# - tag       Tag annotations only
+PACK_CHANGELOG_MODE="<full|release|tag>"
+
 # custom pre-processing steps
 function preprocess() {
   # add custom steps here to be executed

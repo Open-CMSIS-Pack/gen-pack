@@ -18,6 +18,7 @@ This library is written for Bash v5 or later and uses a couple of standard
 - echo
 - find
 - git (optional)
+- gh (optional)
 - grep
 - mkdir
 - mv
