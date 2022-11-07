@@ -1,4 +1,6 @@
 
+PACK_CHANGELOG_MODE="${PACK_CHANGELOG_MODE:-full}"
+
 function git_describe {
   local PREFIX="$1"
 
@@ -141,19 +143,42 @@ function git_changelog {
   fi
 
   for TAG in ${TAGS[@]}; do
-    local TYPE=$("${UTILITY_GIT}" for-each-ref --format "%(objecttype)" ${TAG})
+    local TYPE="$("${UTILITY_GIT}" for-each-ref --format "%(objecttype)" ${TAG})"
     local TAG="${TAG#refs/tags/}"
-    local DESC=$("${UTILITY_GIT}" tag -l -n99 --format "%(contents)" ${TAG})
-    local DATE=$("${UTILITY_GIT}" tag -l -n99 --format "%(taggerdate:short)" ${TAG})
+    local DESC="$("${UTILITY_GIT}" tag -l -n99 --format "%(contents)" ${TAG})"
+    local DATE="$("${UTILITY_GIT}" tag -l -n99 --format "%(taggerdate:short)" ${TAG})"
     if [[ -z "$DATE" ]]; then
-      local DATE=$( "${UTILITY_GIT}" tag -l -n99 --format "%(committerdate:short)" ${TAG})
+      local DATE="$( "${UTILITY_GIT}" tag -l -n99 --format "%(committerdate:short)" ${TAG})"
     fi
-    if [[ $TYPE == "commit" ]] && "${UTILITY_GHCLI}" release view ${TAG} >/dev/null 2>/dev/null; then
-      local RELEASE=$("${UTILITY_GHCLI}" release view ${TAG} --json "body" -t "{{ .body }}")
-      if [ -n "$RELEASE" ]; then
-        local DESC="$RELEASE"
+    if [ "${TYPE}" = "tag" ]; then
+      echo_v "Changelog for tag '${TAG}' taken from annotation message."
+    elif [ "${TYPE}" = "commit" ] && [ "${PACK_CHANGELOG_MODE}" != "tag" ]; then
+      if "${UTILITY_GHCLI}" release view ${TAG} >/dev/null 2>/dev/null; then
+        local RELEASE="$("${UTILITY_GHCLI}" release view ${TAG} --json "body" -t "{{ .body }}")"
+        if [ -n "${RELEASE}" ]; then
+          local DESC="${RELEASE}"
+          echo_v "Changelog for tag '${TAG}' taken from GitHub release description."
+        elif [ "${PACK_CHANGELOG_MODE}" = "full" ]; then
+          echo_v "Changelog for tag '${TAG}' taken from commit message."
+        else
+          echo_err "Changelog generation for tag '${TAG}' failed!"
+          echo_log " => Tag has no annotation message."
+          echo_log " => GitHub release description is empty."
+          exit 1
+        fi
+        local DATE="$("${UTILITY_GHCLI}" release view ${TAG} --json "publishedAt" -t "{{ timefmt \"2006-01-02\" .publishedAt }}")"
+      elif [ "${PACK_CHANGELOG_MODE}" = "full" ]; then
+        echo_v "Changelog for tag '${TAG}' taken from commit message."
+      else
+        echo_err "Changelog generation for tag '${TAG}' failed!"
+        echo_log " => Tag has no annotation message."
+        echo_log " => GitHub release description could not be queried."
+        exit 1
       fi
-      local DATE=$("${UTILITY_GHCLI}" release view ${TAG} --json "publishedAt" -t "{{ timefmt \"2006-01-02\" .publishedAt }}")
+    else
+      echo_err "Changelog generation for tag '${TAG}' failed!"
+      echo_log " => Tag has no annotation message."
+      exit 1
     fi
     git_changelog_$FORMAT "${TAG#${PREFIX}}" "${DATE}" "${DESC}" "${TAG}"
   done

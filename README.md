@@ -18,6 +18,7 @@ This library is written for Bash v5 or later and uses a couple of standard
 - echo
 - find
 - git (optional)
+- gh (optional)
 - grep
 - mkdir
 - mv
@@ -108,6 +109,17 @@ can use the same relative file names as within the `.pdsc` file.
    Packs specified in the `<requirements>` section are considered automatically and do not need to be listed.
    For example, add `ARM.CMSIS.pdsc` to include this file during packchk. The `.pdsc` files are referenced from
    `${CMSIS_PACK_ROOT}/.Web` folder. Missing files are downloaded.
+1. Replace `<full|release|tag>` for `PACK_CHANGELOG_MODE` with either of these choices. It defaults to `full`. This setting
+   is only effective when generating the changelog from Git history. It affects the fallback solutions
+   used to retrieve the changelog text from git:
+
+   `full` allows fallback to GitHub release description or commit message.
+
+   `release` allows fallback to GitHub release description only.
+
+   `tag` forces tag annotation messages to be used without any fallback.
+
+   If no changelog text can be retrieved pack generation is aborted.
 1. Put custom commands to be executed before/after populating the pack build folder
    into the `preprocess` and `postprocess` functions.
 

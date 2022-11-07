@@ -1,5 +1,5 @@
 
-GEN_PACK_LIB_VERSION="0.5.2"
+GEN_PACK_LIB_VERSION="0.6.0"
 GEN_PACK_LIB_SOURCE="$(realpath $(dirname ${BASH_SOURCE}))"
 
 shopt -s expand_aliases
@@ -170,7 +170,21 @@ function gen_pack {
   fi
   if [ -n "${CHANGELOG+x}" ]; then
     find_git
-    find_ghcli
+    case ${PACK_CHANGELOG_MODE} in
+      'full'|'release')
+        find_ghcli
+      ;;
+      'tag')
+        echo_v "Skipping ghcli"
+      ;;
+      *)
+        echo_err "PACK_CHANGELOG_MODE has invalid value '${PACK_CHANGELOG_MODE}'!"
+        echo_log "  Valid options are: full, release, or tag."
+        echo_log "  Defaulting to: full"
+        PACK_CHANGELOG_MODE="full"
+        find_ghcli
+      ;;
+    esac
   fi
 
   echo_log " "
@@ -203,6 +217,7 @@ function gen_pack {
   [[ ${PREPROCESS} == 1 && "$(type -t preprocess)" == "function" ]] && preprocess
 
   if [ -n "${CHANGELOG+x}" ]; then
+    echo_log "Generating changelog with mode '${PACK_CHANGELOG_MODE}' ..."
     pdsc_update_releases "${PACK_DESCRIPTION_FILE}" "${PACK_BUILD_DESCRIPTION_FILE}" "${CHANGELOG}"
   else
     cp "${PACK_DESCRIPTION_FILE}" "${PACK_BUILD_DESCRIPTION_FILE}"
@@ -229,5 +244,5 @@ function gen_pack {
   fi
 
   echo_log ""
-  echo_log "Pack $(basename ${PACK_ARCHIVE}) generated successfully!"
+  echo_log "${LOG_COLOR_GREEN}Pack $(basename ${PACK_ARCHIVE}) generated successfully!"
 }
