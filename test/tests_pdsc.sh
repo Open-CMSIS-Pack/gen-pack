@@ -21,6 +21,7 @@ EOF
 
 alias git_changelog='git_changelog_mock'
 
+. "$(dirname "$0")/../lib/logging"
 . "$(dirname "$0")/../lib/pdsc"
 
 setUp() {
@@ -54,6 +55,75 @@ test_pdsc_vendor() {
 test_pdsc_name() {
   local name=$(pdsc_name "$(pwd)/ARM.GenPack.pdsc")
   assertEquals "GenPack" "$name"
+}
+
+test_pdsc_release_desc() {
+    cat > "ARM.GenPack.pdsc" <<EOF
+<?xml version="1.0" encoding="UTF-8"?>
+<package schemaVersion="1.7.7" xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocation="https://url.to/schema/PACK.xsd">
+  <vendor>ARM</vendor>
+  <name>GenPack</name>
+  <description>Test pack for GenPack library</description>
+  <url>http://www.keil.com/pack/</url>
+  <license>LICENSE</license>
+
+  <releases>
+    <release version="0.0.0">
+      Active development...
+      - Dev change log 1
+      - Dev change log 2
+    </release>
+  </releases>
+
+  <conditions>
+    ...
+  </conditions>
+
+  <components>
+   ...
+  </components>
+
+  ...
+</package>
+EOF
+
+  desc=$(pdsc_release_desc "ARM.GenPack.pdsc")
+
+  assertEquals 0 $?
+  assertContains    "${desc}"  "Active development..."
+  assertContains    "${desc}"  "- Dev change log 1"
+  assertContains    "${desc}"  "- Dev change log 2"
+}
+
+test_pdsc_release_desc_na() {
+    cat > "ARM.GenPack.pdsc" <<EOF
+<?xml version="1.0" encoding="UTF-8"?>
+<package schemaVersion="1.7.7" xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocation="https://url.to/schema/PACK.xsd">
+  <vendor>ARM</vendor>
+  <name>GenPack</name>
+  <description>Test pack for GenPack library</description>
+  <url>http://www.keil.com/pack/</url>
+  <license>LICENSE</license>
+
+  <releases>
+    <release version="0.0.0"/>
+  </releases>
+
+  <conditions>
+    ...
+  </conditions>
+
+  <components>
+   ...
+  </components>
+
+  ...
+</package>
+EOF
+
+  desc=$(pdsc_release_desc "ARM.GenPack.pdsc" 2>&1)
+  assertNotEquals 0 $?
+  assertContains "${desc}" "No release description found in ARM.GenPack.pdsc!"
 }
 
 test_pdsc_update_releases() {

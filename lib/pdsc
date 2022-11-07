@@ -31,18 +31,24 @@ function pdsc_name {
   cut -d. -f 2 <<< $(basename $1)
 }
 
-function pdsc_update_releases {
+function pdsc_release_desc {
   local first=$(grep -n "<release " "$1" | cut -d: -f1)
   local last=$(grep -n "</release>" "$1" | cut -d: -f1)
   last=${last:-$first}
   let first+=1
   if [[ $first < $last ]]; then
     let length=last-first
-    local DEV="$(tail -n +${first} "$1" | head -n ${length})"
-    local indent=$(head -n 1 <<< "${DEV}" | sed -E "s/([ ]*).*/\1/")
-    DEV=$(sed -E "s/^${indent}//" <<< "${DEV}")
+    local desc="$(tail -n +${first} "$1" | head -n ${length})"
+    local indent=$(head -n 1 <<< "${desc}" | sed -E "s/([ ]*).*/\1/")
+    sed -E "s/^${indent}//" <<< "${desc}"
+    return 0
   fi
+  echo_err "No release description found in $1!"
+  return 1
+}
 
+function pdsc_update_releases {
+  local DEV=$(pdsc_release_desc "$1")
   local first=$(grep -n "<releases>" "$1" | cut -d: -f1)
   local last=$(grep -n "</releases>" "$1" | cut -d: -f1)
   let first-=1
