@@ -78,7 +78,12 @@ test_integ_with_git_prerelease() {
   git --git-dir=$(pwd)/.git clean -fdxq
   git --git-dir=$(pwd)/.git checkout -fq v1.0.0
 
-  GIT_COMMITTER_DATE="2022-08-04T16:00:00Z" git tag -m "Active development ..." v1.0.0-dev v1.0.0^
+  $(\
+    GIT_COMMITTER_NAME="github-actions" \
+    GIT_COMMITTER_EMAIL="github-actions@github.com" \
+    GIT_COMMITTER_DATE="2022-08-04T16:00:00Z" \
+    git tag -m "Active development ..." v1.0.0-dev v1.0.0^ \
+  )
 
   ./gen_pack.sh -k
 
