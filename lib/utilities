@@ -67,13 +67,15 @@ function find_pack_root {
         exit 1
         ;;
     esac
+    echo_log "Warning: CMSIS_PACK_ROOT not set in environment."
     CMSIS_PACK_ROOT="${DEFAULT_CMSIS_PACK_ROOT}"
   else
     CMSIS_PACK_ROOT="${CMSIS_PACK_ROOT//\\//}"
   fi
   if [[ ! -d "${CMSIS_PACK_ROOT}" ]]; then
-    echo_err "Error: Cannot find CMSIS_PACK_ROOT"
-    echo_log "Action: Set CMSIS_PACK_ROOT to point to your pack folder"
+    echo_err "Error: CMSIS_PACK_ROOT pointing to ${CMSIS_PACK_ROOT} which doesn't exist"
+    echo_log "Action: Set CMSIS_PACK_ROOT to point to your pack folder, or"
+    echo_log "        initialize new pack folder with cpackget init"
     exit 1
   fi
   echo_log "CMSIS-Pack root is ${CMSIS_PACK_ROOT}"
