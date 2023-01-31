@@ -379,4 +379,26 @@ EOF
   assertContains "$OUTPUT" "Action: Run gh auth login"
 }
 
+test_find_doxygen() {
+  mkdir "doxygen-1.8.6"
+  mkdir "doxygen-1.9.2"
+
+  cat > "doxygen-1.8.6/doxygen" <<EOF
+#!/bin/sh
+echo "1.8.6"
+EOF
+
+  cat > "doxygen-1.9.2/doxygen" <<EOF
+#!/bin/sh
+echo "1.9.2 (caa4e3de211fbbef2c3adf58a6bd4c86d0eb7cb8)"
+EOF
+  chmod +x "doxygen-1.8.6/doxygen"
+  chmod +x "doxygen-1.9.2/doxygen"
+
+  PATH="$(pwd)/doxygen-1.8.6:$(pwd)/doxygen-1.9.2:$PATH"
+
+  find_doxygen "1.8.6"
+  find_doxygen "1.9.2"
+}
+
 . "$(dirname "$0")/shunit2/shunit2"

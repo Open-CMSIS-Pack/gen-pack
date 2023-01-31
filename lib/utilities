@@ -21,7 +21,7 @@ function find_utility {
   fi
   if [[ -n "$2" && -n "$3" ]]; then
     for executable in "${UTILS[@]}"; do
-      local VERSION=$("${executable}" $2)
+      local VERSION=$(bash -c "'${executable}' ${2}")
       if [[ "$VERSION" == "$3" ]]; then
         realpath -q "${executable}"
         return $?
