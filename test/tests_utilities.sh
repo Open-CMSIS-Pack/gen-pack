@@ -287,9 +287,7 @@ EOF
 test_integ_archive_7zip() {
   remove_from_path "zip"
 
-  $(find_zip 2>/dev/null) || (echo "7zip not available, skip integration test."; startSkipping)
-
-  if [ ${__shunit_skip} -eq ${SHUNIT_FALSE} ]; then
+  if $(find_zip 2>/dev/null); then
     find_zip
 
     mkdir -p input
@@ -303,6 +301,8 @@ EOF
     unarchive "$(pwd)/archive.zip" "$(pwd)/output"
     assertTrue "test -f output/file.txt"
     assertTrue "diff input/file.txt output/file.txt"
+  else
+    echo "7zip not available, skip integration test."
   fi
 }
 
@@ -310,9 +310,7 @@ test_integ_archive_gnuzip() {
   PROGRAMFILES=""
   remove_from_path "7z"
 
-  $(find_zip 2>/dev/null) || (echo "zip not available, skip integration test."; startSkipping)
-
-  if [ ${__shunit_skip} -eq ${SHUNIT_FALSE} ]; then
+  if $(find_zip 2>/dev/null); then
     find_zip
 
     mkdir -p input
@@ -326,6 +324,8 @@ EOF
     unarchive "$(pwd)/archive.zip" "$(pwd)/output"
     assertTrue "test -f output/file.txt"
     assertTrue "diff input/file.txt output/file.txt"
+  else
+    echo "zip not available, skip integration test."
   fi
 }
 
