@@ -194,6 +194,7 @@ EOF
 test_find_zip_gnuzip_env() {
   remove_from_path "7z"
   remove_from_path "zip"
+  remove_from_path "unzip"
   PROGRAMFILES=""
 
   cat > "zip" <<EOF
@@ -202,9 +203,16 @@ echo "zip \$*"
 EOF
   chmod +x "zip"
 
+  cat > "unzip" <<EOF
+#!/bin/sh
+echo "unzip \$*"
+EOF
+  chmod +x "unzip"
+
   find_zip
 
   assertEquals "$(pwd)/zip" "${UTILITY_ZIP}"
+  assertEquals "$(pwd)/unzip" "${UTILITY_UNZIP}"
   assertEquals "zip" "${UTILITY_ZIP_TYPE}"
 }
 
@@ -224,6 +232,101 @@ EOF
 
   assertContains "$output" "$(pwd)/input"
   assertContains "$output" "7z a -tzip $(pwd)/output/test.zip"
+}
+
+test_unarchive_7zip() {
+  UTILITY_ZIP_TYPE="7zip"
+  UTILITY_ZIP="$(pwd)/7z"
+
+  cat > "7z" <<EOF
+#!/bin/sh
+echo "7z \$*"
+EOF
+  chmod +x "7z"
+
+  output=$(unarchive "$(pwd)/input/test.zip" "$(pwd)/output"  2>&1)
+
+  assertContains "$output" "$(pwd)/output"
+  assertContains "$output" "7z x $(pwd)/input/test.zip"
+}
+
+test_archive_gnuzip() {
+  UTILITY_ZIP_TYPE="zip"
+  UTILITY_ZIP="$(pwd)/zip"
+
+  cat > "zip" <<EOF
+#!/bin/sh
+echo "zip \$*"
+EOF
+  chmod +x "zip"
+
+  mkdir "input"
+
+  output=$(archive "$(pwd)/input" "$(pwd)/output/test.zip" 2>&1)
+
+  assertContains "$output" "$(pwd)/input"
+  assertContains "$output" "zip -r $(pwd)/output/test.zip"
+}
+
+test_unarchive_gnuzip() {
+  UTILITY_ZIP_TYPE="zip"
+  UTILITY_UNZIP="$(pwd)/unzip"
+
+  cat > "unzip" <<EOF
+#!/bin/sh
+echo "unzip \$*"
+EOF
+  chmod +x "unzip"
+
+  output=$(unarchive "$(pwd)/input/test.zip" "$(pwd)/output"  2>&1)
+
+  assertContains "$output" "$(pwd)/output"
+  assertContains "$output" "unzip $(pwd)/input/test.zip"
+}
+
+test_integ_archive_7zip() {
+  remove_from_path "zip"
+
+  if $(find_zip 2>/dev/null); then
+    find_zip
+
+    mkdir -p input
+  cat > "input/file.txt" <<EOF
+Some test content for archive.
+EOF
+
+    archive "$(pwd)/input" "$(pwd)/archive.zip"
+    assertTrue "test -f archive.zip"
+
+    unarchive "$(pwd)/archive.zip" "$(pwd)/output"
+    assertTrue "test -f output/file.txt"
+    assertTrue "diff input/file.txt output/file.txt"
+  else
+    echo "7zip not available, skip integration test."
+  fi
+}
+
+test_integ_archive_gnuzip() {
+  PROGRAMFILES=""
+  remove_from_path "7z"
+
+  if $(find_zip 2>/dev/null); then
+    find_zip
+
+    mkdir -p input
+  cat > "input/file.txt" <<EOF
+Some test content for archive.
+EOF
+
+    archive "$(pwd)/input" "$(pwd)/archive.zip"
+    assertTrue "test -f archive.zip"
+
+    unarchive "$(pwd)/archive.zip" "$(pwd)/output"
+    assertTrue "test -f output/file.txt"
+    assertTrue "diff input/file.txt output/file.txt"
+  else
+    echo "zip not available, skip integration test."
+  fi
 }
 
 linkchecker_mock() {
