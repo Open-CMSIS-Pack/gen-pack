@@ -118,6 +118,7 @@ function find_zip {
   elif type -a zip 1>/dev/null 2>/dev/null; then
     UTILITY_ZIP_TYPE="zip"
     UTILITY_ZIP="$(which zip)"
+    UTILITY_UNZIP="$(which unzip)"
     report_utility "Zip" "$UTILITY_ZIP"
     return 0
   fi
@@ -221,7 +222,6 @@ function find_doxygen {
 }
 
 function archive_7zip {
-  rm -f "$2"
   echo_v "pushd \"$1\"; \"${UTILITY_ZIP}\" a -tzip \"$2\" ."
   pushd "$1" 2>&1 >/dev/null
   "${UTILITY_ZIP}" a -tzip "$2" .
@@ -229,13 +229,44 @@ function archive_7zip {
 }
 
 function archive_zip {
-  echo_err "zip not implemented!"
-  exit 1
-  "${UTILITY_ZIP}"
+  echo_v "pushd \"$1\"; \"${UTILITY_ZIP}\" -r \"$2\" ."
+  pushd "$1" 2>&1 >/dev/null
+  "${UTILITY_ZIP}" -r "$2" .
+  popd 2>&1 >/dev/null
 }
 
+#
+# Usage: archive <folder> <archive>
+#  <folder>   The source folder to be archived recusrively.
+#  <archive>  The target file name for the archive.
+#             If the file already exists it is overwritten!
 function archive {
+  echo_v "rm -rf \"$2\""
+  rm -f "$2"
   archive_$UTILITY_ZIP_TYPE "$1" "$2"
+}
+
+function unarchive_7zip {
+  echo_v "\"${UTILITY_ZIP}\" x \"$1\" -o\"$2\" -y"
+  "${UTILITY_ZIP}" x "$1" -o"$2" -y
+}
+
+function unarchive_zip {
+  echo_v "\"${UTILITY_UNZIP}\" \"$1\" -d \"$2\""
+  "${UTILITY_UNZIP}" "$1" -d "$2"
+}
+
+#
+# Usage: unarchive <archive> <folder>
+#  <archive>  The source file name of the archive to extract.
+#  <folder>   The target folder to extract the archive to.
+#             If the folder already exists it is purged!
+function unarchive {
+  echo_v "rm -rf \"$2\""
+  rm -rf "$2"
+  echo_v "mkdir -p \"$2\""
+  mkdir -p "$2"
+  unarchive_$UTILITY_ZIP_TYPE "$1" "$2"
 }
 
 #
