@@ -6,7 +6,8 @@ function report_utility {
     echo_log " "
     exit $3
   else
-    echo_log "$1 is $2"
+    printf -v  util_out_text "%-10s is located in %s" "$1" "$2"
+    echo_log "$util_out_text"
   fi
 }
 
@@ -78,7 +79,7 @@ function find_pack_root {
     echo_log "        initialize new pack folder with cpackget init"
     exit 1
   fi
-  echo_log "CMSIS-Pack root is ${CMSIS_PACK_ROOT}"
+  echo_log "CMSIS-Pack is located in ${CMSIS_PACK_ROOT}"
 }
 
 function find_packchk {

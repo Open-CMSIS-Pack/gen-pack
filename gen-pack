@@ -9,7 +9,7 @@ if [[ "$(uname)" == "Darwin"  ]]; then
   alias "grep"="ggrep"
 fi
 
-echo "Loading gen-pack library ${GEN_PACK_LIB_VERSION} ..."
+echo "Loading gen-pack library ${GEN_PACK_LIB_VERSION} from ${GEN_PACK_LIB_SOURCE}"
 
 . "${GEN_PACK_LIB_SOURCE}/lib/usage"
 . "${GEN_PACK_LIB_SOURCE}/lib/getopts"
@@ -190,7 +190,7 @@ function gen_pack {
   echo_log " "
 
   PACK_DESCRIPTION_FILE=$(locate_pdsc "$1")
-  echo_log "PDSC is ${PACK_DESCRIPTION_FILE}"
+  echo_log "PDSC       is located in ${PACK_DESCRIPTION_FILE}"
   echo_log " "
 
   PACK_BASEDIR=$(dirname ${PACK_DESCRIPTION_FILE})
