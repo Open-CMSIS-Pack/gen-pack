@@ -1,5 +1,5 @@
 
-GEN_PACK_LIB_VERSION="0.7.0"
+GEN_PACK_LIB_VERSION="0.8.0"
 GEN_PACK_LIB_SOURCE="$(realpath $(dirname ${BASH_SOURCE}))"
 
 shopt -s expand_aliases
@@ -28,7 +28,12 @@ function add_dirs {
   echo_log "${PACK_DIRS}"
   echo_log " "
   for d in ${PACK_DIRS}; do
-    cp -r --parents "$d" "$1"
+    d=$(realpath --relative-to="$(pwd)" $d)
+    if [[ $d = ../* ]]; then
+      cp -r "$d" "$1"
+    else
+      cp -r --parents "$d" "$1"
+    fi
   done
 }
 
@@ -39,7 +44,12 @@ function add_files {
     echo_log "${PACK_BASE_FILES}"
     echo_log " "
     for f in ${PACK_BASE_FILES}; do
-      cp -f --parents "$f" "$1/"
+      d=$(realpath --relative-to="$(pwd)" $f)
+      if [[ $f = ../* ]]; then
+        cp -r "$f" "$1"
+      else
+        cp -f --parents "$f" "$1/"
+      fi
     done
   else
     echo_log "PACK_BASE_FILES is empty, no additional files to be copied."
@@ -214,7 +224,7 @@ function gen_pack {
 
   pushd ${PACK_BASEDIR} >/dev/null
 
-  [[ ${PREPROCESS} == 1 && "$(type -t preprocess)" == "function" ]] && preprocess
+  [[ ${PREPROCESS} == 1 && "$(type -t preprocess)" == "function" ]] && preprocess "${PACK_BUILD}"
 
   if [ -n "${CHANGELOG+x}" ]; then
     echo_log "Generating changelog with mode '${PACK_CHANGELOG_MODE}' ..."
@@ -228,7 +238,7 @@ function gen_pack {
   delete_files "${PACK_BUILD}"
   apply_patches "${PACK_BUILD}"
 
-  [[ ${POSTPROCESS} == 1 && "$(type -t postprocess)" == "function" ]] && postprocess
+  [[ ${POSTPROCESS} == 1 && "$(type -t postprocess)" == "function" ]] && postprocess "${PACK_BUILD}"
 
   check_schema "${PACK_BUILD_DESCRIPTION_FILE}"
   check_pack "${PACK_BUILD_DESCRIPTION_FILE}"
