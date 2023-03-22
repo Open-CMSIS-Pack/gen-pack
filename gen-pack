@@ -4,10 +4,15 @@ GEN_PACK_LIB_SOURCE="$(realpath $(dirname ${BASH_SOURCE}))"
 
 shopt -s expand_aliases
 
-if [[ "$(uname)" == "Darwin"  ]]; then
-  alias "cp"="gcp"
-  alias "grep"="ggrep"
-fi
+case $(uname -s) in
+  'WindowsNT'|MINGW*|CYGWIN*)
+    alias "pwd"="realpath \$($(which pwd))"
+    ;;
+  'Darwin')
+    alias "cp"="gcp"
+    alias "grep"="ggrep"
+    ;;
+esac
 
 echo "Loading gen-pack library ${GEN_PACK_LIB_VERSION} from ${GEN_PACK_LIB_SOURCE}"
 
@@ -28,7 +33,7 @@ function add_dirs {
   echo_log "${PACK_DIRS}"
   echo_log " "
   for d in ${PACK_DIRS}; do
-    d=$(realpath --relative-to="$(pwd)" $d)
+    d=$(realpath --relative-to="$(pwd)" "$d")
     if [[ $d = ../* ]]; then
       cp -r "$d" "$1"
     else
@@ -44,7 +49,7 @@ function add_files {
     echo_log "${PACK_BASE_FILES}"
     echo_log " "
     for f in ${PACK_BASE_FILES}; do
-      d=$(realpath --relative-to="$(pwd)" $f)
+      d=$(realpath --relative-to="$(pwd)" "$f")
       if [[ $f = ../* ]]; then
         cp -r "$f" "$1"
       else
