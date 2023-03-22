@@ -3,7 +3,7 @@
 . "$(dirname "$0")/../gen-pack"
 
 setUp() {
-  TESTDIR="${SHUNIT_TMPDIR}/${_shunit_test_}"
+  TESTDIR="${SHUNIT_TMPDIR}/${_shunit_test_}/pack"
   mkdir -p "${TESTDIR}"
   pushd "${TESTDIR}" >/dev/null
 
@@ -23,7 +23,7 @@ createTestData() {
   mkdir input2
   mkdir input3
   mkdir -p input4/test
-  mkdir -p ../input5
+  mkdir ../input5
 
   echo "File 11" > input1/file11.txt
   echo "File 12" > input1/file12.txt
