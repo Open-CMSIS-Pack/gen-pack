@@ -3,7 +3,7 @@
 . "$(dirname "$0")/../gen-pack"
 
 setUp() {
-  TESTDIR="${SHUNIT_TMPDIR}/${_shunit_test_}"
+  TESTDIR="${SHUNIT_TMPDIR}/${_shunit_test_}/pack"
   mkdir -p "${TESTDIR}"
   pushd "${TESTDIR}" >/dev/null
 
@@ -22,6 +22,9 @@ createTestData() {
   mkdir input1
   mkdir input2
   mkdir input3
+  mkdir -p input4/test
+  mkdir ../input5
+
   echo "File 11" > input1/file11.txt
   echo "File 12" > input1/file12.txt
   echo "File 13" > input1/file13.txt
@@ -31,6 +34,8 @@ createTestData() {
   echo "File 31" > input3/file31.txt
   echo "File 32" > input3/file32.txt
   echo "File 33" > input3/file33.txt
+  echo "File 41" > input4/test/file41.txt
+  echo "File 51" > ../input5/file51.txt
 
   # create a target folder
   mkdir -p "${PACK_BUILD}"
@@ -43,6 +48,8 @@ test_add_dirs() {
   PACK_DIRS="
     input1
     input2
+    input4/test
+    ../input5
   "
   add_dirs "${PACK_BUILD}"
 
@@ -55,6 +62,8 @@ test_add_dirs() {
   assertTrue  "[ -f \"${PACK_BUILD}/input2/file22.txt\" ]"
   assertTrue  "[ -f \"${PACK_BUILD}/input2/file23.txt\" ]"
   assertFalse "[ -d \"${PACK_BUILD}/input3\" ]"
+  assertTrue  "[ -f \"${PACK_BUILD}/input4/test/file41.txt\" ]"
+  assertTrue  "[ -f \"${PACK_BUILD}/input5/file51.txt\" ]"
 }
 
 test_add_dirs_default() {
@@ -78,7 +87,6 @@ test_add_dirs_default() {
   assertTrue  "[ -f \"${PACK_BUILD}/input3/file33.txt\" ]"
 }
 
-
 test_add_files() {
   createTestData
 
@@ -86,6 +94,7 @@ test_add_files() {
   PACK_BASE_FILES="
     input1/file12.txt
     input3/file31.txt
+    ../input5/file51.txt
   "
   add_files "${PACK_BUILD}"
 
@@ -96,7 +105,7 @@ test_add_files() {
   assertTrue  "[ -f \"${PACK_BUILD}/input3/file31.txt\" ]"
   assertFalse "[ -f \"${PACK_BUILD}/input3/file32.txt\" ]"
   assertFalse "[ -f \"${PACK_BUILD}/input3/file33.txt\" ]"
-
+  assertTrue  "[ -f \"${PACK_BUILD}/file51.txt\" ]"
 }
 
 test_delete_files() {

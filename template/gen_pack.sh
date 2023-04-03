@@ -1,6 +1,6 @@
 #!/bin/bash
-# Version: 2.4
-# Date: 2022-11-21
+# Version: 2.5
+# Date: 2023-03-22
 # This bash script generates a CMSIS Software Pack:
 #
 
@@ -55,14 +55,24 @@ PACKCHK_DEPS="
 # - tag       Tag annotations only
 PACK_CHANGELOG_MODE="<full|release|tag>"
 
+#
 # custom pre-processing steps
+#
+# usage: preprocess <build>
+#   <build>  The build folder
+#
 function preprocess() {
   # add custom steps here to be executed
   # before populating the pack build folder
   return 0
 }
 
+#
 # custom post-processing steps
+#
+# usage: postprocess <build>
+#   <build>  The build folder
+#
 function postprocess() {
   # add custom steps here to be executed
   # after populating the pack build folder
