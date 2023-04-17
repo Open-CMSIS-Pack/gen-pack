@@ -1,3 +1,11 @@
+#
+# Open-CMSIS-Pack gen-pack Bash library
+#
+# Copyright (c) 2022-2023 Arm Limited. All rights reserved.
+#
+# Provided as-is without warranty under Apache 2.0 License
+# SPDX-License-Identifier: Apache-2.0
+#
 
 GEN_PACK_LIB_VERSION="0.8.0"
 GEN_PACK_LIB_SOURCE="$(realpath $(dirname ${BASH_SOURCE}))"
@@ -23,11 +31,36 @@ echo "Loading gen-pack library ${GEN_PACK_LIB_VERSION} from ${GEN_PACK_LIB_SOURC
 . "${GEN_PACK_LIB_SOURCE}/lib/gittools"
 . "${GEN_PACK_LIB_SOURCE}/lib/logging"
 
+# Sanity check settings
+function check_placeholder {
+  local re=".*<.*>.*"
+  if [[ "${!1}" =~ $re ]]; then
+    echo_err "Variable '$1' contains placeholder '<..>'"
+    echo_log "Remove placeholders from gen-pack settings!"
+    exit 1
+  fi
+}
+
+check_placeholder "PACK_DIRS"
+check_placeholder "PACK_BASE_FILES"
+check_placeholder "PACK_DELETE_FILES"
+check_placeholder "PACK_PATCH_FILES"
+check_placeholder "PACKCHK_DEPS"
+PACK_CHANGELOG_MODE="${PACK_CHANGELOG_MODE:-full}"
+check_placeholder "PACK_CHANGELOG_MODE"
+
+#
+# Add directories listed in PACK_DIRS to build folder.
+# An empty PACK_DIRS setting picks up all folders.
+#
+# Usage: add_dirs <build>
+#  <build>   The temporary build folder, typically PACK_BUILD
+#
 function add_dirs {
   # Add directories
   if [ -z "${PACK_DIRS}" ]; then
     echo_log "PACK_DIRS is empty, defaulting to all folders."
-    PACK_DIRS=$(OIFS="$IFS"; IFS='\n'; find . -maxdepth 1 -type d -not -name ".*" -not -path "./$(realpath --relative-to="$(pwd)" "$PACK_BUILD")" -not -path "./$(realpath --relative-to="$(pwd)" "$PACK_OUTPUT")"; IFS="$OIFS")
+    PACK_DIRS=$(OIFS="$IFS"; IFS=$'\n'; find . -maxdepth 1 -type d -not -name ".*" -not -path "./$(realpath --relative-to="$(pwd)" "${PACK_BUILD}")" -not -path "./$(realpath --relative-to="$(pwd)" "${PACK_OUTPUT}")"; IFS="$OIFS")
   fi
   echo_log Adding directories to pack:
   echo_log "${PACK_DIRS}"
@@ -42,6 +75,13 @@ function add_dirs {
   done
 }
 
+#
+# Add single files listed in PACK_BASE_FILES to build folder.
+#
+# Usage: add_files <build>
+#  <build>   The temporary build folder, typically PACK_BUILD
+#
+#
 function add_files {
   # Add files
   if [ -n "${PACK_BASE_FILES}" ]; then
@@ -61,6 +101,12 @@ function add_files {
   fi
 }
 
+#
+# Remove specific files listed in PACK_DELETE_FILES from build folder.
+#
+# Usage: delete_files <build>
+#  <build>   The temporary build folder, typically PACK_BUILD
+#
 function delete_files {
   # Delete files
   if [ -n "${PACK_DELETE_FILES}" ]; then
@@ -75,6 +121,12 @@ function delete_files {
   fi
 }
 
+#
+# Apply patches listed in PACK_PATCH_FILES to files in build folder.
+#
+# Usage: apply_patches <build>
+#  <build>   The temporary build folder, typically PACK_BUILD
+#
 function apply_patches {
   # Apply patches
   if [ -n "${PACK_PATCH_FILES}" ]; then
@@ -92,6 +144,12 @@ function apply_patches {
   fi
 }
 
+#
+# Run pack schema check
+#
+# Usage: check_schema <pdsc>
+#  <pdsc>   The pack description to check
+#
 function check_schema {
   echo_log "Running schema check for $1"
   local CMSISSCHEMA=$(realpath -m "${CMSIS_TOOLSDIR:-.}/../PACK.xsd")
@@ -135,6 +193,12 @@ function check_schema {
   fi
 }
 
+#
+# Run packchk
+#
+# Usage: check_pack <pdsc>
+#  <pdsc>   The pack description to check
+#
 function check_pack {
   PACKCHK_DEPS="${PACKCHK_DEPS:-ARM.CMSIS.pdsc}"
   local dependencies=$(grep -Pio "<package\s+\Kvendor=\"[^\"]+\"\s+name=\"[^\"]+\"" "$1" \
@@ -160,6 +224,15 @@ function check_pack {
   fi
 }
 
+#
+# Create checksum file for the pack content
+# The checksum file is placed to <build>/<vendor>.<pack>.sha1
+#
+# Usage: create_sha1 <build> <vendor> <pack>
+#   <build>   Pack build folder
+#   <vendor>  Pack vendor name
+#   <pack>    Pack name
+#
 function create_sha1 {
   pushd "$1" > /dev/null
   find . -type f -exec "${UTILITY_SHA1SUM}" -b {} + > "${TEMP:-/tmp}/$2.$3.sha1"
@@ -167,6 +240,9 @@ function create_sha1 {
   popd > /dev/null
 }
 
+#
+# Top level function to generate a pack.
+#
 function gen_pack {
   getopts "$@"
   set -- "${POSITIONAL[@]}" # restore positional parameters
@@ -205,6 +281,7 @@ function gen_pack {
   echo_log " "
 
   PACK_DESCRIPTION_FILE=$(locate_pdsc "$1")
+  fail_and_bail $?
   echo_log "PDSC       is located in ${PACK_DESCRIPTION_FILE}"
   echo_log " "
 
@@ -213,8 +290,8 @@ function gen_pack {
   PACK_NAME=$(pdsc_name "${PACK_DESCRIPTION_FILE}")
   echo_log "Generating Pack for ${PACK_VENDOR}.${PACK_NAME}"
 
-  PACK_BUILD=$(realpath "${PACK_BASEDIR}/${PACK_BUILD}")
-  PACK_OUTPUT=$(realpath "${PACK_BASEDIR}/${PACK_OUTPUT}")
+  PACK_BUILD=$(realpath "${PACK_BASEDIR}/${PACK_BUILD:-build}")
+  PACK_OUTPUT=$(realpath "${PACK_BASEDIR}/${PACK_OUTPUT:-output}")
   PACK_BUILD_DESCRIPTION_FILE="${PACK_BUILD}/$(basename ${PACK_DESCRIPTION_FILE})"
 
   echo_log " via ${PACK_BUILD}"

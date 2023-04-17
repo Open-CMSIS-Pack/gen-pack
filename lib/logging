@@ -1,3 +1,12 @@
+#
+# Open-CMSIS-Pack gen-pack Bash library
+#
+# Copyright (c) 2022-2023 Arm Limited. All rights reserved.
+#
+# Provided as-is without warranty under Apache 2.0 License
+# SPDX-License-Identifier: Apache-2.0
+#
+
 LOG_COLOR_NC=''
 LOG_COLOR_BLACK=''
 LOG_COLOR_RED=''
@@ -36,4 +45,11 @@ function echo_log {
 
 function echo_err {
   echo -e "${LOG_COLOR_RED}$*${LOG_COLOR_NC}" >&2
+}
+
+function fail_and_bail {
+  if [[ $1 != 0 ]]; then
+    echo_err "Fatal error detected, bailing out ..."
+    exit $1
+  fi
 }
