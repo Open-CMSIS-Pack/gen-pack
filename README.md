@@ -91,7 +91,10 @@ All file references are evaluated relative to the `.pdsc` files parent directory
 can use the same relative file names as within the `.pdsc` file.
 
 1. Put the [template](template/gen_pack.sh) into the root of your package source.
+1. **Windows only**! Run `git update-index --chmod=+x gen_pack.sh` to set the eXecute permission. Otherwise the script will not be executable in a Linux/Mac checkout by default such as running in a GitHub Action.
 1. Replace `<pin lib version here>` with the version of the library you want to use, e.g. `1.0.0`.
+   For available versions see [Open-CMSIS-Pack/gen-pack/tags](https://github.com/Open-CMSIS-Pack/gen-pack/tags).
+   Use the tag name without the prefix "v", e.g., 0.7.0
 1. Add any required default command line arguments to the line `DEFAULT_ARGS=()`.
    For example, add `-c [<prefix>]` here to force creating release history from Git.
    The `<prefix>` is the version prefixed used for release tags if any.

@@ -1,4 +1,16 @@
+#
+# Open-CMSIS-Pack gen-pack Bash library
+#
+# Copyright (c) 2022-2023 Arm Limited. All rights reserved.
+#
+# Provided as-is without warranty under Apache 2.0 License
+# SPDX-License-Identifier: Apache-2.0
+#
 
+#
+# Parse command line options
+# Remaining options are stored in POSITIONAL
+#
 function getopts {
   KEEP=${KEEP:-0}
   VERBOSE=${VERBOSE:-0}

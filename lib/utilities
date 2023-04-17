@@ -1,4 +1,20 @@
+#
+# Open-CMSIS-Pack gen-pack Bash library
+#
+# Copyright (c) 2022-2023 Arm Limited. All rights reserved.
+#
+# Provided as-is without warranty under Apache 2.0 License
+# SPDX-License-Identifier: Apache-2.0
+#
 
+#
+# Report search result for a utility
+#
+# Usage: report_utility <name> <location> [<result>]
+#   <name>        The name of the utility.
+#   <location>    The location the utility is found at.,
+#   <result>      The result of lookup. Anything else than 0 creates error output.
+#
 function report_utility {
   if [[ -n "$3" && $3 != 0 ]]; then
     echo_err "Error: No $1 utility found"
@@ -11,6 +27,19 @@ function report_utility {
   fi
 }
 
+#
+# Find a utility based on system PATH
+#
+# Usage: find_utility <name> [<flag> <version>]
+#   <name>       The utilities binary name.
+#   <flag>       The command line flag to query utility version.
+#   <version>    The utility version to search for.
+#
+# By default, the first found binary matchig <name> is returned.
+# Giving optional parameters <flag> and <version> queries the
+# version of a found binary (by calling it with <flag> and returns
+# the first one that reports the expected <version>.
+#
 function find_utility {
   OFS="$IFS"
   IFS=$'\n'
@@ -34,6 +63,9 @@ function find_utility {
   return $?
 }
 
+#
+# Return unified host os type name.
+#
 function get_os_type {
   local OS=$(uname -s)
   case $OS in
@@ -53,6 +85,11 @@ function get_os_type {
   esac
 }
 
+#
+# Find the CMSIS-Pack Root folder based on heuristic:
+# - CMSIS_PACK_ROOT env variable
+# - OS dependent default location
+#
 function find_pack_root {
   if [[ -z "${CMSIS_PACK_ROOT}" || ! -d "${CMSIS_PACK_ROOT}" ]]; then
     local OS=$(uname -s)
@@ -82,6 +119,9 @@ function find_pack_root {
   echo_log "CMSIS-Pack is located in ${CMSIS_PACK_ROOT}"
 }
 
+#
+# Find packchk utility
+#
 function find_packchk {
   if type -a packchk 1>/dev/null 2>/dev/null; then
     UTILITY_PACKCHK="$(which packchk)"
@@ -104,6 +144,9 @@ function find_packchk {
   exit 1
 }
 
+#
+# Find zip utility
+#
 function find_zip {
   local programfiles="$(sed -e 's~\\~/~g' -e "s/\([CD]\):/\/\L\1/" <<<$PROGRAMFILES)"
   if type -a 7z 1>/dev/null 2>/dev/null; then
@@ -130,6 +173,9 @@ function find_zip {
   exit 1
 }
 
+#
+# Find xmllint utility
+#
 function find_xmllint {
   if type -a xmllint 1>/dev/null 2>/dev/null; then
     UTILITY_XMLLINT="$(which xmllint)"
@@ -143,6 +189,9 @@ function find_xmllint {
   exit 1
 }
 
+#
+# Find curl utility
+#
 function find_curl {
   if type -a curl 1>/dev/null 2>/dev/null; then
     UTILITY_CURL="$(which curl)"
@@ -156,6 +205,9 @@ function find_curl {
   exit 1
 }
 
+#
+# Find git command line utility
+#
 function find_git {
   if type -a git 1>/dev/null 2>/dev/null; then
     UTILITY_GIT="$(which git)"
@@ -169,6 +221,9 @@ function find_git {
   exit 1
 }
 
+#
+# Find GitHub cli utility
+#
 function find_ghcli {
   if type -a gh 1>/dev/null 2>/dev/null; then
     UTILITY_GHCLI="$(find_utility gh)"
@@ -191,6 +246,9 @@ function find_ghcli {
   return 1
 }
 
+#
+# Find sha1sum utility
+#
 function find_sha1sum {
   if type -a sha1sum 1>/dev/null 2>/dev/null; then
     UTILITY_SHA1SUM="$(which sha1sum)"
@@ -204,6 +262,9 @@ function find_sha1sum {
   exit 1
 }
 
+#
+# Find linkchecker utility
+#
 function find_linkchecker {
   if type -a linkchecker 1>/dev/null 2>/dev/null; then
     UTILITY_LINKCHECKER="$(which linkchecker)"
@@ -217,11 +278,24 @@ function find_linkchecker {
   exit 1
 }
 
+#
+# Find doxygen utility with matching version
+#
+# Usage: find_doxygen <version>
+#   <version>    Version of Doxygen returned when calling doxygen -v
+#
 function find_doxygen {
   UTILITY_DOXYGEN=$(find_utility doxygen "-v | cut -d' ' -f1" "$1")
   report_utility "doxygen" "$UTILITY_DOXYGEN" $?
 }
 
+#
+# Archive a folder using 7zip
+#
+# Usage: archive_7zip <folder> <archive>
+#   <folder>     The folder to be archived.
+#   <archive>    The output archive name.
+#
 function archive_7zip {
   echo_v "pushd \"$1\"; \"${UTILITY_ZIP}\" a -tzip \"$2\" ."
   pushd "$1" 2>&1 >/dev/null
@@ -229,6 +303,13 @@ function archive_7zip {
   popd 2>&1 >/dev/null
 }
 
+#
+# Archive a folder using GNU zip
+#
+# Usage: archive_zip <folder> <archive>
+#   <folder>     The folder to be archived.
+#   <archive>    The output archive name.
+#
 function archive_zip {
   echo_v "pushd \"$1\"; \"${UTILITY_ZIP}\" -r \"$2\" ."
   pushd "$1" 2>&1 >/dev/null
@@ -236,6 +317,8 @@ function archive_zip {
   popd 2>&1 >/dev/null
 }
 
+#
+# Archive a folder using detected zip utility.
 #
 # Usage: archive <folder> <archive>
 #  <folder>   The source folder to be archived recusrively.
@@ -247,16 +330,32 @@ function archive {
   archive_$UTILITY_ZIP_TYPE "$1" "$2"
 }
 
+#
+# Unarchive an archive using 7zip.
+#
+# Usage: unarchive_7zip <archive> <folder>
+#  <archive>  The source file name of the archive to extract.
+#  <folder>   The target folder to extract the archive to.
+#
 function unarchive_7zip {
   echo_v "\"${UTILITY_ZIP}\" x \"$1\" -o\"$2\" -y"
   "${UTILITY_ZIP}" x "$1" -o"$2" -y
 }
 
+#
+# Unarchive an archive using GNU zip.
+#
+# Usage: unarchive_zip <archive> <folder>
+#  <archive>  The source file name of the archive to extract.
+#  <folder>   The target folder to extract the archive to.
+#
 function unarchive_zip {
   echo_v "\"${UTILITY_UNZIP}\" \"$1\" -d \"$2\""
   "${UTILITY_UNZIP}" "$1" -d "$2"
 }
 
+#
+# Unarchive an archive using detected zip utility.
 #
 # Usage: unarchive <archive> <folder>
 #  <archive>  The source file name of the archive to extract.
@@ -270,6 +369,8 @@ function unarchive {
   unarchive_$UTILITY_ZIP_TYPE "$1" "$2"
 }
 
+#
+# Run linkchecker
 #
 # Usage: check_links [--timeout <sec>] <index> <src>
 #  <index>  Index.html file to start link scanning at."
@@ -334,6 +435,8 @@ function check_links {
   return 0
 }
 
+#
+# Download a file
 #
 # Usage: curl_download <url> <dest>
 #  <url>   URL to download file from

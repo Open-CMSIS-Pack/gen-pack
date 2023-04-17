@@ -1,6 +1,18 @@
+#
+# Open-CMSIS-Pack gen-pack Bash library
+#
+# Copyright (c) 2022-2023 Arm Limited. All rights reserved.
+#
+# Provided as-is without warranty under Apache 2.0 License
+# SPDX-License-Identifier: Apache-2.0
+#
 
-PACK_CHANGELOG_MODE="${PACK_CHANGELOG_MODE:-full}"
-
+#
+# Get version from Git history via git describe command
+#
+# Usage: git_describe [<prefix>]
+#   <prefix>   Optional prefix to filter tags.
+#
 function git_describe {
   local PREFIX="$1"
 
@@ -20,10 +32,16 @@ function git_describe {
   fi
 }
 
+#
+# Generate header for changelog in text format
+#
 function git_changelog_text_head {
   true
 }
 
+#
+# Generate body for changelog in text format
+#
 function git_changelog_text {
   if [ -z "$2" ]; then
     echo "$1"
@@ -34,14 +52,23 @@ function git_changelog_text {
   echo -e "$3"
 }
 
+#
+# Generate footer for changelog in text format
+#
 function git_changelog_text_tail {
   true
 }
 
+#
+# Generate header for changelog in pdsc format
+#
 function git_changelog_pdsc_head {
   echo "<releases>"
 }
 
+#
+# Generate body for changelog in pdsc format
+#
 function git_changelog_pdsc {
   echo -n "  <release version=\"$1\""
   if [ -n "$2" ]; then
@@ -63,23 +90,38 @@ function git_changelog_pdsc {
   echo -e "  </release>"
 }
 
+#
+# Generate footer for changelog in pdsc format
+#
 function git_changelog_pdsc_tail {
   echo "</releases>"
 }
 
+#
+# Generate header for changelog in doxygen/markdown format
+#
 function git_changelog_dxy_head {
   echo "Version     | Description"
   echo ":-----------|:------------------------------------------"
 }
 
+#
+# Generate body for changelog in doxygen/markdown format
+#
 function git_changelog_dxy {
   printf "v%-10s | %s\n" "$1" "$3"
 }
 
+#
+# Generate footer for changelog in doxygen/markdown format
+#
 function git_changelog_dxy_tail {
   echo ""
 }
 
+#
+# Generate header for changelog in doxygen/html format
+#
 function git_changelog_html_head {
   echo "/**"
   echo "\page rev_hist Revision History"
@@ -90,6 +132,9 @@ function git_changelog_html_head {
   echo "</tr>"
 }
 
+#
+# Generate body for changelog in doxygen/html format
+#
 function git_changelog_html {
   echo "<tr>"
   echo "  <td>v$1</td>"
@@ -99,11 +144,31 @@ function git_changelog_html {
   echo "</tr>"
 }
 
+#
+# Generate footer for changelog in doxygen/html format
+#
 function git_changelog_html_tail {
   echo "</table>"
   echo "*/"
 }
 
+#
+# Generate changelog from Git history
+#
+# Setting PACK_CHANGELOG_MODE can be used to steer how the changelog text is retrieved:
+#   full        Tag annotations, release descriptions, or commit messages (in order)
+#   release     Tag annotations, or release descriptions (in order)
+#   tag         Tag annotations only
+#
+# Usage: git_changelog [-f <fmt>] [-d [<msg>]] [-p <prefix>]
+#   <fmt>       The outout format, defaults to text:
+#               text    Plain text
+#               pdsc    Pack description XML, i.e. <releases>..</releases>
+#               dxy     Doxygen Markdown table
+#               html    Doxygen HTML table
+#   <msg>       Create devdrop release with option message.
+#   <prefix>    Prefix to filter Git tags to be considered as releases
+#
 function git_changelog {
   local FORMAT="text"
   local DEVDROP=""

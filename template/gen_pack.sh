@@ -1,51 +1,70 @@
 #!/bin/bash
-# Version: 2.5
-# Date: 2023-03-22
+# Version: 2.6
+# Date: 2023-04-17
 # This bash script generates a CMSIS Software Pack:
 #
 
 set -o pipefail
 
 # Set version of gen pack library
+# For available versions see https://github.com/Open-CMSIS-Pack/gen-pack/tags.
+# Use the tag name without the prefix "v", e.g., 0.7.0
 REQUIRED_GEN_PACK_LIB="<pin lib version here>"
 
 # Set default command line arguments
 DEFAULT_ARGS=()
 
 # Pack warehouse directory - destination
-PACK_OUTPUT=./output
+# Default: ./output
+#
+# PACK_OUTPUT=./output
 
-# Temporary pack build directory
-PACK_BUILD=./build
+# Temporary pack build directory,
+# Default: ./build
+#
+# PACK_BUILD=./build
 
 # Specify directory names to be added to pack base directory
-PACK_DIRS="
-    <list directories here>
-"
+# An empty list defaults to all folders next to this script.
+# Default: empty (all folders)
+#
+# PACK_DIRS="
+#    <list directories here>
+# "
 
 # Specify file names to be added to pack base directory
-PACK_BASE_FILES="
-  LICENSE
-  <list files here>
-"
+# Default: empty
+#
+# PACK_BASE_FILES="
+#   LICENSE
+#   <list files here>
+# "
 
 # Specify file names to be deleted from pack build directory
-PACK_DELETE_FILES="
-    <list files here>
-"
+# Default: empty
+#
+# PACK_DELETE_FILES="
+#     <list files here>
+# "
 
 # Specify patches to be applied
-PACK_PATCH_FILES="
-    <list patches here>
-"
+# Default: empty
+#
+# PACK_PATCH_FILES="
+#     <list patches here>
+# "
 
 # Specify addition argument to packchk
-PACKCHK_ARGS=()
+# Default: empty
+#
+# PACKCHK_ARGS=()
 
 # Specify additional dependencies for packchk
-PACKCHK_DEPS="
-    <list pdsc files here>
-"
+# Default: empty
+#
+# PACKCHK_DEPS="
+#     <list pdsc files here>
+# "
 
 # Optional: restrict fallback modes for changelog generation
 # Default: full
@@ -53,7 +72,8 @@ PACKCHK_DEPS="
 # - full      Tag annotations, release descriptions, or commit messages (in order)
 # - release   Tag annotations, or release descriptions (in order)
 # - tag       Tag annotations only
-PACK_CHANGELOG_MODE="<full|release|tag>"
+#
+# PACK_CHANGELOG_MODE="<full|release|tag>"
 
 #
 # custom pre-processing steps
@@ -84,7 +104,14 @@ function postprocess() {
 
 function install_lib() {
   local URL="https://github.com/Open-CMSIS-Pack/gen-pack/archive/refs/tags/v$1.tar.gz"
-  echo "Downloading gen-pack lib to '$2'"
+  local STATUS=$(curl -sLI "${URL}" | grep "^HTTP" | tail -n 1 | cut -d' ' -f2 || echo "$((600+$?))")
+  if [[ $STATUS -ge 400 ]]; then
+    echo "Wrong/unavailable gen-pack lib version '$1'!" >&2
+    echo "Check REQUIRED_GEN_PACK_LIB variable."  >&2
+    echo "For available versions see https://github.com/Open-CMSIS-Pack/gen-pack/tags." >&2
+    exit 1
+  fi
+  echo "Downloading gen-pack lib version '$1' to '$2' ..."
   mkdir -p "$2"
   curl -L "${URL}" -s | tar -xzf - --strip-components 1 -C "$2" || exit 1
 }
