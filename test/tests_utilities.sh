@@ -366,6 +366,31 @@ EOF
     "$(cat results.csv)"
 }
 
+test_check_links_markdown() {
+  touch "index.html"
+  mkdir "src"
+  cat > "src/index.md" <<EOF
+Follw the link to [file](https://url.to/file).
+EOF
+  cat > "linkchecker-out.csv" <<EOF
+# created by LinkChecker at 2022-08-31 11:38:43+002
+# Get the newest version at https://linkchecker.github.io/linkchecker/
+# Write comments and bugs to https://github.com/linkchecker/linkchecker/issues
+urlname;parentname;base;result;warningstring;infostring;valid;url;line;column;name;dltime;size;checktime;cached;level;modified
+https://url.to/file;index.html;;"SSLError: HTTPSConnectionPool(host='url.to', port=443): Max retries exceeded with url: /file";;;False;https://url.to/file;119;74;AT45DB641E;-1;-1;0.9966633319854736;0;3;
+# Stopped checking at 2022-08-31 11:38:56+002 (13 seconds)
+EOF
+
+  UTILITY_LINKCHECKER="linkchecker_mock"
+  check_links "index.html" "src" --timeout 10 2> results.csv
+
+  assertContains "${LINKCHECKER_MOCK_ARGS[*]}" "index.html"
+  assertContains "${LINKCHECKER_MOCK_ARGS[*]}" "--timeout 10"
+  assertEquals \
+    "$(realpath src/index.md):1:25;https://url.to/file;\"SSLError: HTTPSConnectionPool(host='url.to', port=443): Max retries exceeded with url: /file\";URL 'https://url.to/file' results to '\"SSLError: HTTPSConnectionPool(host='url.to', port=443): Max retries exceeded with url: /file\"'" \
+    "$(cat results.csv)"
+}
+
 test_find_utility() {
   mkdir util-1.0
   mkdir util-2.0

@@ -420,7 +420,7 @@ function check_links {
   for line in $(grep -E '^[^#]' linkchecker-out.csv | tail -n +2); do
     link=$(cut -d';' -f 1 <<<$line)
     msg=$(cut -d';' -f 4 <<<$line)
-    origin=$(grep -Ern "href=['\"]${link}['\"]" "$2")
+    origin=$(grep -rn "${link}" "$2")
     for o in $origin; do
       ofile=$(cut -d':' -f 1  <<<$o)
       oline=$(cut -d':' -f 2  <<<$o)
