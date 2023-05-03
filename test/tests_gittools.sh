@@ -172,26 +172,24 @@ test_git_changelog_pdsc() {
   changelog=$(git_changelog -f pdsc -d -p v)
 
   read -r -d '' expected <<EOF
-<releases>
-  <release version="1.5.1-dev3+g1abcdef">
-    Active development ...
-  </release>
-  <release version="1.5.0" date="2022-08-03" tag="v1.5.0">
-    Change log text for release version v1.5.0
-  </release>
-  <release version="1.2.4" date="2022-06-27" tag="v1.2.4">
-    Change log text for release version v1.2.4
-  </release>
-  <release version="1.2.3" date="2022-06-15" tag="v1.2.3">
-    Change log text for release version v1.2.3
-  </release>
-  <release version="0.9.0" date="2021-07-29" tag="v0.9.0">
-    Release description for version v0.9.0
-  </release>
-  <release version="0.0.1" date="2021-07-29" tag="v0.0.1">
-    Commit message for v0.0.1
-  </release>
-</releases>
+<release version="1.5.1-dev3+g1abcdef">
+  Active development ...
+</release>
+<release version="1.5.0" date="2022-08-03" tag="v1.5.0">
+  Change log text for release version v1.5.0
+</release>
+<release version="1.2.4" date="2022-06-27" tag="v1.2.4">
+  Change log text for release version v1.2.4
+</release>
+<release version="1.2.3" date="2022-06-15" tag="v1.2.3">
+  Change log text for release version v1.2.3
+</release>
+<release version="0.9.0" date="2021-07-29" tag="v0.9.0">
+  Release description for version v0.9.0
+</release>
+<release version="0.0.1" date="2021-07-29" tag="v0.0.1">
+  Commit message for v0.0.1
+</release>
 EOF
 
   assertEquals "${expected}" "${changelog}"
@@ -205,26 +203,24 @@ test_git_changelog_pdsc_with_empty_devlog() {
   changelog=$(git_changelog -f pdsc -d "" -p v)
 
   read -r -d '' expected <<EOF
-<releases>
-  <release version="1.5.1-dev3+g1abcdef">
-    Active development ...
-  </release>
-  <release version="1.5.0" date="2022-08-03" tag="v1.5.0">
-    Change log text for release version v1.5.0
-  </release>
-  <release version="1.2.4" date="2022-06-27" tag="v1.2.4">
-    Change log text for release version v1.2.4
-  </release>
-  <release version="1.2.3" date="2022-06-15" tag="v1.2.3">
-    Change log text for release version v1.2.3
-  </release>
-  <release version="0.9.0" date="2021-07-29" tag="v0.9.0">
-    Release description for version v0.9.0
-  </release>
-  <release version="0.0.1" date="2021-07-29" tag="v0.0.1">
-    Commit message for v0.0.1
-  </release>
-</releases>
+<release version="1.5.1-dev3+g1abcdef">
+  Active development ...
+</release>
+<release version="1.5.0" date="2022-08-03" tag="v1.5.0">
+  Change log text for release version v1.5.0
+</release>
+<release version="1.2.4" date="2022-06-27" tag="v1.2.4">
+  Change log text for release version v1.2.4
+</release>
+<release version="1.2.3" date="2022-06-15" tag="v1.2.3">
+  Change log text for release version v1.2.3
+</release>
+<release version="0.9.0" date="2021-07-29" tag="v0.9.0">
+  Release description for version v0.9.0
+</release>
+<release version="0.0.1" date="2021-07-29" tag="v0.0.1">
+  Commit message for v0.0.1
+</release>
 EOF
 
   assertEquals "${expected}" "${changelog}"
@@ -238,26 +234,24 @@ test_git_changelog_pdsc_with_devlog() {
   changelog=$(git_changelog -f pdsc -d "Custom dev log" -p v)
 
   read -r -d '' expected <<EOF
-<releases>
-  <release version="1.5.1-dev3+g1abcdef">
-    Custom dev log
-  </release>
-  <release version="1.5.0" date="2022-08-03" tag="v1.5.0">
-    Change log text for release version v1.5.0
-  </release>
-  <release version="1.2.4" date="2022-06-27" tag="v1.2.4">
-    Change log text for release version v1.2.4
-  </release>
-  <release version="1.2.3" date="2022-06-15" tag="v1.2.3">
-    Change log text for release version v1.2.3
-  </release>
-  <release version="0.9.0" date="2021-07-29" tag="v0.9.0">
-    Release description for version v0.9.0
-  </release>
-  <release version="0.0.1" date="2021-07-29" tag="v0.0.1">
-    Commit message for v0.0.1
-  </release>
-</releases>
+<release version="1.5.1-dev3+g1abcdef">
+  Custom dev log
+</release>
+<release version="1.5.0" date="2022-08-03" tag="v1.5.0">
+  Change log text for release version v1.5.0
+</release>
+<release version="1.2.4" date="2022-06-27" tag="v1.2.4">
+  Change log text for release version v1.2.4
+</release>
+<release version="1.2.3" date="2022-06-15" tag="v1.2.3">
+  Change log text for release version v1.2.3
+</release>
+<release version="0.9.0" date="2021-07-29" tag="v0.9.0">
+  Release description for version v0.9.0
+</release>
+<release version="0.0.1" date="2021-07-29" tag="v0.0.1">
+  Commit message for v0.0.1
+</release>
 EOF
 
   assertEquals "${expected}" "${changelog}"
