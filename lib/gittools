@@ -63,14 +63,14 @@ function git_changelog_text_tail {
 # Generate header for changelog in pdsc format
 #
 function git_changelog_pdsc_head {
-  echo "<releases>"
+  true
 }
 
 #
 # Generate body for changelog in pdsc format
 #
 function git_changelog_pdsc {
-  echo -n "  <release version=\"$1\""
+  echo -n "<release version=\"$1\""
   if [ -n "$2" ]; then
     echo -n " date=\"$2\""
   fi
@@ -79,7 +79,7 @@ function git_changelog_pdsc {
   fi
   echo ">"
   echo -e "$3" | \
-    sed "s/^/    /" | \
+    sed "s/^/  /" | \
     sed "s/<br>//" | \
     sed "s/<ul>//" | \
     sed "s/<\/ul>//" | \
@@ -87,14 +87,14 @@ function git_changelog_pdsc {
     sed "s/<\/li>//" | \
     sed "s/[ ]*$//" | \
     sed "/^$/d"
-  echo -e "  </release>"
+  echo -e "</release>"
 }
 
 #
 # Generate footer for changelog in pdsc format
 #
 function git_changelog_pdsc_tail {
-  echo "</releases>"
+  true
 }
 
 #

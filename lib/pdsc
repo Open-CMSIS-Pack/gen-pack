@@ -57,15 +57,17 @@ function pdsc_name {
 }
 
 #
-# Retrieve the release description from a pdsc file, i.e.
-# everyting between (not including) <releases>..</releases>.
+# Retrieve the latest release description from a pdsc file, i.e.
+# text between (not including) first <release>..</release>
+# if release has no date attribute.
 #
 # Usage: pdsc_release_desc <pdsc>
 #   <pdsc>    The pdsc file
 #
 function pdsc_release_desc {
-  local first=$(grep -n "<release " "$1" | cut -d: -f1)
-  local last=$(grep -n "</release>" "$1" | cut -d: -f1)
+  local first=$(grep -n "<release " "$1" | grep -v "date=" | head -n 1 | cut -d: -f1)
+  local last=$(grep -n "</release>" "$1" | head -n 1 | cut -d: -f1)
+  first=${first:-$last}
   last=${last:-$first}
   let first+=1
   if [[ $first < $last ]]; then
@@ -93,14 +95,17 @@ function pdsc_release_desc {
 function pdsc_update_releases {
   local DEV=$(pdsc_release_desc "$1")
   local first=$(grep -n "<releases>" "$1" | cut -d: -f1)
-  local last=$(grep -n "</releases>" "$1" | cut -d: -f1)
-  let first-=1
+  if [ -z "$DEV" ]; then
+    local last=$first
+  else
+    local last=$(grep -n "</release>" "$1" | cut -d: -f1 | head -n 1)
+  fi
   let last+=1
   head -n ${first} "$1" > "$2"
   local PREFIX=""
   if [ -n "$3" ]; then
     local PREFIX="-p $3"
   fi
-  git_changelog ${PREFIX} -d "${DEV}" -f pdsc | sed "s/^/  /" >> "$2"
+  git_changelog ${PREFIX} -d "${DEV}" -f pdsc | sed "s/^/    /" >> "$2"
   tail -n +${last} "$1" >> "$2"
 }
