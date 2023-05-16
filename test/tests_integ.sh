@@ -144,3 +144,4 @@ test_integ_with_git_devdrop() {
 }
 
 . "${DIRNAME}/shunit2/shunit2"
+
