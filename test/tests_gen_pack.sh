@@ -14,6 +14,8 @@ setUp() {
   TESTDIR="${SHUNIT_TMPDIR}/${_shunit_test_}/pack"
   mkdir -p "${TESTDIR}"
   pushd "${TESTDIR}" >/dev/null
+  mkdir build
+  mkdir output
 
   PACK_BUILD="$(realpath ./build)"
   PACK_OUTPUT="$(realpath ./output)"
@@ -366,15 +368,15 @@ test_check_locale_unset() {
   unset LANG
 
   output=$(check_locale 2>&1)
-  assertTrue $?
-  assertContains "${output}" "Fixing LANG="
+  assertFalse $?
+  assertContains "${output}" "LANG is not set!"
 
   export LANG="${OLD_LANG}"
 }
 
 test_check_locale_utf8() {
   OLD_LANG="${LANG}"
-  export LANG="$(locale -in)"
+  export LANG="POSIX"
 
   output=$(check_locale 2>&1)
   assertFalse $?

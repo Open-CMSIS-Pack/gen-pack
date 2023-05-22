@@ -33,17 +33,17 @@ echo "Loading gen-pack library ${GEN_PACK_LIB_VERSION} from ${GEN_PACK_LIB_SOURC
 
 # Sanity check locale setting (LANG)
 function check_locale {
-  local UTF8="\\.(UTF|utf)-8$"
+  local UTF8="\\.(UTF|utf)(-)?8$"
   if [[ "${LANG}" =~ $UTF8 ]]; then
     echo_v "Found LANG=${LANG} set to UTF-8 locale."
-  elif [ -z "${LANG}" ]; then
-    echo_err "LANG is not set!"
-    export LANG="$(locale -iU)"
-    echo_log "Fixing LANG=${LANG}"
   else
-    echo_err "LANG is set to non-UTF locale '${LANG}'!"
+    if [ -z "${LANG}" ]; then
+      echo_err "LANG is not set!"
+    else
+      echo_err "LANG is set to non-UTF locale '${LANG}'!"
+    fi
     echo_log "gen-pack needs UTF-8 environment to work."
-    echo_log "Consider setting LANG=$(locale -iU)."
+    echo_log "Consider setting LANG to your locale!"
     exit 1
   fi
 }
