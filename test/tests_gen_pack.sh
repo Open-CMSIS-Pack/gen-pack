@@ -14,15 +14,19 @@ setUp() {
   TESTDIR="${SHUNIT_TMPDIR}/${_shunit_test_}/pack"
   mkdir -p "${TESTDIR}"
   pushd "${TESTDIR}" >/dev/null
+  mkdir build
+  mkdir output
 
   PACK_BUILD="$(realpath ./build)"
   PACK_OUTPUT="$(realpath ./output)"
+  VERBOSE=1
 }
 
 tearDown() {
   unset UTILITY_CURL_RESULT
   unset CURL_MOCK_ARGS
   unset XMLLINT_MOCK_ARGS
+  unset VERBOSE
 }
 
 createTestData() {
@@ -347,5 +351,39 @@ test_create_sha1() {
   assertNotContains "$(cat "${PACK_BUILD}/ARM.GenPack.sha1")" "./input2"
   assertNotContains "$(cat "${PACK_BUILD}/ARM.GenPack.sha1")" "./input3"
 }
+
+test_check_locale() {
+  OLD_LANG="${LANG}"
+  export LANG="en_US.UTF-8"
+
+  output=$(check_locale 2>&1)
+  assertTrue $?
+  assertContains "${output}" "Found LANG=${LANG} set to UTF-8 locale."
+
+  export LANG="${OLD_LANG}"
+}
+
+test_check_locale_unset() {
+  OLD_LANG="${LANG}"
+  unset LANG
+
+  output=$(check_locale 2>&1)
+  assertFalse $?
+  assertContains "${output}" "LANG is not set!"
+
+  export LANG="${OLD_LANG}"
+}
+
+test_check_locale_utf8() {
+  OLD_LANG="${LANG}"
+  export LANG="POSIX"
+
+  output=$(check_locale 2>&1)
+  assertFalse $?
+  assertContains "${output}" "non-UTF locale"
+
+  export LANG="${OLD_LANG}"
+}
+
 
 . "$(dirname "$0")/shunit2/shunit2"
