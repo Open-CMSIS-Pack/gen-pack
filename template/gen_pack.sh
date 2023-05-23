@@ -1,6 +1,6 @@
-#!/bin/bash
-# Version: 2.6
-# Date: 2023-04-17
+#!/usr/bin/env bash
+# Version: 2.7
+# Date: 2023-05-22
 # This bash script generates a CMSIS Software Pack:
 #
 
@@ -29,7 +29,7 @@ DEFAULT_ARGS=()
 # Default: empty (all folders)
 #
 # PACK_DIRS="
-#    <list directories here>
+#   <list directories here>
 # "
 
 # Specify file names to be added to pack base directory
@@ -44,7 +44,7 @@ DEFAULT_ARGS=()
 # Default: empty
 #
 # PACK_DELETE_FILES="
-#     <list files here>
+#   <list files here>
 # "
 
 # Specify patches to be applied
@@ -63,7 +63,7 @@ DEFAULT_ARGS=()
 # Default: empty
 #
 # PACKCHK_DEPS="
-#     <list pdsc files here>
+#   <list pdsc files here>
 # "
 
 # Optional: restrict fallback modes for changelog generation

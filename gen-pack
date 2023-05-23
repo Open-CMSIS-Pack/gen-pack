@@ -12,13 +12,32 @@ GEN_PACK_LIB_SOURCE="$(realpath $(dirname ${BASH_SOURCE}))"
 
 shopt -s expand_aliases
 
+if [ $(cut -d. -f1 <<<$BASH_VERSION) -lt 5 ]; then
+  echo "gen-pack requires Bash version 5 or later." >&2
+  echo "Running Bash version is ${BASH_VERSION}!" >&2
+  exit 1
+fi
+
 case $(uname -s) in
   'WindowsNT'|MINGW*|CYGWIN*)
     alias "pwd"="realpath \$($(which pwd))"
     ;;
   'Darwin')
+    if ! which gcp > /dev/null; then
+      echo "GNU Utilities are required, run brew install coreutils!" >&2
+      exit 1
+    fi
+    if ! which grealpath > /dev/null; then
+      echo "GNU Utilities are required, run brew install coreutils!" >&2
+      exit 1
+    fi
+    if ! which ggrep > /dev/null; then
+      echo "GNU Grep is required, run brew install grep!" >&2
+      exit 1
+    fi
     alias "cp"="gcp"
     alias "grep"="ggrep"
+    alias "realpath"="grealpath"
     ;;
 esac
 

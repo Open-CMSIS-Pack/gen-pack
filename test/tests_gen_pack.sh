@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 #
 # Open-CMSIS-Pack gen-pack Bash library
 #
