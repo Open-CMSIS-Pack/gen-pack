@@ -40,10 +40,11 @@ $ sudo apt install \
 
 ### MacOS
 
-This library requires Bash and some additional GNU tools to be installed using [Homebrew](https://brew.sh/):
+This library requires Bash v5 and some additional GNU tools to be installed using [Homebrew](https://brew.sh/):
 
 ```sh
 $ brew install \
+    bash \ 
     coreutils \
     grep
 ```
