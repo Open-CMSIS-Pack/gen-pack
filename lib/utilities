@@ -250,16 +250,8 @@ function find_ghcli {
 # Find sha1sum utility
 #
 function find_sha1sum {
-  if type -a sha1sum 1>/dev/null 2>/dev/null; then
-    UTILITY_SHA1SUM="$(which sha1sum)"
-    report_utility "sha1sum" "$UTILITY_SHA1SUM"
-    return 0
-  fi
-
-  echo_err "Error: No git utility found"
-  echo_log "Action: Add git to your path"
-  echo_log " "
-  exit 1
+  UTILITY_SHA1SUM="$(find_utility sha1sum)"
+  report_utility "sha1sum" "$UTILITY_SHA1SUM" $?
 }
 
 #

@@ -45,6 +45,7 @@ jobs:
         if: ${{ startsWith(matrix.os, 'macos') }}
         run: |
           brew install \
+            bash \
             coreutils \
             grep
 

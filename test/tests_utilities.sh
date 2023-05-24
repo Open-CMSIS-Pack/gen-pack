@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 #
 # Open-CMSIS-Pack gen-pack Bash library
 #
@@ -56,7 +56,16 @@ tearDown() {
 }
 
 remove_path() {
-  PATH=$(awk -v RS=: -v ORS=: '$0 != "'$1'"' <<<"$PATH" | sed 's/:$//')
+  local OFS=$IFS
+  IFS=':'
+  local path=()
+  for p in $PATH; do
+    if [[ ! "$p" == $1 ]]; then
+      path+=($p)
+    fi
+  done
+  PATH="${path[*]}"
+  IFS=$OFS
 }
 
 add_path() {
@@ -67,17 +76,18 @@ remove_from_path() {
   # Remove all command executables from PATH
   while which $1 1>/dev/null 2>/dev/null; do
     local path="$(dirname $(which $1))"
-    # echo "Un'PATH'ing ${path}..." >&2
+    #echo "Un'PATH'ing ${path}..." >&2
     if [[ "${path}" == "/bin" || "${path}" == "/usr/bin" ]] ; then
-      if [[ ! -d "$(pwd)${path}" ]]; then
-        # echo "  Relocating ${path} to $(pwd)${path}..." >&2
-        mkdir -p "$(pwd)${path}"
-        find "${path}/" -executable -exec ln -s {} "$(pwd)${path}/" \;
-        add_path "$(pwd)${path}"
+      local lpath="$(pwd)${path}"
+      if [[ ! -d "${lpath}" ]]; then
+        #echo "  Relocating ${path} to ${lpath}..." >&2
+        mkdir -p "${lpath}"
+        find "${path}" -executable -exec ln -s {} "${lpath}" \;
+        add_path "${lpath}"
       fi
       remove_path "${path}"
     elif [[ "${path}" == "$(pwd)/bin" || "${path}" == "$(pwd)/usr/bin" ]] ; then
-      # echo "  Removing $1 from ${path}..." >&2
+      #echo "  Removing $1 from ${path}..." >&2
       rm "${path}/$1"
     else
       remove_path "${path}"

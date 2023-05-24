@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 #
 # Open-CMSIS-Pack gen-pack Bash library
 #
@@ -73,7 +73,7 @@ test_integ_with_git_release() {
   assertTrue  "Checksum file verification failed" "cd build; sha1sum ARM.GenPack.sha1"
 
   pdsc=$(cat build/ARM.GenPack.pdsc)
-  assertContains "$pdsc" '<release version="1.0.0" date="2022-11-21" tag="v1.0.0">'
+  assertContains "$pdsc" '<release version="1.0.0" date="2023-05-22" tag="v1.0.0">'
   assertContains "$pdsc" "Initial release 1.0.0"
   assertNotContains "$pdsc" "Active development ..."
 }
@@ -108,7 +108,7 @@ test_integ_with_git_prerelease() {
   assertTrue  "Checksum file verification failed" "cd build; sha1sum ARM.GenPack.sha1"
 
   pdsc=$(cat build/ARM.GenPack.pdsc)
-  assertContains "$pdsc" '<release version="1.0.0" date="2022-11-21" tag="v1.0.0">'
+  assertContains "$pdsc" '<release version="1.0.0" date="2023-05-22" tag="v1.0.0">'
   assertContains "$pdsc" "Initial release 1.0.0"
   assertContains "$pdsc" '<release version="1.0.0-dev" date="2022-08-04" tag="v1.0.0-dev">'
   assertContains "$pdsc" "Active development ..."
@@ -132,13 +132,13 @@ test_integ_with_git_devdrop() {
   assertTrue  "Doc index file missing"         "[ -f build/doc/html/index.html ]"
   assertTrue  "Header file missing"            "[ -f build/inc/test.h ]"
   assertTrue  "Source file missing"            "[ -f build/src/test.c ]"
-  assertTrue  "Pack archive missing"           "[ -f output/ARM.GenPack.1.0.1-dev1+g83ce9fd.pack ]"
+  assertTrue  "Pack archive missing"           "[ -f output/ARM.GenPack.1.0.1-dev1+g07dedc7.pack ]"
 
   assertTrue  "Checksum file verification failed" "cd build; sha1sum ARM.GenPack.sha1"
 
   pdsc=$(cat build/ARM.GenPack.pdsc)
-  assertContains "$pdsc" '<release version="1.0.1-dev1+g83ce9fd">'
-  assertContains "$pdsc" '<release version="1.0.0" date="2022-11-21" tag="v1.0.0">'
+  assertContains "$pdsc" '<release version="1.0.1-dev1+g07dedc7">'
+  assertContains "$pdsc" '<release version="1.0.0" date="2023-05-22" tag="v1.0.0">'
   assertContains "$pdsc" "Initial release 1.0.0"
   assertContains "$pdsc" "Active development ..."
 }
