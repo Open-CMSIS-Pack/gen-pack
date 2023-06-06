@@ -7,7 +7,7 @@
 # SPDX-License-Identifier: Apache-2.0
 #
 
-GEN_PACK_LIB_VERSION="0.8.3"
+GEN_PACK_LIB_VERSION="0.8.4"
 GEN_PACK_LIB_SOURCE="$(realpath $(dirname ${BASH_SOURCE}))"
 
 shopt -s expand_aliases
@@ -67,35 +67,9 @@ echo "Loading gen-pack library ${GEN_PACK_LIB_VERSION} from ${GEN_PACK_LIB_SOURC
 . "${GEN_PACK_LIB_SOURCE}/lib/pdsc"
 . "${GEN_PACK_LIB_SOURCE}/lib/gittools"
 . "${GEN_PACK_LIB_SOURCE}/lib/logging"
-
-# Sanity check locale setting (LANG)
-function check_locale {
-  local UTF8="\\.(UTF|utf)(-)?8$"
-  if [[ "${LANG}" =~ $UTF8 ]]; then
-    echo_v "Found LANG=${LANG} set to UTF-8 locale."
-  else
-    if [ -z "${LANG}" ]; then
-      echo_err "LANG is not set!"
-    else
-      echo_err "LANG is set to non-UTF locale '${LANG}'!"
-    fi
-    echo_log "gen-pack needs UTF-8 environment to work."
-    echo_log "Consider setting LANG to your locale!"
-    exit 1
-  fi
-}
+. "${GEN_PACK_LIB_SOURCE}/lib/helper"
 
 check_locale
-
-# Sanity check settings
-function check_placeholder {
-  local re=".*<.*>.*"
-  if [[ "${!1}" =~ $re ]]; then
-    echo_err "Variable '$1' contains placeholder '<..>'"
-    echo_log "Remove placeholders from gen-pack settings!"
-    exit 1
-  fi
-}
 
 check_placeholder "PACK_DIRS"
 check_placeholder "PACK_BASE_FILES"
@@ -207,6 +181,11 @@ function apply_patches {
 #  <pdsc>   The pack description to check
 #
 function check_schema {
+  if [ -z "${UTILITY_XMLLINT}" ]; then
+    echo_err "Cannot run schema check when missing xmllint utility!"
+    return 1
+  fi
+
   echo_log "Running schema check for $1"
   local CMSISSCHEMA=$(realpath -m "${CMSIS_TOOLSDIR:-.}/../PACK.xsd")
   local SCHEMA="${CMSISSCHEMA}"
