@@ -60,7 +60,15 @@ The following tools need to be installed on Windows machines.
 
 #### xmllint
 
-[xmllint](http://xmlsoft.org/xmllint.html) can be installed using the
+xmllint is provided by the [Chocolatey](https://chocolatey.org/install) [xsltproc package](https://chocolatey.org/packages/xsltproc).
+Installing choco and xsltproc can be done from an administrative PowerShell prompt:
+
+```ps
+> Set-ExecutionPolicy Bypass -Scope Process -Force; [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; iex ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
+> choco install xsltproc
+```
+
+Alternatively, [xmllint](http://xmlsoft.org/xmllint.html) can be installed manually using the
 [libxml library](https://www.zlatkovic.com/pub/libxml/). Download the following ZIP files:
 
 - iconv-1.9.2.win32.zip
@@ -70,12 +78,6 @@ The following tools need to be installed on Windows machines.
 
 Extract the /bin directory of each ZIP file to a directory, for example C:\xmllint and add this directory to the
 Windows PATH environment variable.
-
-Alternatively, xmllint is also provided by the [Chocolatey xsltproc package](https://chocolatey.org/packages/xsltproc):
-
-```ps
-> choco install xsltproc
-```
 
 #### 7-Zip
 

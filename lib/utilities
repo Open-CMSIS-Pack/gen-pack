@@ -17,8 +17,13 @@
 #
 function report_utility {
   if [[ -n "$3" && $3 != 0 ]]; then
-    echo_err "Error: No $1 utility found"
-    echo_log "Action: Add $1 to your path"
+    if [ -n "$4" ]; then
+      echo_err "Error: No $1 utility found with version $4"
+      echo_log "Action: Add $1 version $4 to your PATH"
+    else
+      echo_err "Error: No $1 utility found"
+      echo_log "Action: Add $1 to your PATH"
+    fi
     echo_log " "
     exit $3
   else
@@ -95,7 +100,7 @@ function find_pack_root {
     local OS=$(uname -s)
     case $OS in
       'Linux'|'Darwin')
-        local DEFAULT_CMSIS_PACK_ROOT="${HOME}/.arm/Packs"
+        local DEFAULT_CMSIS_PACK_ROOT="${HOME}/.cache/arm/packs"
         ;;
       'WindowsNT'|MINGW*|CYGWIN*)
         local DEFAULT_CMSIS_PACK_ROOT="${LOCALAPPDATA//\\//}/Arm/Packs"
@@ -185,8 +190,22 @@ function find_xmllint {
 
   echo_err "Error: No xmllint utility found"
   echo_log "Action: Add xmllint to your path"
+  case $(uname -s) in
+    'WindowsNT'|MINGW*|CYGWIN*)
+      echo_log 'Try installing Chocolatey and run choco install xsltproc.'
+      echo_log 'See documentation for more details.'
+      ;;
+    'Linux')
+      if which apt-get; then
+        echo_log "Try running sudo apt-get install libxml2-utils."
+      fi
+      ;;
+    'Darwin')
+      echo_log "Try running brew install libxml2"
+      ;;
+  esac
   echo_log " "
-  exit 1
+  return 1
 }
 
 #
@@ -278,7 +297,7 @@ function find_linkchecker {
 #
 function find_doxygen {
   UTILITY_DOXYGEN=$(find_utility doxygen "-v | cut -d' ' -f1" "$1")
-  report_utility "doxygen" "$UTILITY_DOXYGEN" $?
+  report_utility "doxygen" "$UTILITY_DOXYGEN" $? "$1"
 }
 
 #

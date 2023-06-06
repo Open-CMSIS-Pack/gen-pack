@@ -196,6 +196,15 @@ EOF
   assertContains "${XMLLINT_MOCK_ARGS[@]}" "test.pdsc"
 }
 
+test_check_schema_no_xmllint() {
+  UTILITY_XMLLINT=""
+
+  output=$(check_schema test.pdsc 2>&1)
+
+  assertFalse $?
+  assertContains "${output}" "Cannot run schema check when missing xmllint utility!"
+}
+
 test_check_schema_nourl_version() {
   cat > test.pdsc <<EOF
 <?xml version="1.0" encoding="UTF-8"?>
@@ -351,39 +360,5 @@ test_create_sha1() {
   assertNotContains "$(cat "${PACK_BUILD}/ARM.GenPack.sha1")" "./input2"
   assertNotContains "$(cat "${PACK_BUILD}/ARM.GenPack.sha1")" "./input3"
 }
-
-test_check_locale() {
-  OLD_LANG="${LANG}"
-  export LANG="en_US.UTF-8"
-
-  output=$(check_locale 2>&1)
-  assertTrue $?
-  assertContains "${output}" "Found LANG=${LANG} set to UTF-8 locale."
-
-  export LANG="${OLD_LANG}"
-}
-
-test_check_locale_unset() {
-  OLD_LANG="${LANG}"
-  unset LANG
-
-  output=$(check_locale 2>&1)
-  assertFalse $?
-  assertContains "${output}" "LANG is not set!"
-
-  export LANG="${OLD_LANG}"
-}
-
-test_check_locale_utf8() {
-  OLD_LANG="${LANG}"
-  export LANG="POSIX"
-
-  output=$(check_locale 2>&1)
-  assertFalse $?
-  assertContains "${output}" "non-UTF locale"
-
-  export LANG="${OLD_LANG}"
-}
-
 
 . "$(dirname "$0")/shunit2/shunit2"

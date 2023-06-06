@@ -123,7 +123,7 @@ test_find_pack_root_by_env() {
 test_find_pack_root_by_default() {
   case $(uname -s) in
     'Linux'|'Darwin')
-      local DEFAULT_CMSIS_PACK_ROOT="${HOME}/.arm/Packs"
+      local DEFAULT_CMSIS_PACK_ROOT="${HOME}/.cache/arm/packs"
       ;;
     'WindowsNT'|MINGW*|CYGWIN*)
       local DEFAULT_CMSIS_PACK_ROOT="${LOCALAPPDATA//\\//}/Arm/Packs"
@@ -545,6 +545,32 @@ EOF
 
   find_doxygen "1.8.6"
   find_doxygen "1.9.2"
+}
+
+test_find_doxygen_version() {
+  mkdir "doxygen-1.8.6"
+  mkdir "doxygen-1.9.2"
+
+  cat > "doxygen-1.8.6/doxygen" <<EOF
+#!/bin/sh
+echo "1.8.6"
+EOF
+
+  cat > "doxygen-1.9.2/doxygen" <<EOF
+#!/bin/sh
+echo "1.9.2 (caa4e3de211fbbef2c3adf58a6bd4c86d0eb7cb8)"
+EOF
+  chmod +x "doxygen-1.8.6/doxygen"
+  chmod +x "doxygen-1.9.2/doxygen"
+
+
+  remove_from_path "doxygen"
+  PATH="$(pwd)/doxygen-1.8.6:$(pwd)/doxygen-1.9.2:$PATH"
+
+  OUTPUT=$(find_doxygen "1.9.6" 2>&1)
+  assertFalse $?
+  assertContains "$OUTPUT" "Error: No doxygen utility found with version 1.9.6"
+  assertContains "$OUTPUT" "Action: Add doxygen version 1.9.6 to your PATH" 
 }
 
 . "$(dirname "$0")/shunit2/shunit2"

@@ -1,0 +1,57 @@
+#
+# Open-CMSIS-Pack gen-pack Bash library
+#
+# Copyright (c) 2022-2023 Arm Limited. All rights reserved.
+#
+# Provided as-is without warranty under Apache 2.0 License
+# SPDX-License-Identifier: Apache-2.0
+#
+
+#
+# Sanity check locale setting (LANG)
+# 
+# Usage: check_locale
+#
+function check_locale {
+  local UTF8="\\.(UTF|utf)(-)?8$"
+  if [[ "${LANG}" =~ $UTF8 ]]; then
+    echo_v "Found LANG=${LANG} set to UTF-8 locale."
+    return 0
+  fi
+  
+  if [ -z "${LANG}" ]; then
+    echo_err "LANG is not set!"
+  else
+    echo_err "LANG is set to non-UTF locale '${LANG}'!"
+  fi
+  echo_log "gen-pack needs UTF-8 environment to work."
+  echo_log "Consider setting LANG to your locale!"
+  case $(uname -s) in
+    'WindowsNT'|MINGW*|CYGWIN*)
+      echo_log 'E.g., export LANG=$(locale -s -U)'
+      export LANG=$(locale -s -U 2>/dev/null || echo "en_US.UTF-8")
+      ;;
+    *)
+      echo_log "E.g., export LANG=en_US.UTF-8"
+      export LANG=en_US.UTF-8
+      ;;
+  esac
+  echo_log "Going on with LANG=${LANG} ..."
+
+  return 1
+}
+
+#
+# Sanity check settings
+#
+# Usage: check_placeholder <var>
+#  <var>   The Bash variable name to check for placeholders  
+#
+function check_placeholder {
+  local re=".*<.*>.*"
+  if [[ "${!1}" =~ $re ]]; then
+    echo_err "Variable '$1' contains placeholder '<..>'"
+    echo_log "Remove placeholders from gen-pack settings!"
+    exit 1
+  fi
+}
