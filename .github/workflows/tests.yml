@@ -25,7 +25,7 @@ jobs:
 
       - name: Run ShellCheck
         run: |
-          shellcheck -f gcc gen-pack lib/*
+          shellcheck -s bash -f gcc gen-pack lib/*
 
   tests:
     runs-on: ${{ matrix.os }}

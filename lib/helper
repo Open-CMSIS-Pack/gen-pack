@@ -28,12 +28,12 @@ function check_locale {
   echo_log "Consider setting LANG to your locale!"
   case $(uname -s) in
     'WindowsNT'|MINGW*|CYGWIN*)
-      echo_log 'E.g., export LANG=$(locale -s -U)'
-      export LANG=$(locale -s -U 2>/dev/null || echo "en_US.UTF-8")
+      echo_log "E.g., export LANG=\$(locale -s -U)"
+      LANG="$(locale -s -U 2>/dev/null || echo "en_US.UTF-8")"
       ;;
     *)
       echo_log "E.g., export LANG=en_US.UTF-8"
-      export LANG=en_US.UTF-8
+      LANG="en_US.UTF-8"
       ;;
   esac
   echo_log "Going on with LANG=${LANG} ..."

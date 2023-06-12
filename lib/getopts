@@ -32,7 +32,7 @@ function getopts {
       ;;
       '-c'|'--changelog')
         shift
-        CHANGELOG=$1
+        export CHANGELOG=$1
       ;;
       '--no-changelog')
         unset CHANGELOG
