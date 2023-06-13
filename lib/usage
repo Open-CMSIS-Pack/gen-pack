@@ -9,7 +9,7 @@
 
 function usage {
 cat << EOF
-Usage: $(basename $0) [-h] [-k] [-c <prefix>] [-v] [<pdsc>]
+Usage: $(basename "$0") [-h] [-k] [-c <prefix>] [-v] [<pdsc>]
 
 Arguments:
   -h, --help                      Print this usage message and exit.

@@ -17,19 +17,23 @@ function git_describe {
   local PREFIX="$1"
 
   if "${UTILITY_GIT}" rev-parse --git-dir 2>/dev/null >/dev/null; then
-    local gitversion=$("${UTILITY_GIT}" describe --tags --long --match "${PREFIX}*" --abbrev=7 || echo "0.0.0-dirty-1-g$("${UTILITY_GIT}" describe --tags --match "${PREFIX}*" --always --abbrev=7 2>/dev/null)")
-    local patch=$(sed -r -e 's/[0-9]+\.[0-9]+\.([0-9]+).*/\1/' <<< ${gitversion#${PREFIX}})
-    let patch+=1
-    local version=$(sed -r -e 's/-0-(g[0-9a-f]{7})//' <<< ${gitversion#${PREFIX}})
-    local version=$(sed -r -e "s/\.[0-9]+-([0-9]+)-(g[0-9a-f]{7})/.${patch}-dev\1+\2/" <<< ${version})
-    local version=$(sed -r -e "s/-([^0-9]+[0-9]+)-([0-9]+)-(g[0-9a-f]{7})/-\1.\2+\3/" <<< ${version})
-    local version=$(sed -r -e "s/-([^0-9]+)-([0-9]+)-(g[0-9a-f]{7})/-\1\2+\3/" <<< ${version})
-    echo_log "Git version: '$version'"
-    echo $version
+    local gitversion
+    local patch
+    local version
+    gitversion=$("${UTILITY_GIT}" describe --tags --long --match "${PREFIX}*" --abbrev=7 || echo "0.0.0-dirty-1-g$("${UTILITY_GIT}" describe --tags --match "${PREFIX}*" --always --abbrev=7 2>/dev/null)")
+    patch=$(sed -r -e 's/[0-9]+\.[0-9]+\.([0-9]+).*/\1/' <<< "${gitversion#"${PREFIX}"}")
+    ((patch+=1))
+    version=$(sed -r -e 's/-0-(g[0-9a-f]{7})//' <<< "${gitversion#"${PREFIX}"}")
+    version=$(sed -r -e "s/\.[0-9]+-([0-9]+)-(g[0-9a-f]{7})/.${patch}-dev\1+\2/" <<< "${version}")
+    version=$(sed -r -e "s/-([^0-9]+[0-9]+)-([0-9]+)-(g[0-9a-f]{7})/-\1.\2+\3/" <<< "${version}")
+    version=$(sed -r -e "s/-([^0-9]+)-([0-9]+)-(g[0-9a-f]{7})/-\1\2+\3/" <<< "${version}")
+    echo_log "Git version: '${version}'"
+    echo "${version}"
   else
     echo_err "No Git repository: '0.0.0-nogit'"
     echo "0.0.0-nogit"
   fi
+  set +x
 }
 
 #
@@ -198,33 +202,39 @@ function git_changelog {
     shift # past argument
   done
 
-  local TAGS=($(\
+  mapfile -t TAGS < <(\
     GIT_CONFIG_COUNT=1\
     GIT_CONFIG_KEY_0="versionsort.suffix"\
     GIT_CONFIG_VALUE_0="-"\
     "${UTILITY_GIT}" for-each-ref --format "%(refname)" --sort="-v:refname" "refs/tags/${PREFIX}*"\
-  ))
-  local LATEST=$(git_describe "${PREFIX}")
+  )
+  local LATEST
+  LATEST=$(git_describe "${PREFIX}")
 
-  git_changelog_${FORMAT}_head
+  "git_changelog_${FORMAT}_head"
 
   if [[ -n "${DEVDROP}" ]] && !  "${UTILITY_GIT}" rev-list "${PREFIX}${LATEST}" 1>/dev/null 2>/dev/null; then
-    git_changelog_$FORMAT "${LATEST}" "" "${DEVDROP}"
+    "git_changelog_${FORMAT}" "${LATEST}" "" "${DEVDROP}"
   fi
 
-  for TAG in ${TAGS[@]}; do
-    local TYPE="$("${UTILITY_GIT}" for-each-ref --format "%(objecttype)" ${TAG})"
-    local TAG="${TAG#refs/tags/}"
-    local DESC="$("${UTILITY_GIT}" tag -l -n99 --format "%(contents)" ${TAG})"
-    local DATE="$("${UTILITY_GIT}" tag -l -n99 --format "%(taggerdate:short)" ${TAG})"
+  local TAG
+  for TAG in "${TAGS[@]}"; do
+    local TYPE
+    local DESC
+    local DATE
+    TYPE="$("${UTILITY_GIT}" for-each-ref --format "%(objecttype)" "${TAG}")"
+    TAG="${TAG#refs/tags/}"
+    DESC="$("${UTILITY_GIT}" tag -l -n99 --format "%(contents)" "${TAG}")"
+    DATE="$("${UTILITY_GIT}" tag -l -n99 --format "%(taggerdate:short)" "${TAG}")"
     if [[ -z "$DATE" ]]; then
-      local DATE="$( "${UTILITY_GIT}" tag -l -n99 --format "%(committerdate:short)" ${TAG})"
+      DATE="$( "${UTILITY_GIT}" tag -l -n99 --format "%(committerdate:short)" "${TAG}")"
     fi
     if [ "${TYPE}" = "tag" ]; then
       echo_v "Changelog for tag '${TAG}' taken from annotation message."
     elif [ "${TYPE}" = "commit" ] && [ "${PACK_CHANGELOG_MODE}" != "tag" ]; then
-      if "${UTILITY_GHCLI}" release view ${TAG} >/dev/null 2>/dev/null; then
-        local RELEASE="$("${UTILITY_GHCLI}" release view ${TAG} --json "body" -t "{{ .body }}")"
+      if "${UTILITY_GHCLI}" release view "${TAG}" >/dev/null 2>/dev/null; then
+        local RELEASE
+        RELEASE="$("${UTILITY_GHCLI}" release view "${TAG}" --json "body" -t "{{ .body }}")"
         if [ -n "${RELEASE}" ]; then
           local DESC="${RELEASE}"
           echo_v "Changelog for tag '${TAG}' taken from GitHub release description."
@@ -236,7 +246,7 @@ function git_changelog {
           echo_log " => GitHub release description is empty."
           exit 1
         fi
-        local DATE="$("${UTILITY_GHCLI}" release view ${TAG} --json "publishedAt" -t "{{ timefmt \"2006-01-02\" .publishedAt }}")"
+        DATE="$("${UTILITY_GHCLI}" release view "${TAG}" --json "publishedAt" -t "{{ timefmt \"2006-01-02\" .publishedAt }}")"
       elif [ "${PACK_CHANGELOG_MODE}" = "full" ]; then
         echo_v "Changelog for tag '${TAG}' taken from commit message."
       else
@@ -250,8 +260,8 @@ function git_changelog {
       echo_log " => Tag has no annotation message."
       exit 1
     fi
-    git_changelog_$FORMAT "${TAG#${PREFIX}}" "${DATE}" "${DESC}" "${TAG}"
+    "git_changelog_$FORMAT" "${TAG#"${PREFIX}"}" "${DATE}" "${DESC}" "${TAG}"
   done
 
-  git_changelog_${FORMAT}_tail
+  "git_changelog_${FORMAT}_tail"
 }

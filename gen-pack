@@ -8,11 +8,11 @@
 #
 
 GEN_PACK_LIB_VERSION="0.8.4"
-GEN_PACK_LIB_SOURCE="$(realpath $(dirname ${BASH_SOURCE}))"
+GEN_PACK_LIB_SOURCE="$(realpath "$(dirname "${BASH_SOURCE[0]}")")"
 
 shopt -s expand_aliases
 
-if [ $(cut -d. -f1 <<<$BASH_VERSION) -lt 5 ]; then
+if [ "$(cut -d. -f1 <<<"${BASH_VERSION}")" -lt 5 ]; then
   echo "gen-pack requires Bash version 5 or later." >&2
   echo "Running Bash version is ${BASH_VERSION}!" >&2
   case $(uname -s) in
@@ -38,7 +38,7 @@ fi
 
 case $(uname -s) in
   'WindowsNT'|MINGW*|CYGWIN*)
-    alias "pwd"="realpath \$($(which pwd))"
+    alias "pwd"="realpath \$(\$(which pwd))"
     ;;
   'Darwin')
     if ! which gcp > /dev/null; then
@@ -163,12 +163,13 @@ function apply_patches {
     echo_log Applying patches to pack:
     echo_log "${PACK_PATCH_FILES}"
     echo_log " "
-    local CWD=$(pwd)
-    pushd "$1" > /dev/null
+    local cwd 
+    cwd=$(pwd)
+    pushd "$1" > /dev/null || exit
     for f in ${PACK_PATCH_FILES}; do
-      patch -p0 -t -i "${CWD}/${f}"
+      patch -p0 -t -i "${cwd}/${f}"
     done
-    popd > /dev/null
+    popd > /dev/null || exit
   else
     echo_log "PACK_PATCH_FILES is empty, no patches to be applied."
   fi
@@ -187,12 +188,15 @@ function check_schema {
   fi
 
   echo_log "Running schema check for $1"
-  local CMSISSCHEMA=$(realpath -m "${CMSIS_TOOLSDIR:-.}/../PACK.xsd")
+  local CMSISSCHEMA
+  CMSISSCHEMA=$(realpath -m "${CMSIS_TOOLSDIR:-.}/../PACK.xsd")
   local SCHEMA="${CMSISSCHEMA}"
   if [ ! -f "$SCHEMA" ]; then
     echo_log "Fetching schema file..."
-    local SCHEMAURL=$(grep -Pio "xs:noNamespaceSchemaLocation=\"\K[^\"]+" "$1")
-    local SCHEMAVERSION=$(grep -Pio "schemaVersion=\"\K[^\"]+" "$1")
+    local SCHEMAURL
+    SCHEMAURL=$(grep -Pio "xs:noNamespaceSchemaLocation=\"\K[^\"]+" "$1")
+    local SCHEMAVERSION
+    SCHEMAVERSION=$(grep -Pio "schemaVersion=\"\K[^\"]+" "$1")
     local SCHEMA="${TEMP:-/tmp}/PACK.xsd"
     curl_download "${SCHEMAURL}" "${SCHEMA}"
     local errorlevel=$?
@@ -236,9 +240,10 @@ function check_schema {
 #
 function check_pack {
   PACKCHK_DEPS="${PACKCHK_DEPS:-ARM.CMSIS.pdsc}"
-  local dependencies=$(grep -Pio "<package\s+\Kvendor=\"[^\"]+\"\s+name=\"[^\"]+\"" "$1" \
+  local dependencies
+  dependencies=$(grep -Pio "<package\s+\Kvendor=\"[^\"]+\"\s+name=\"[^\"]+\"" "$1" \
    | sed -E 's/vendor="([^"]*)"[ ]*name="([^"]*)"/\1.\2.pdsc/')
-  local include=""
+  declare -a include
   local webdir="${CMSIS_PACK_ROOT}/.Web"
   if [ ! -d "${webdir}" ]; then
     mkdir -p "${webdir}"
@@ -247,10 +252,10 @@ function check_pack {
     if [ ! -f "${webdir}/${dep}" ]; then
       curl_download "https://www.keil.com/pack/${dep}" "${webdir}/${dep}"
     fi
-    include="${include} -i ${webdir}/${dep}"
+    include+=(-i "${webdir}/${dep}")
   done
-  echo_v "\"${UTILITY_PACKCHK}\" \"$1\" ${include} -n \"${PACK_OUTPUT}/PackName.txt\"" ${PACKCHK_ARGS[@]}
-  "${UTILITY_PACKCHK}" "$1" ${include} -n "${PACK_OUTPUT}/PackName.txt" ${PACKCHK_ARGS[@]}
+  echo_v "\"${UTILITY_PACKCHK}\" \"$1\" ${include[*]} -n \"${PACK_OUTPUT}/PackName.txt\"" "${PACKCHK_ARGS[@]}"
+  "${UTILITY_PACKCHK}" "$1" "${include[@]}" -n "${PACK_OUTPUT}/PackName.txt" "${PACKCHK_ARGS[@]}"
   local errorlevel=$?
   if [ $errorlevel -ne 0 ]; then
     echo_err "build aborted: pack check failed"
@@ -269,10 +274,10 @@ function check_pack {
 #   <pack>    Pack name
 #
 function create_sha1 {
-  pushd "$1" > /dev/null
+  pushd "$1" > /dev/null || exit
   find . -type f -exec "${UTILITY_SHA1SUM}" -b {} + > "${TEMP:-/tmp}/$2.$3.sha1"
   mv "${TEMP:-/tmp}/$2.$3.sha1" "$2.$3.sha1"
-  popd > /dev/null
+  popd > /dev/null || exit
 }
 
 #
@@ -320,14 +325,14 @@ function gen_pack {
   echo_log "PDSC       is located in ${PACK_DESCRIPTION_FILE}"
   echo_log " "
 
-  PACK_BASEDIR=$(dirname ${PACK_DESCRIPTION_FILE})
+  PACK_BASEDIR=$(dirname "${PACK_DESCRIPTION_FILE}")
   PACK_VENDOR=$(pdsc_vendor "${PACK_DESCRIPTION_FILE}")
   PACK_NAME=$(pdsc_name "${PACK_DESCRIPTION_FILE}")
   echo_log "Generating Pack for ${PACK_VENDOR}.${PACK_NAME}"
 
   PACK_BUILD=$(realpath "${PACK_BASEDIR}/${PACK_BUILD:-build}")
   PACK_OUTPUT=$(realpath "${PACK_BASEDIR}/${PACK_OUTPUT:-output}")
-  PACK_BUILD_DESCRIPTION_FILE="${PACK_BUILD}/$(basename ${PACK_DESCRIPTION_FILE})"
+  PACK_BUILD_DESCRIPTION_FILE="${PACK_BUILD}/$(basename "${PACK_DESCRIPTION_FILE}")"
 
   echo_log " via ${PACK_BUILD}"
   echo_log " to ${PACK_OUTPUT}"
@@ -339,7 +344,7 @@ function gen_pack {
   mkdir -p "${PACK_BUILD}"
   mkdir -p "${PACK_OUTPUT}"
 
-  pushd ${PACK_BASEDIR} >/dev/null
+  pushd "${PACK_BASEDIR}" >/dev/null || exit
 
   [[ ${PREPROCESS} == 1 && "$(type -t preprocess)" == "function" ]] && preprocess "${PACK_BUILD}"
 
@@ -371,5 +376,5 @@ function gen_pack {
   fi
 
   echo_log ""
-  echo_log "${LOG_COLOR_GREEN}Pack $(basename ${PACK_ARCHIVE}) generated successfully!"
+  echo_log "${LOG_COLOR_GREEN}Pack $(basename "${PACK_ARCHIVE}") generated successfully!"
 }

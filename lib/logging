@@ -7,19 +7,19 @@
 # SPDX-License-Identifier: Apache-2.0
 #
 
-LOG_COLOR_NC=''
-LOG_COLOR_BLACK=''
-LOG_COLOR_RED=''
-LOG_COLOR_GREEN=''
-LOG_COLOR_YELLOW=''
-LOG_COLOR_BLUE=''
-LOG_COLOR_MAGENTA=''
-LOG_COLOR_CYAN=''
-LOG_COLOR_WHITE=''
+declare -x LOG_COLOR_NC=''
+declare -x LOG_COLOR_BLACK=''
+declare -x LOG_COLOR_RED=''
+declare -x LOG_COLOR_GREEN=''
+declare -x LOG_COLOR_YELLOW=''
+declare -x LOG_COLOR_BLUE=''
+declare -x LOG_COLOR_MAGENTA=''
+declare -x LOG_COLOR_CYAN=''
+declare -x LOG_COLOR_WHITE=''
 
 if test -t 1 && type tput >/dev/null; then
   ncolors=$(tput colors)
-  if test -n "$ncolors" && test $ncolors -ge 8; then
+  if test -n "${ncolors}" && test "${ncolors}" -ge 8; then
     LOG_COLOR_NC="$(tput sgr0)"
     LOG_COLOR_BLACK="$(tput setaf 0)"
     LOG_COLOR_RED="$(tput setaf 1)"
@@ -34,7 +34,7 @@ if test -t 1 && type tput >/dev/null; then
 fi
 
 function echo_v {
-  if [[ $VERBOSE == 1 ]]; then
+  if [[ ${VERBOSE} == 1 ]]; then
     echo -e "${LOG_COLOR_GREEN}$*${LOG_COLOR_NC}" >&2
   fi
 }
@@ -50,6 +50,6 @@ function echo_err {
 function fail_and_bail {
   if [[ $1 != 0 ]]; then
     echo_err "Fatal error detected, bailing out ..."
-    exit $1
+    exit "$1"
   fi
 }

@@ -25,7 +25,7 @@ function report_utility {
       echo_log "Action: Add $1 to your PATH"
     fi
     echo_log " "
-    exit $3
+    exit "$3"
   else
     printf -v  util_out_text "%-10s is located in %s" "$1" "$2"
     echo_log "$util_out_text"
@@ -48,7 +48,8 @@ function report_utility {
 function find_utility {
   OFS="$IFS"
   IFS=$'\n'
-  local UTILS=($(type -ap "$1" 2>/dev/null))
+  local UTILS
+  mapfile -t UTILS < <(type -ap "$1" 2>/dev/null)
   IFS="$OFS"
   local retval=$?
   if [[ $retval != 0 ]]; then
@@ -56,7 +57,8 @@ function find_utility {
   fi
   if [[ -n "$2" && -n "$3" ]]; then
     for executable in "${UTILS[@]}"; do
-      local VERSION=$(bash -c "'${executable}' ${2}")
+      local VERSION
+      VERSION=$(bash -c "'${executable}' ${2}")
       if [[ "$VERSION" == "$3" ]]; then
         realpath -q "${executable}"
         return $?
@@ -64,7 +66,7 @@ function find_utility {
     done
     return 1
   fi
-  realpath -q "$UTILS"
+  realpath -q "${UTILS[0]}"
   return $?
 }
 
@@ -72,7 +74,8 @@ function find_utility {
 # Return unified host os type name.
 #
 function get_os_type {
-  local OS=$(uname -s)
+  local OS
+  OS=$(uname -s)
   case $OS in
     'Linux')
       echo "Linux64"
@@ -97,7 +100,8 @@ function get_os_type {
 #
 function find_pack_root {
   if [[ -z "${CMSIS_PACK_ROOT}" || ! -d "${CMSIS_PACK_ROOT}" ]]; then
-    local OS=$(uname -s)
+    local OS
+    OS=$(uname -s)
     case $OS in
       'Linux'|'Darwin')
         local DEFAULT_CMSIS_PACK_ROOT="${HOME}/.cache/arm/packs"
@@ -134,7 +138,7 @@ function find_packchk {
     return 0
   fi
 
-  CMSIS_TOOLSDIR="$(ls -drv ${CMSIS_PACK_ROOT}/ARM/CMSIS/* | head -1)/CMSIS/Utilities/$(get_os_type)"
+  CMSIS_TOOLSDIR="$(find "${CMSIS_PACK_ROOT}/ARM/CMSIS" -maxdepth 1 -type d | sort -r | head -1)/CMSIS/Utilities/$(get_os_type)"
   if type -a "${CMSIS_TOOLSDIR}/packchk" 1>/dev/null 2>/dev/null; then
     UTILITY_PACKCHK="${CMSIS_TOOLSDIR}/packchk"
     report_utility "PackChk" "$UTILITY_PACKCHK"
@@ -144,7 +148,7 @@ function find_packchk {
   echo_err "Error: No packchk utility found"
   echo_log "Action: Add packchk to your path"
   echo_v "Hint: Included in CMSIS Pack:"
-  echo_v '${CMSIS_PACK_ROOT}/ARM/CMSIS/<version>/CMSIS/Utilities/<os>/'
+  echo_v "\${CMSIS_PACK_ROOT}/ARM/CMSIS/<version>/CMSIS/Utilities/<os>/"
   echo_log " "
   exit 1
 }
@@ -153,7 +157,8 @@ function find_packchk {
 # Find zip utility
 #
 function find_zip {
-  local programfiles="$(sed -e 's~\\~/~g' -e "s/\([CD]\):/\/\L\1/" <<<$PROGRAMFILES)"
+  local programfiles
+  programfiles="$(sed -e 's~\\~/~g' -e "s/\([CD]\):/\/\L\1/" <<<"${PROGRAMFILES:-}")"
   if type -a 7z 1>/dev/null 2>/dev/null; then
     UTILITY_ZIP_TYPE="7zip"
     UTILITY_ZIP="$(which 7z)"
@@ -309,9 +314,9 @@ function find_doxygen {
 #
 function archive_7zip {
   echo_v "pushd \"$1\"; \"${UTILITY_ZIP}\" a -tzip \"$2\" ."
-  pushd "$1" 2>&1 >/dev/null
+  pushd "$1" >/dev/null 2>&1 || exit
   "${UTILITY_ZIP}" a -tzip "$2" .
-  popd 2>&1 >/dev/null
+  popd >/dev/null 2>&1 || exit 
 }
 
 #
@@ -323,9 +328,9 @@ function archive_7zip {
 #
 function archive_zip {
   echo_v "pushd \"$1\"; \"${UTILITY_ZIP}\" -r \"$2\" ."
-  pushd "$1" 2>&1 >/dev/null
+  pushd "$1" >/dev/null 2>&1 || exit
   "${UTILITY_ZIP}" -r "$2" .
-  popd 2>&1 >/dev/null
+  popd >/dev/null 2>&1 || exit
 }
 
 #
@@ -338,7 +343,7 @@ function archive_zip {
 function archive {
   echo_v "rm -rf \"$2\""
   rm -f "$2"
-  archive_$UTILITY_ZIP_TYPE "$1" "$2"
+  "archive_${UTILITY_ZIP_TYPE}" "$1" "$2"
 }
 
 #
@@ -377,7 +382,7 @@ function unarchive {
   rm -rf "$2"
   echo_v "mkdir -p \"$2\""
   mkdir -p "$2"
-  unarchive_$UTILITY_ZIP_TYPE "$1" "$2"
+  "unarchive_${UTILITY_ZIP_TYPE}" "$1" "$2"
 }
 
 #
@@ -423,22 +428,32 @@ function check_links {
     return 1
   fi
 
-  "${UTILITY_LINKCHECKER}" -F csv --timeout $timeout --check-extern "$1"
+  "${UTILITY_LINKCHECKER}" -F csv --timeout "${timeout}" --check-extern "$1"
 
   OFS=$IFS
   IFS=$'\n'
 
+  local line
   for line in $(grep -E '^[^#]' linkchecker-out.csv | tail -n +2); do
-    link=$(cut -d';' -f 1 <<<$line)
-    msg=$(cut -d';' -f 4 <<<$line)
+    local link
+    local msg
+    local origin
+    local o
+    local ofile
+    local oline
+    local match
+    local rest
+    local ocolumn
+    link=$(cut -d';' -f 1 <<<"$line")
+    msg=$(cut -d';' -f 4 <<<"$line")
     origin=$(grep -rn "${link}" "$2")
     for o in $origin; do
-      ofile=$(cut -d':' -f 1  <<<$o)
-      oline=$(cut -d':' -f 2  <<<$o)
-      match=$(cut -d':' -f 3- <<<$o)
-      rest="${match#*$link}"
+      ofile=$(cut -d':' -f 1  <<<"$o")
+      oline=$(cut -d':' -f 2  <<<"$o")
+      match=$(cut -d':' -f 3- <<<"$o")
+      rest="${match#*"${link}"}"
       ocolumn=$((${#match} - ${#rest} - ${#link}))
-      echo "$(realpath $ofile):${oline}:${ocolumn};${link};${msg};URL '${link}' results to '${msg}'" >&2
+      echo "$(realpath "${ofile}"):${oline}:${ocolumn};${link};${msg};URL '${link}' results to '${msg}'" >&2
     done
   done
 
@@ -454,7 +469,7 @@ function check_links {
 #  <dest>  Path to download file to
 function curl_download {
     echo_v "\"${UTILITY_CURL}\" -sL $1 --output \"$2\""
-    "${UTILITY_CURL}" -sL $1 --output "$2"
+    "${UTILITY_CURL}" -sL "$1" --output "$2"
     local errorlevel=$?
     if [ $errorlevel -ne 0 ]; then
       echo_err "Failed downloading file from URL '$1'."

@@ -15,16 +15,18 @@
 #   <folder>    The folder to search for pdsc files
 #
 function locate_pdsc {
-  local NUM_PDSCS=$(ls -1 *.pdsc | wc -l)
-  local PACK_DESCRIPTION_FILE=$(ls *.pdsc)
+  local NUM_PDSCS
+  local PACK_DESCRIPTION_FILE
+  NUM_PDSCS=$(find . -maxdepth 1 -name "*.pdsc" | wc -l)
+  PACK_DESCRIPTION_FILE=$(find . -maxdepth 1 -name "*.pdsc")
   if [[ -n "$1" && -f "$1" ]]; then
     realpath "$1"
     return 0
-  elif [ ${NUM_PDSCS} -lt 1 ]; then
+  elif [ "${NUM_PDSCS}" -lt 1 ]; then
     echo_err "Error: No *.pdsc file found in current directory"
     echo_err " "
     exit 1
-  elif [ ${NUM_PDSCS} -gt 1 ]; then
+  elif [ "${NUM_PDSCS}" -gt 1 ]; then
     echo_err "Error: Only one PDSC file allowed in directory structure:"
     echo_log "Found:"
     echo_log "$PACK_DESCRIPTION_FILE"
@@ -43,7 +45,7 @@ function locate_pdsc {
 #   <pdsc>    The pdsc file
 #
 function pdsc_vendor {
-  cut -d. -f 1 <<< $(basename $1)
+  cut -d. -f 1 <<< "$(basename "$1")"
 }
 
 #
@@ -53,7 +55,7 @@ function pdsc_vendor {
 #   <pdsc>    The pdsc file
 #
 function pdsc_name {
-  cut -d. -f 2 <<< $(basename $1)
+  cut -d. -f 2 <<< "$(basename "$1")"
 }
 
 #
@@ -65,15 +67,19 @@ function pdsc_name {
 #   <pdsc>    The pdsc file
 #
 function pdsc_release_desc {
-  local first=$(grep -n "<release " "$1" | grep -v "date=" | head -n 1 | cut -d: -f1)
-  local last=$(grep -n "</release>" "$1" | head -n 1 | cut -d: -f1)
+  local first
+  local last
+  local desc
+  local indent
+  first=$(grep -n "<release " "$1" | grep -v "date=" | head -n 1 | cut -d: -f1)
+  last=$(grep -n "</release>" "$1" | head -n 1 | cut -d: -f1)
   first=${first:-$last}
   last=${last:-$first}
-  let first+=1
-  if [[ $first < $last ]]; then
-    let length=last-first
-    local desc="$(tail -n +${first} "$1" | head -n ${length})"
-    local indent=$(head -n 1 <<< "${desc}" | sed -E "s/([ ]*).*/\1/")
+  ((first+=1))
+  if [[ $first -lt $last ]]; then
+    ((length=last-first))
+    desc="$(tail -n +${first} "$1" | head -n ${length})"
+    indent=$(head -n 1 <<< "${desc}" | sed -E "s/([ ]*).*/\1/")
     sed -E "s/^${indent}//" <<< "${desc}"
     return 0
   fi
@@ -93,19 +99,23 @@ function pdsc_release_desc {
 #   <prefix>    Optional tag prefix for generating changelog.
 #
 function pdsc_update_releases {
-  local DEV=$(pdsc_release_desc "$1")
-  local first=$(grep -n "<releases>" "$1" | cut -d: -f1)
+  local PREFIX=()
+  local DEV
+  local first
+  local last
+
+  DEV=$(pdsc_release_desc "$1")
+  first=$(grep -n "<releases>" "$1" | cut -d: -f1)
   if [ -z "$DEV" ]; then
-    local last=$first
+    last=$first
   else
-    local last=$(grep -n "</release>" "$1" | cut -d: -f1 | head -n 1)
+    last=$(grep -n "</release>" "$1" | cut -d: -f1 | head -n 1)
   fi
-  let last+=1
-  head -n ${first} "$1" > "$2"
-  local PREFIX=""
+  ((last+=1))
+  head -n "${first}" "$1" > "$2"
   if [ -n "$3" ]; then
-    local PREFIX="-p $3"
+    PREFIX=("-p" "$3")
   fi
-  git_changelog ${PREFIX} -d "${DEV}" -f pdsc | sed "s/^/    /" >> "$2"
+  git_changelog "${PREFIX[@]}" -d "${DEV}" -f pdsc | sed "s/^/    /" >> "$2"
   tail -n +${last} "$1" >> "$2"
 }

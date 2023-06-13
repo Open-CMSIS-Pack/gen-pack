@@ -11,7 +11,7 @@
 . "$(dirname "$0")/../lib/logging"
 . "$(dirname "$0")/../lib/utilities"
 
-find() {
+ffind() {
   if [[ "$(uname)" == "Darwin"  ]]; then
     args=()
     while [[ $# -gt 0 ]]; do
@@ -82,7 +82,7 @@ remove_from_path() {
       if [[ ! -d "${lpath}" ]]; then
         #echo "  Relocating ${path} to ${lpath}..." >&2
         mkdir -p "${lpath}"
-        find "${path}" -executable -exec ln -s {} "${lpath}" \;
+        ffind "${path}" -executable -exec ln -s {} "${lpath}" \;
         add_path "${lpath}"
       fi
       remove_path "${path}"
