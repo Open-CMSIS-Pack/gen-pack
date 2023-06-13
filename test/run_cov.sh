@@ -15,11 +15,11 @@ for test in $(find "${DIRNAME}" -name "tests_*.sh"); do
   if [[ ! "$test" =~ .*_integ.* ]]; then
     echo "$test"
     mkdir -p "${DIRNAME}/cov/$(basename "${test/.sh}")"
-    kcov --include-pattern=gen-pack/gen-pack,gen-pack/lib/ "${DIRNAME}/cov/$(basename "${test/.sh}")" "${test}" || result=$?
+    kcov --strip-path="$(realpath "${DIRNAME}/../..")" --include-pattern=gen-pack/gen-pack,gen-pack/lib/ "${DIRNAME}/cov/$(basename "${test/.sh}")" "${test}" || result=$?
     echo ""
   fi
 done
 
-kcov --merge "${DIRNAME}/cov/all" ${DIRNAME}/cov/tests_*
+kcov --merge "${DIRNAME}/cov/all" --include-pattern=gen-pack/gen-pack,gen-pack/lib/ ${DIRNAME}/cov/tests_*
 
 exit $result
