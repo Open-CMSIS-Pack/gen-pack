@@ -138,7 +138,7 @@ function find_packchk {
     return 0
   fi
 
-  CMSIS_TOOLSDIR="$(find "${CMSIS_PACK_ROOT}/ARM/CMSIS" -depth 1 -type d | sort -r | head -1)/CMSIS/Utilities/$(get_os_type)"
+  CMSIS_TOOLSDIR="$(find "${CMSIS_PACK_ROOT}/ARM/CMSIS" -maxdepth 1 -type d | sort -r | head -1)/CMSIS/Utilities/$(get_os_type)"
   if type -a "${CMSIS_TOOLSDIR}/packchk" 1>/dev/null 2>/dev/null; then
     UTILITY_PACKCHK="${CMSIS_TOOLSDIR}/packchk"
     report_utility "PackChk" "$UTILITY_PACKCHK"

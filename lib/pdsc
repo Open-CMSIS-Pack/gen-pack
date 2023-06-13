@@ -17,8 +17,8 @@
 function locate_pdsc {
   local NUM_PDSCS
   local PACK_DESCRIPTION_FILE
-  NUM_PDSCS=$(find . -depth 1 -name "*.pdsc" | wc -l)
-  PACK_DESCRIPTION_FILE=$(find . -depth 1 -name "*.pdsc")
+  NUM_PDSCS=$(find . -maxdepth 1 -name "*.pdsc" | wc -l)
+  PACK_DESCRIPTION_FILE=$(find . -maxdepth 1 -name "*.pdsc")
   if [[ -n "$1" && -f "$1" ]]; then
     realpath "$1"
     return 0
