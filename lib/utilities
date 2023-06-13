@@ -158,7 +158,7 @@ function find_packchk {
 #
 function find_zip {
   local programfiles
-  programfiles="$(sed -e 's~\\~/~g' -e "s/\([CD]\):/\/\L\1/" <<<"${PROGRAMFILES:-C:\\Program Files}")"
+  programfiles="$(sed -e 's~\\~/~g' -e "s/\([CD]\):/\/\L\1/" <<<"${PROGRAMFILES:-}")"
   if type -a 7z 1>/dev/null 2>/dev/null; then
     UTILITY_ZIP_TYPE="7zip"
     UTILITY_ZIP="$(which 7z)"
