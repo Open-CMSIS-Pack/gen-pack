@@ -31,3 +31,10 @@ esac
 function cwd() {
   realpath -q "$(pwd)"
 }
+
+echo "Patches:"
+type cp
+type grep
+type realpath
+type cwd
+echo " "
