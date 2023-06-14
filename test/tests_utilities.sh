@@ -8,6 +8,8 @@
 # SPDX-License-Identifier: Apache-2.0
 #
 
+# shellcheck disable=SC2317
+
 . "$(dirname "$0")/../lib/patches"
 . "$(dirname "$0")/../lib/logging"
 . "$(dirname "$0")/../lib/utilities"
@@ -61,8 +63,8 @@ remove_path() {
   IFS=':'
   local path=()
   for p in $PATH; do
-    if [[ ! "$p" == $1 ]]; then
-      path+=($p)
+    if [[ "${p%/}" != "$1" ]]; then
+      path+=("$p")
     fi
   done
   PATH="${path[*]}"
@@ -76,10 +78,12 @@ add_path() {
 remove_from_path() {
   # Remove all command executables from PATH
   while type -p "$1" 1>/dev/null 2>&1; do
-    local path="$(dirname $(type -p "$1"))"
+    local path
+    path="$(dirname "$(type -p "$1")")"
     #echo "Un'PATH'ing ${path}..." >&2
     if [[ "${path}" == "/bin" || "${path}" == "/usr/bin" ]] ; then
-      local lpath="$(cwd)${path}"
+      local lpath
+      lpath="$(cwd)${path}"
       if [[ ! -d "${lpath}" ]]; then
         #echo "  Relocating ${path} to ${lpath}..." >&2
         mkdir -p "${lpath}"
@@ -101,13 +105,13 @@ test_get_os_type() {
   local OS=$(uname -s)
   case $OS in
     'Linux')
-      assertEquals $OS_TYPE "Linux64"
+      assertEquals "$OS_TYPE" "Linux64"
       ;;
     'WindowsNT'|MINGW*|CYGWIN*)
-      assertEquals $OS_TYPE "Win32"
+      assertEquals "$OS_TYPE" "Win32"
       ;;
     'Darwin')
-      assertEquals $OS_TYPE "Darwin64"
+      assertEquals "$OS_TYPE" "Darwin64"
       ;;
   esac
 }

@@ -28,7 +28,6 @@ case $(uname -s) in
     ;;
 esac
 
-_pwd="$(which pwd)"
 function cwd() {
-  realpath -q "$($_pwd)"
+  realpath -q "$(pwd)"
 }
