@@ -7,7 +7,7 @@
 # SPDX-License-Identifier: Apache-2.0
 #
 
-GEN_PACK_LIB_VERSION="0.8.4"
+GEN_PACK_LIB_VERSION="0.8.5"
 GEN_PACK_LIB_SOURCE="$(realpath "$(dirname "${BASH_SOURCE[0]}")")"
 
 shopt -s expand_aliases
@@ -36,31 +36,9 @@ if [ "$(cut -d. -f1 <<<"${BASH_VERSION}")" -lt 5 ]; then
   exit 1
 fi
 
-case $(uname -s) in
-  'WindowsNT'|MINGW*|CYGWIN*)
-    alias "pwd"="realpath \$(\$(which pwd))"
-    ;;
-  'Darwin')
-    if ! which gcp > /dev/null; then
-      echo "GNU Utilities are required, run brew install coreutils!" >&2
-      exit 1
-    fi
-    if ! which grealpath > /dev/null; then
-      echo "GNU Utilities are required, run brew install coreutils!" >&2
-      exit 1
-    fi
-    if ! which ggrep > /dev/null; then
-      echo "GNU Grep is required, run brew install grep!" >&2
-      exit 1
-    fi
-    alias "cp"="gcp"
-    alias "grep"="ggrep"
-    alias "realpath"="grealpath"
-    ;;
-esac
-
 echo "Loading gen-pack library ${GEN_PACK_LIB_VERSION} from ${GEN_PACK_LIB_SOURCE}"
 
+. "${GEN_PACK_LIB_SOURCE}/lib/patches"
 . "${GEN_PACK_LIB_SOURCE}/lib/usage"
 . "${GEN_PACK_LIB_SOURCE}/lib/getopts"
 . "${GEN_PACK_LIB_SOURCE}/lib/utilities"
