@@ -10,6 +10,8 @@
 
 # shellcheck disable=SC2317
 
+shopt -s expand_aliases
+
 . "$(dirname "$0")/../lib/patches"
 . "$(dirname "$0")/../lib/logging"
 . "$(dirname "$0")/../lib/utilities"
@@ -81,7 +83,10 @@ remove_from_path() {
     local path
     path="$(dirname "$(type -p "$1")")"
     #echo "Un'PATH'ing ${path}..." >&2
-    if [[ "${path}" == "/bin" || "${path}" == "/usr/bin" ]] ; then
+    if [[ "${path}" =~ ^$(cwd) ]]; then
+      #echo "  Removing $1 from ${path}..." >&2
+      rm "${path}/$1"  
+    else
       local lpath
       lpath="$(cwd)${path}"
       if [[ ! -d "${lpath}" ]]; then
@@ -90,11 +95,6 @@ remove_from_path() {
         ffind "${path}" -executable -exec ln -s {} "${lpath}" \;
         add_path "${lpath}"
       fi
-      remove_path "${path}"
-    elif [[ "${path}" == "$(cwd)/bin" || "${path}" == "$(cwd)/usr/bin" ]] ; then
-      #echo "  Removing $1 from ${path}..." >&2
-      rm "${path}/$1"
-    else
       remove_path "${path}"
     fi
   done

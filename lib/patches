@@ -21,7 +21,7 @@ case $(uname -s) in
     if ! which ggrep > /dev/null; then
       echo "GNU Grep is required, run brew install grep!" >&2
       exit 1
-    fi
+    fi    
     alias "cp"="gcp"
     alias "grep"="ggrep"
     alias "realpath"="grealpath"
@@ -31,10 +31,3 @@ esac
 function cwd() {
   realpath -q "$(pwd)"
 }
-
-echo "Patches:"
-type cp
-type grep
-type realpath
-type cwd
-echo " "
