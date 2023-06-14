@@ -8,6 +8,11 @@
 # SPDX-License-Identifier: Apache-2.0
 #
 
+# shellcheck disable=SC2317
+
+shopt -s expand_aliases
+
+. "$(dirname "$0")/../lib/patches"
 . "$(dirname "$0")/../lib/logging"
 . "$(dirname "$0")/../lib/utilities"
 
@@ -25,10 +30,10 @@ ffind() {
       unset arg
       shift # past argument
     done
-    command find "${args[@]}"
+    find "${args[@]}"
     unset args
   else
-    command find "$@"
+    find "$@"
   fi
 }
 
@@ -36,15 +41,15 @@ setUp() {
   VERBOSE=1
   TESTDIR="${SHUNIT_TMPDIR}/${_shunit_test_}"
   mkdir -p "${TESTDIR}"
-  pushd "${TESTDIR}" >/dev/null
+  pushd "${TESTDIR}" >/dev/null || exit
 
   OLD_PATH="$PATH"
   OLD_HOME="${HOME}"
   OLD_LOCALAPPDATA="${LOCALAPPDATA}"
 
-  PATH="$(pwd):$PATH"
-  HOME="$(pwd)"
-  LOCALAPPDATA="$(pwd)"
+  PATH="$(cwd):$PATH"
+  HOME="$(cwd)"
+  LOCALAPPDATA="$(cwd)"
 
   unset CMSIS_PACK_ROOT
 }
@@ -60,8 +65,8 @@ remove_path() {
   IFS=':'
   local path=()
   for p in $PATH; do
-    if [[ ! "$p" == $1 ]]; then
-      path+=($p)
+    if [[ "${p%/}" != "$1" ]]; then
+      path+=("$p")
     fi
   done
   PATH="${path[*]}"
@@ -74,22 +79,22 @@ add_path() {
 
 remove_from_path() {
   # Remove all command executables from PATH
-  while which $1 1>/dev/null 2>/dev/null; do
-    local path="$(dirname $(which $1))"
+  while type -p "$1" 1>/dev/null 2>&1; do
+    local path
+    path="$(dirname "$(type -p "$1")")"
     #echo "Un'PATH'ing ${path}..." >&2
-    if [[ "${path}" == "/bin" || "${path}" == "/usr/bin" ]] ; then
-      local lpath="$(pwd)${path}"
+    if [[ "${path}" =~ ^$(cwd) ]]; then
+      #echo "  Removing $1 from ${path}..." >&2
+      rm "${path}/$1"  
+    else
+      local lpath
+      lpath="$(cwd)${path}"
       if [[ ! -d "${lpath}" ]]; then
         #echo "  Relocating ${path} to ${lpath}..." >&2
         mkdir -p "${lpath}"
         ffind "${path}" -executable -exec ln -s {} "${lpath}" \;
         add_path "${lpath}"
       fi
-      remove_path "${path}"
-    elif [[ "${path}" == "$(pwd)/bin" || "${path}" == "$(pwd)/usr/bin" ]] ; then
-      #echo "  Removing $1 from ${path}..." >&2
-      rm "${path}/$1"
-    else
       remove_path "${path}"
     fi
   done
@@ -100,24 +105,24 @@ test_get_os_type() {
   local OS=$(uname -s)
   case $OS in
     'Linux')
-      assertEquals $OS_TYPE "Linux64"
+      assertEquals "$OS_TYPE" "Linux64"
       ;;
     'WindowsNT'|MINGW*|CYGWIN*)
-      assertEquals $OS_TYPE "Win32"
+      assertEquals "$OS_TYPE" "Win32"
       ;;
     'Darwin')
-      assertEquals $OS_TYPE "Darwin64"
+      assertEquals "$OS_TYPE" "Darwin64"
       ;;
   esac
 }
 
 test_find_pack_root_by_env() {
-  CMSIS_PACK_ROOT="$(pwd)/.packs"
+  CMSIS_PACK_ROOT="$(cwd)/.packs"
   mkdir -p "${CMSIS_PACK_ROOT}"
 
   find_pack_root
 
-  assertEquals "${CMSIS_PACK_ROOT}" "$(pwd)/.packs"
+  assertEquals "${CMSIS_PACK_ROOT}" "$(cwd)/.packs"
 }
 
 test_find_pack_root_by_default() {
@@ -150,11 +155,11 @@ EOF
 
   find_packchk
 
-  assertEquals "$(pwd)/packchk" "${UTILITY_PACKCHK}"
+  assertEquals "$(cwd)/packchk" "${UTILITY_PACKCHK}"
 }
 
 test_find_packchk_by_pack() {
-  CMSIS_PACK_ROOT="$(pwd)/.arm/Packs"
+  CMSIS_PACK_ROOT="$(cwd)/.arm/Packs"
   local toolsdir="${CMSIS_PACK_ROOT}/ARM/CMSIS/5.9.0/CMSIS/Utilities/$(get_os_type)"
 
   mkdir -p "${toolsdir}"
@@ -184,7 +189,7 @@ EOF
 
   find_zip
 
-  assertEquals "$(pwd)/7z" "${UTILITY_ZIP}"
+  assertEquals "$(cwd)/7z" "${UTILITY_ZIP}"
   assertEquals "7zip" "${UTILITY_ZIP_TYPE}"
 }
 
@@ -192,7 +197,7 @@ test_find_zip_7zip_default() {
   remove_from_path "7z"
   remove_from_path "zip"
 
-  local programfiles="$(pwd)/Program Files"
+  local programfiles="$(cwd)/Program Files"
   local zipdir="${programfiles}/7-Zip"
   PROGRAMFILES="$(sed -e 's~^/\([cd]\)/~\U\1:/~g' -e 's~/~\\~g' <<<${programfiles})"
   mkdir -p "${zipdir}"
@@ -229,14 +234,14 @@ EOF
 
   find_zip
 
-  assertEquals "$(pwd)/zip" "${UTILITY_ZIP}"
-  assertEquals "$(pwd)/unzip" "${UTILITY_UNZIP}"
+  assertEquals "$(cwd)/zip" "${UTILITY_ZIP}"
+  assertEquals "$(cwd)/unzip" "${UTILITY_UNZIP}"
   assertEquals "zip" "${UTILITY_ZIP_TYPE}"
 }
 
 test_archive_7zip() {
   UTILITY_ZIP_TYPE="7zip"
-  UTILITY_ZIP="$(pwd)/7z"
+  UTILITY_ZIP="$(cwd)/7z"
 
   cat > "7z" <<EOF
 #!/bin/sh
@@ -246,15 +251,15 @@ EOF
 
   mkdir "input"
 
-  output=$(archive "$(pwd)/input" "$(pwd)/output/test.zip" 2>&1)
+  output=$(archive "$(cwd)/input" "$(cwd)/output/test.zip" 2>&1)
 
-  assertContains "$output" "$(pwd)/input"
-  assertContains "$output" "7z a -tzip $(pwd)/output/test.zip"
+  assertContains "$output" "$(cwd)/input"
+  assertContains "$output" "7z a -tzip $(cwd)/output/test.zip"
 }
 
 test_unarchive_7zip() {
   UTILITY_ZIP_TYPE="7zip"
-  UTILITY_ZIP="$(pwd)/7z"
+  UTILITY_ZIP="$(cwd)/7z"
 
   cat > "7z" <<EOF
 #!/bin/sh
@@ -262,15 +267,15 @@ echo "7z \$*"
 EOF
   chmod +x "7z"
 
-  output=$(unarchive "$(pwd)/input/test.zip" "$(pwd)/output"  2>&1)
+  output=$(unarchive "$(cwd)/input/test.zip" "$(cwd)/output"  2>&1)
 
-  assertContains "$output" "$(pwd)/output"
-  assertContains "$output" "7z x $(pwd)/input/test.zip"
+  assertContains "$output" "$(cwd)/output"
+  assertContains "$output" "7z x $(cwd)/input/test.zip"
 }
 
 test_archive_gnuzip() {
   UTILITY_ZIP_TYPE="zip"
-  UTILITY_ZIP="$(pwd)/zip"
+  UTILITY_ZIP="$(cwd)/zip"
 
   cat > "zip" <<EOF
 #!/bin/sh
@@ -280,15 +285,15 @@ EOF
 
   mkdir "input"
 
-  output=$(archive "$(pwd)/input" "$(pwd)/output/test.zip" 2>&1)
+  output=$(archive "$(cwd)/input" "$(cwd)/output/test.zip" 2>&1)
 
-  assertContains "$output" "$(pwd)/input"
-  assertContains "$output" "zip -r $(pwd)/output/test.zip"
+  assertContains "$output" "$(cwd)/input"
+  assertContains "$output" "zip -r $(cwd)/output/test.zip"
 }
 
 test_unarchive_gnuzip() {
   UTILITY_ZIP_TYPE="zip"
-  UTILITY_UNZIP="$(pwd)/unzip"
+  UTILITY_UNZIP="$(cwd)/unzip"
 
   cat > "unzip" <<EOF
 #!/bin/sh
@@ -296,16 +301,16 @@ echo "unzip \$*"
 EOF
   chmod +x "unzip"
 
-  output=$(unarchive "$(pwd)/input/test.zip" "$(pwd)/output"  2>&1)
+  output=$(unarchive "$(cwd)/input/test.zip" "$(cwd)/output"  2>&1)
 
-  assertContains "$output" "$(pwd)/output"
-  assertContains "$output" "unzip $(pwd)/input/test.zip"
+  assertContains "$output" "$(cwd)/output"
+  assertContains "$output" "unzip $(cwd)/input/test.zip"
 }
 
 test_integ_archive_7zip() {
   remove_from_path "zip"
 
-  if $(find_zip 2>/dev/null); then
+  if $(find_zip 1>/dev/null 2>&1); then
     find_zip
 
     mkdir -p input
@@ -313,10 +318,10 @@ test_integ_archive_7zip() {
 Some test content for archive.
 EOF
 
-    archive "$(pwd)/input" "$(pwd)/archive.zip"
+    archive "$(cwd)/input" "$(cwd)/archive.zip"
     assertTrue "test -f archive.zip"
 
-    unarchive "$(pwd)/archive.zip" "$(pwd)/output"
+    unarchive "$(cwd)/archive.zip" "$(cwd)/output"
     assertTrue "test -f output/file.txt"
     assertTrue "diff input/file.txt output/file.txt"
   else
@@ -328,7 +333,7 @@ test_integ_archive_gnuzip() {
   PROGRAMFILES=""
   remove_from_path "7z"
 
-  if $(find_zip 2>/dev/null); then
+  if $(find_zip 1>/dev/null 2>&1); then
     find_zip
 
     mkdir -p input
@@ -336,10 +341,10 @@ test_integ_archive_gnuzip() {
 Some test content for archive.
 EOF
 
-    archive "$(pwd)/input" "$(pwd)/archive.zip"
+    archive "$(cwd)/input" "$(cwd)/archive.zip"
     assertTrue "test -f archive.zip"
 
-    unarchive "$(pwd)/archive.zip" "$(pwd)/output"
+    unarchive "$(cwd)/archive.zip" "$(cwd)/output"
     assertTrue "test -f output/file.txt"
     assertTrue "diff input/file.txt output/file.txt"
   else
@@ -418,19 +423,19 @@ EOF
   chmod +x util-1.0/util
   chmod +x util-2.0/util
 
-  PATH="$(pwd)/util-1.0:$(pwd)/util-2.0:$PATH"
+  PATH="$(cwd)/util-1.0:$(cwd)/util-2.0:$PATH"
 
   UTIL=$(find_utility "util")
   assertEquals 0 $?
-  assertEquals "$(realpath $(pwd))/util-1.0/util" "$UTIL"
+  assertEquals "$(realpath $(cwd))/util-1.0/util" "$UTIL"
 
   UTIL=$(find_utility "util" "-v" "1.0.0")
   assertEquals 0 $?
-  assertEquals "$(realpath $(pwd))/util-1.0/util" "$UTIL"
+  assertEquals "$(realpath $(cwd))/util-1.0/util" "$UTIL"
 
   UTIL=$(find_utility "util" "-v" "2.0.3")
   assertEquals 0 $?
-  assertEquals "$(realpath $(pwd))/util-2.0/util" "$UTIL"
+  assertEquals "$(realpath $(cwd))/util-2.0/util" "$UTIL"
 }
 
 test_find_utility_version_na() {
@@ -450,7 +455,7 @@ EOF
   chmod +x util-1.0/util
   chmod +x util-2.0/util
 
-  PATH="$(pwd)/util-1.0:$(pwd)/util-2.0:$PATH"
+  PATH="$(cwd)/util-1.0:$(cwd)/util-2.0:$PATH"
 
   UTIL=$(find_utility "util" "-v" "3.0.0")
   assertNotEquals "find_utility did not fail" 0 $?
@@ -477,33 +482,44 @@ EOF
   chmod +x "util 1.0/util"
   chmod +x "util 2.0/util"
 
-  PATH="$(pwd)/util 2.0:$(pwd)/util 1.0:$PATH"
+  PATH="$(cwd)/util 2.0:$(cwd)/util 1.0:$PATH"
 
   UTIL=$(find_utility "util" "-v" "1.0.0")
   assertEquals 0 $?
-  assertEquals "$(realpath $(pwd))/util 1.0/util" "$UTIL"
+  assertEquals "$(realpath $(cwd))/util 1.0/util" "$UTIL"
 
   UTIL=$(find_utility "util" "-v" "2.0.3")
   assertEquals 0 $?
-  assertEquals "$(realpath $(pwd))/util 2.0/util" "$UTIL"
+  assertEquals "$(realpath $(cwd))/util 2.0/util" "$UTIL"
+}
+
+_test_find_() {
+  local utility=${2:-$1}
+  local utility_var="UTILITY_${utility^^}"
+
+  mkdir bin
+
+  cat > "bin/$1" <<EOF
+#!/bin/sh
+echo "$1 $@"
+EOF
+  chmod +x "bin/$1"
+
+  remove_from_path "$1"
+  PATH="$(cwd)/bin:$PATH"
+
+  find_${utility}
+  assertEquals 0 $?
+  assertEquals "$(cwd)/bin/$1" "${!utility_var}"
+
+  OUTPUT=$(find_${utility} 2>&1 > /dev/null)
+  assertNotContains "Error" "$OUTPUT"
+  assertNotContains "Warning" "$OUTPUT"
+  assertNotContains "Info" "$OUTPUT"
 }
 
 test_find_ghcli() {
-  mkdir ghcli
-
-  cat > ghcli/gh <<EOF
-#!/bin/sh
-echo "gh-mock \$*"
-exit 0
-EOF
-
-  chmod +x ghcli/gh
-
-  PATH="$(pwd)/ghcli:$PATH"
-
-  find_ghcli
-  assertEquals 0 $?
-  assertEquals "$(realpath $(pwd))/ghcli/gh" "$UTILITY_GHCLI"
+  _test_find_ gh ghcli
 }
 
 test_find_ghcli_unauth() {
@@ -517,7 +533,7 @@ EOF
 
   chmod +x ghcli/gh
 
-  PATH="$(pwd)/ghcli:$PATH"
+  PATH="$(cwd)/ghcli:$PATH"
 
   OUTPUT=$(find_ghcli 2>&1)
   assertEquals 1 $?
@@ -541,10 +557,15 @@ EOF
   chmod +x "doxygen-1.8.6/doxygen"
   chmod +x "doxygen-1.9.2/doxygen"
 
-  PATH="$(pwd)/doxygen-1.8.6:$(pwd)/doxygen-1.9.2:$PATH"
+  PATH="$(cwd)/doxygen-1.8.6:$(cwd)/doxygen-1.9.2:$PATH"
 
   find_doxygen "1.8.6"
+  assertEquals 0 $?
+  assertEquals "$(realpath $(cwd))/doxygen-1.8.6/doxygen" "$UTILITY_DOXYGEN"
+
   find_doxygen "1.9.2"
+  assertEquals 0 $?
+  assertEquals "$(realpath $(cwd))/doxygen-1.9.2/doxygen" "$UTILITY_DOXYGEN"
 }
 
 test_find_doxygen_version() {
@@ -560,17 +581,29 @@ EOF
 #!/bin/sh
 echo "1.9.2 (caa4e3de211fbbef2c3adf58a6bd4c86d0eb7cb8)"
 EOF
+
   chmod +x "doxygen-1.8.6/doxygen"
   chmod +x "doxygen-1.9.2/doxygen"
 
-
   remove_from_path "doxygen"
-  PATH="$(pwd)/doxygen-1.8.6:$(pwd)/doxygen-1.9.2:$PATH"
+  PATH="$(cwd)/doxygen-1.8.6:$(cwd)/doxygen-1.9.2:$PATH"
 
   OUTPUT=$(find_doxygen "1.9.6" 2>&1)
   assertFalse $?
   assertContains "$OUTPUT" "Error: No doxygen utility found with version 1.9.6"
   assertContains "$OUTPUT" "Action: Add doxygen version 1.9.6 to your PATH" 
+}
+
+test_find_xmllint() {
+  _test_find_ xmllint
+}
+
+test_find_sha1sum() {
+  _test_find_ sha1sum
+}
+
+test_find_linkchecker() {
+  _test_find_ linkchecker
 }
 
 . "$(dirname "$0")/shunit2/shunit2"

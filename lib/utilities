@@ -12,11 +12,11 @@
 #
 # Usage: report_utility <name> <location> [<result>]
 #   <name>        The name of the utility.
-#   <location>    The location the utility is found at.,
+#   <location>    The location the utility is found at.
 #   <result>      The result of lookup. Anything else than 0 creates error output.
 #
 function report_utility {
-  if [[ -n "$3" && $3 != 0 ]]; then
+  if [[ -z "$2" || ${3:-0} != 0 ]]; then
     if [ -n "$4" ]; then
       echo_err "Error: No $1 utility found with version $4"
       echo_log "Action: Add $1 version $4 to your PATH"
@@ -25,11 +25,13 @@ function report_utility {
       echo_log "Action: Add $1 to your PATH"
     fi
     echo_log " "
-    exit "$3"
-  else
-    printf -v  util_out_text "%-10s is located in %s" "$1" "$2"
-    echo_log "$util_out_text"
+    return 1
   fi
+
+  printf -v  util_out_text "%-10s is located in %s" "$1" "$2"
+  echo_log "$util_out_text"
+
+  return 0
 }
 
 #
@@ -132,24 +134,14 @@ function find_pack_root {
 # Find packchk utility
 #
 function find_packchk {
-  if type -a packchk 1>/dev/null 2>/dev/null; then
-    UTILITY_PACKCHK="$(which packchk)"
-    report_utility "PackChk" "$UTILITY_PACKCHK"
-    return 0
-  fi
+  CMSIS_TOOLSDIR="$(test -d "${CMSIS_PACK_ROOT}/ARM/CMSIS" && find "${CMSIS_PACK_ROOT}/ARM/CMSIS" -maxdepth 1 -type d | sort -r | head -1)/CMSIS/Utilities/$(get_os_type)"
+  UTILITY_PACKCHK="$(find_utility packchk || find_utility "${CMSIS_TOOLSDIR}/packchk")"
+  report_utility "PackChk" "$UTILITY_PACKCHK" && return 0
 
-  CMSIS_TOOLSDIR="$(find "${CMSIS_PACK_ROOT}/ARM/CMSIS" -maxdepth 1 -type d | sort -r | head -1)/CMSIS/Utilities/$(get_os_type)"
-  if type -a "${CMSIS_TOOLSDIR}/packchk" 1>/dev/null 2>/dev/null; then
-    UTILITY_PACKCHK="${CMSIS_TOOLSDIR}/packchk"
-    report_utility "PackChk" "$UTILITY_PACKCHK"
-    return 0
-  fi
-
-  echo_err "Error: No packchk utility found"
-  echo_log "Action: Add packchk to your path"
   echo_v "Hint: Included in CMSIS Pack:"
   echo_v "\${CMSIS_PACK_ROOT}/ARM/CMSIS/<version>/CMSIS/Utilities/<os>/"
   echo_log " "
+
   exit 1
 }
 
@@ -159,50 +151,43 @@ function find_packchk {
 function find_zip {
   local programfiles
   programfiles="$(sed -e 's~\\~/~g' -e "s/\([CD]\):/\/\L\1/" <<<"${PROGRAMFILES:-}")"
-  if type -a 7z 1>/dev/null 2>/dev/null; then
-    UTILITY_ZIP_TYPE="7zip"
-    UTILITY_ZIP="$(which 7z)"
-    report_utility "Zip" "$UTILITY_ZIP"
-    return 0
-  elif type -a "${programfiles}/7-Zip/7z" 1>/dev/null 2>/dev/null; then
-    UTILITY_ZIP_TYPE="7zip"
-    UTILITY_ZIP="${programfiles}/7-Zip/7z"
-    report_utility "Zip" "$UTILITY_ZIP"
-    return 0
-  elif type -a zip 1>/dev/null 2>/dev/null; then
-    UTILITY_ZIP_TYPE="zip"
-    UTILITY_ZIP="$(which zip)"
-    UTILITY_UNZIP="$(which unzip)"
-    report_utility "Zip" "$UTILITY_ZIP"
-    return 0
-  fi
 
-  echo_err "Error: No zip or 7zip utility found"
-  echo_log "Action: Add zip or 7zip to your path"
-  echo_log " "
-  exit 1
+  UTILITY_ZIP="$(find_utility 7z || find_utility "${programfiles}/7-Zip/7z" || find_utility zip)"
+  report_utility "Zip" "$UTILITY_ZIP" $? || exit
+  
+  case "$(basename "$UTILITY_ZIP")" in
+    '7z')
+      UTILITY_ZIP_TYPE="7zip"
+      ;;
+    'zip') 
+      UTILITY_ZIP_TYPE="zip"
+      UTILITY_UNZIP="$(find_utility unzip)"
+      report_utility "Unzip" "$UTILITY_UNZIP" $? || exit
+      ;;
+    *)
+      echo_err "Unknown zip utility type: $(basename "$UTILITY_ZIP")"
+      exit 1
+      ;;
+  esac
 }
 
 #
 # Find xmllint utility
 #
 function find_xmllint {
-  if type -a xmllint 1>/dev/null 2>/dev/null; then
-    UTILITY_XMLLINT="$(which xmllint)"
-    report_utility "XML-Lint" "$UTILITY_XMLLINT"
-    return 0
-  fi
+  UTILITY_XMLLINT="$(find_utility xmllint)"
+  report_utility "xmllint" "$UTILITY_XMLLINT" $? && return 0
 
-  echo_err "Error: No xmllint utility found"
-  echo_log "Action: Add xmllint to your path"
   case $(uname -s) in
     'WindowsNT'|MINGW*|CYGWIN*)
       echo_log 'Try installing Chocolatey and run choco install xsltproc.'
       echo_log 'See documentation for more details.'
       ;;
     'Linux')
-      if which apt-get; then
+      if type -p apt-get >/dev/null; then
         echo_log "Try running sudo apt-get install libxml2-utils."
+      else
+        echo_log "Check your system's package manager for a package like libxml2-utils."
       fi
       ;;
     'Darwin')
@@ -217,41 +202,25 @@ function find_xmllint {
 # Find curl utility
 #
 function find_curl {
-  if type -a curl 1>/dev/null 2>/dev/null; then
-    UTILITY_CURL="$(which curl)"
-    report_utility "Curl" "$UTILITY_CURL"
-    return 0
-  fi
-
-  echo_err "Error: No curl utility found"
-  echo_log "Action: Add curl to your path"
-  echo_log " "
-  exit 1
+  UTILITY_CURL="$(find_utility curl)"
+  report_utility "Curl" "$UTILITY_CURL" $? || exit
 }
 
 #
 # Find git command line utility
 #
 function find_git {
-  if type -a git 1>/dev/null 2>/dev/null; then
-    UTILITY_GIT="$(which git)"
-    report_utility "Git" "$UTILITY_GIT"
-    return 0
-  fi
-
-  echo_err "Error: No git utility found"
-  echo_log "Action: Add git to your path"
-  echo_log " "
-  exit 1
+  UTILITY_GIT="$(find_utility git)"
+  report_utility "Git" "$UTILITY_GIT" $? || exit
 }
 
 #
 # Find GitHub cli utility
 #
 function find_ghcli {
-  if type -a gh 1>/dev/null 2>/dev/null; then
-    UTILITY_GHCLI="$(find_utility gh)"
-    report_utility "GitHub CLI" "$UTILITY_GHCLI"
+  UTILITY_GHCLI="$(find_utility gh)"
+
+  if report_utility "GitHub CLI" "$UTILITY_GHCLI" $?; then
     status=$("${UTILITY_GHCLI}" auth status 2>&1)
     result=$?
     echo_v "$status"
@@ -264,9 +233,6 @@ function find_ghcli {
     return 1
   fi
 
-  echo_log "Info: No GitHub CLI utility found"
-  echo_log "Action: Add gh to your path"
-  echo_log " "
   return 1
 }
 
@@ -275,21 +241,16 @@ function find_ghcli {
 #
 function find_sha1sum {
   UTILITY_SHA1SUM="$(find_utility sha1sum)"
-  report_utility "sha1sum" "$UTILITY_SHA1SUM" $?
+  report_utility "sha1sum" "$UTILITY_SHA1SUM" $? || exit
 }
 
 #
 # Find linkchecker utility
 #
 function find_linkchecker {
-  if type -a linkchecker 1>/dev/null 2>/dev/null; then
-    UTILITY_LINKCHECKER="$(which linkchecker)"
-    report_utility "linkchecker" "$UTILITY_LINKCHECKER"
-    return 0
-  fi
-
-  echo_err "Error: No linkchecker utility found"
-  echo_log "Action: Add linkchecker to your path"
+  UTILITY_LINKCHECKER="$(find_utility linkchecker)"
+  report_utility "linkchecker" "$UTILITY_LINKCHECKER" $? && return 0
+  echo_log "Action: Try running pip install linkchecker"
   echo_log " "
   exit 1
 }
@@ -302,7 +263,7 @@ function find_linkchecker {
 #
 function find_doxygen {
   UTILITY_DOXYGEN=$(find_utility doxygen "-v | cut -d' ' -f1" "$1")
-  report_utility "doxygen" "$UTILITY_DOXYGEN" $? "$1"
+  report_utility "doxygen" "$UTILITY_DOXYGEN" $? "$1" && return
 }
 
 #
