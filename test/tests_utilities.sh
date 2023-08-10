@@ -150,12 +150,16 @@ test_find_packchk_by_env() {
   cat > packchk <<EOF
 #!/bin/sh
 echo "packchk \$*"
+if [[ "\$*" =~ "--help" ]]; then
+  echo "--disable-validation"
+fi
 EOF
   chmod +x packchk
 
   find_packchk
 
   assertEquals "$(cwd)/packchk" "${UTILITY_PACKCHK}"
+  assertEquals "0" "${UTILITY_PACKCHK_HAS_SCHEMACHECK}"
 }
 
 test_find_packchk_by_pack() {

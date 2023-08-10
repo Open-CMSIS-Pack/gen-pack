@@ -285,11 +285,13 @@ test_check_pack() {
 
   CMSIS_PACK_ROOT="path/to/packs"
   UTILITY_PACKCHK="packchk_mock"
+  UTILITY_PACKCHK_HAS_SCHEMACHECK=0
   UTILITY_CURL="curl_mock"
   check_pack test.pdsc
 
   assertContains "${PACKCHK_MOCK_ARGS[@]}" "test.pdsc"
   assertContains "${PACKCHK_MOCK_ARGS[@]}" "path/to/packs/.Web/ARM.CMSIS.pdsc"
+  assertContains "${PACKCHK_MOCK_ARGS[@]}" "--disable-validation"
 }
 
 test_check_pack_with_args() {

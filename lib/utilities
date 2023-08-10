@@ -136,7 +136,9 @@ function find_pack_root {
 function find_packchk {
   CMSIS_TOOLSDIR="$(test -d "${CMSIS_PACK_ROOT}/ARM/CMSIS" && find "${CMSIS_PACK_ROOT}/ARM/CMSIS" -maxdepth 1 -type d | sort -r | head -1)/CMSIS/Utilities/$(get_os_type)"
   UTILITY_PACKCHK="$(find_utility packchk || find_utility "${CMSIS_TOOLSDIR}/packchk")"
-  report_utility "PackChk" "$UTILITY_PACKCHK" && return 0
+# shellcheck disable=SC2034
+  UTILITY_PACKCHK_HAS_SCHEMACHECK=$([[ -f "${UTILITY_PACKCHK}" && $(packchk --help) == *--disable-validation* ]]; echo $?)
+  report_utility "PackChk" "${UTILITY_PACKCHK}" && return 0
 
   echo_v "Hint: Included in CMSIS Pack:"
   echo_v "\${CMSIS_PACK_ROOT}/ARM/CMSIS/<version>/CMSIS/Utilities/<os>/"

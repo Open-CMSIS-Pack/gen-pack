@@ -232,8 +232,12 @@ function check_pack {
     fi
     include+=(-i "${webdir}/${dep}")
   done
-  echo_v "\"${UTILITY_PACKCHK}\" \"$1\" ${include[*]} -n \"${PACK_OUTPUT}/PackName.txt\"" "${PACKCHK_ARGS[@]}"
-  "${UTILITY_PACKCHK}" "$1" "${include[@]}" -n "${PACK_OUTPUT}/PackName.txt" "${PACKCHK_ARGS[@]}"
+  if [ "${UTILITY_PACKCHK_HAS_SCHEMACHECK}" -eq 0 ]; then
+    PACKCHK_ARGS+=(--disable-validation)
+  fi
+  # shellcheck disable=SC2086
+  echo_v "\"${UTILITY_PACKCHK}\" ${include[*]} -n \"${PACK_OUTPUT}/PackName.txt\"" "${PACKCHK_ARGS[@]}" \"$1\"
+  "${UTILITY_PACKCHK}" "${include[@]}" -n "${PACK_OUTPUT}/PackName.txt" "${PACKCHK_ARGS[@]}" "$1"
   local errorlevel=$?
   if [ $errorlevel -ne 0 ]; then
     echo_err "build aborted: pack check failed"
