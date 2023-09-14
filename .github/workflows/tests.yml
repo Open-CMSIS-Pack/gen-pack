@@ -122,5 +122,7 @@ jobs:
         env:
           LANG: en_GB.UTF-8
           LC_ALL: en_GB.UTF-8
+          TMPDIR: ${{ github.workspace }}/../../tmp
         run: |
+          mkdir -p ${TMPDIR}
           ./test/run_all.sh

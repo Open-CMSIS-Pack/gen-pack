@@ -148,7 +148,7 @@ test_find_pack_root_by_default() {
 
 test_find_packchk_by_env() {
   cat > packchk <<EOF
-#!/bin/sh
+#!/usr/bin/env bash
 echo "packchk \$*"
 if [[ "\$*" =~ "--help" ]]; then
   echo "--disable-validation"
@@ -169,7 +169,7 @@ test_find_packchk_by_pack() {
   mkdir -p "${toolsdir}"
 
   cat > "${toolsdir}/packchk" <<EOF
-#!/bin/sh
+#!/usr/bin/env bash
 echo "packchk \$*"
 EOF
   chmod +x "${toolsdir}/packchk"
@@ -186,7 +186,7 @@ test_find_zip_7zip_env() {
   remove_from_path "zip"
 
   cat > "7z" <<EOF
-#!/bin/sh
+#!/usr/bin/env bash
 echo "7z \$*"
 EOF
   chmod +x "7z"
@@ -207,7 +207,7 @@ test_find_zip_7zip_default() {
   mkdir -p "${zipdir}"
 
   cat > "${zipdir}/7z" <<EOF
-#!/bin/sh
+#!/usr/bin/env bash
 echo "7z \$*"
 EOF
   chmod +x "${zipdir}/7z"
@@ -225,13 +225,13 @@ test_find_zip_gnuzip_env() {
   PROGRAMFILES=""
 
   cat > "zip" <<EOF
-#!/bin/sh
+#!/usr/bin/env bash
 echo "zip \$*"
 EOF
   chmod +x "zip"
 
   cat > "unzip" <<EOF
-#!/bin/sh
+#!/usr/bin/env bash
 echo "unzip \$*"
 EOF
   chmod +x "unzip"
@@ -248,7 +248,7 @@ test_archive_7zip() {
   UTILITY_ZIP="$(cwd)/7z"
 
   cat > "7z" <<EOF
-#!/bin/sh
+#!/usr/bin/env bash
 echo "7z \$*"
 EOF
   chmod +x "7z"
@@ -266,7 +266,7 @@ test_unarchive_7zip() {
   UTILITY_ZIP="$(cwd)/7z"
 
   cat > "7z" <<EOF
-#!/bin/sh
+#!/usr/bin/env bash
 echo "7z \$*"
 EOF
   chmod +x "7z"
@@ -282,7 +282,7 @@ test_archive_gnuzip() {
   UTILITY_ZIP="$(cwd)/zip"
 
   cat > "zip" <<EOF
-#!/bin/sh
+#!/usr/bin/env bash
 echo "zip \$*"
 EOF
   chmod +x "zip"
@@ -300,7 +300,7 @@ test_unarchive_gnuzip() {
   UTILITY_UNZIP="$(cwd)/unzip"
 
   cat > "unzip" <<EOF
-#!/bin/sh
+#!/usr/bin/env bash
 echo "unzip \$*"
 EOF
   chmod +x "unzip"
@@ -415,12 +415,12 @@ test_find_utility() {
   mkdir util-2.0
 
   cat > util-1.0/util <<EOF
-#!/bin/sh
+#!/usr/bin/env bash
 echo "1.0.0"
 EOF
 
   cat > util-2.0/util <<EOF
-#!/bin/sh
+#!/usr/bin/env bash
 echo "2.0.3"
 EOF
 
@@ -447,12 +447,12 @@ test_find_utility_version_na() {
   mkdir util-2.0
 
   cat > util-1.0/util <<EOF
-#!/bin/sh
+#!/usr/bin/env bash
 echo "1.0.0"
 EOF
 
   cat > util-2.0/util <<EOF
-#!/bin/sh
+#!/usr/bin/env bash
 echo "2.0.3"
 EOF
 
@@ -475,12 +475,12 @@ test_find_utility_whitespace() {
   mkdir "util 2.0"
 
   cat > "util 1.0/util" <<EOF
-#!/bin/sh
+#!/usr/bin/env bash
 echo "1.0.0"
 EOF
 
   cat > "util 2.0/util" <<EOF
-#!/bin/sh
+#!/usr/bin/env bash
 echo "2.0.3"
 EOF
   chmod +x "util 1.0/util"
@@ -504,7 +504,7 @@ _test_find_() {
   mkdir bin
 
   cat > "bin/$1" <<EOF
-#!/bin/sh
+#!/usr/bin/env bash
 echo "$1 $@"
 EOF
   chmod +x "bin/$1"
@@ -530,7 +530,7 @@ test_find_ghcli_unauth() {
   mkdir ghcli
 
   cat > ghcli/gh <<EOF
-#!/bin/sh
+#!/usr/bin/env bash
 echo "gh-mock \$*"
 exit 1
 EOF
@@ -550,12 +550,12 @@ test_find_doxygen() {
   mkdir "doxygen-1.9.2"
 
   cat > "doxygen-1.8.6/doxygen" <<EOF
-#!/bin/sh
+#!/usr/bin/env bash
 echo "1.8.6"
 EOF
 
   cat > "doxygen-1.9.2/doxygen" <<EOF
-#!/bin/sh
+#!/usr/bin/env bash
 echo "1.9.2 (caa4e3de211fbbef2c3adf58a6bd4c86d0eb7cb8)"
 EOF
   chmod +x "doxygen-1.8.6/doxygen"
@@ -577,12 +577,12 @@ test_find_doxygen_version() {
   mkdir "doxygen-1.9.2"
 
   cat > "doxygen-1.8.6/doxygen" <<EOF
-#!/bin/sh
+#!/usr/bin/env bash
 echo "1.8.6"
 EOF
 
   cat > "doxygen-1.9.2/doxygen" <<EOF
-#!/bin/sh
+#!/usr/bin/env bash
 echo "1.9.2 (caa4e3de211fbbef2c3adf58a6bd4c86d0eb7cb8)"
 EOF
 

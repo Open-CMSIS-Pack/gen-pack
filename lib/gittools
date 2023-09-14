@@ -203,10 +203,7 @@ function git_changelog {
   done
 
   mapfile -t TAGS < <(\
-    GIT_CONFIG_COUNT=1\
-    GIT_CONFIG_KEY_0="versionsort.suffix"\
-    GIT_CONFIG_VALUE_0="-"\
-    "${UTILITY_GIT}" for-each-ref --format "%(refname)" --sort="-v:refname" "refs/tags/${PREFIX}*"\
+    "${UTILITY_GIT}" -c 'versionsort.suffix=-' for-each-ref --format "%(refname)" --sort="-v:refname" "refs/tags/${PREFIX}*"\
   )
   local LATEST
   LATEST=$(git_describe "${PREFIX}")
