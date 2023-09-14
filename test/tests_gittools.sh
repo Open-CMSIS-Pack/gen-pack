@@ -27,77 +27,86 @@ tearDown() {
 git_mock() {
   echo "git $*" >&2
 
-  case $1 in
-    'rev-parse')
-      return ${GIT_MOCK_REVPARSE-0}
+  while [[ $# -gt 0 ]]; do 
+    case $1 in
+      '-c')
+        shift
+        shift
+        ;;
+      'rev-parse')
+        return ${GIT_MOCK_REVPARSE-0}
+        ;;
+      'describe')
+        if [ -n "${GIT_MOCK_DESCRIBE+x}" ]; then
+          echo "${GIT_MOCK_DESCRIBE}"
+          return 0
+        elif [[ " $* " =~ " --always " ]]; then
+          echo "1abcdef"
+          return 0
+        else
+          return 1
+        fi
+        ;;
+      'for-each-ref')
+        if [[ " $* " =~ " --format %(refname)" ]]; then
+          echo "refs/tags/v1.5.0"
+          echo "refs/tags/v1.2.4"
+          echo "refs/tags/v1.2.3"
+          echo "refs/tags/v0.9.0"
+          echo "refs/tags/v0.0.1"
+          return 0
+        elif  [[ " $* " =~ " --format %(objecttype)" ]]; then
+          case "${@: -1}" in
+            "refs/tags/v1.5.0"|"refs/tags/v1.2.4"|"refs/tags/v1.2.3")
+              echo "tag"
+            ;;
+            *)
+              echo "commit"
+            ;;
+          esac
+          return 0
+        fi
+        ;;
+      'rev-list')
+        return ${GIT_MOCK_REVLIST-1}
+        ;;
+      'tag')
+        if [[ " $* " =~ " %(contents) " ]]; then
+          case "${@: -1}" in
+            "v1.5.0"|"v1.2.4"|"v1.2.3")
+              echo "Change log text for release version ${@: -1}"
+            ;;
+            *)
+              echo "Commit message for ${@: -1}"
+            ;;
+          esac
+          return 0
+        elif [[ " $* " =~ " %(taggerdate:short) " ]]; then
+          case "${@: -1}" in
+            "v1.5.0")
+              echo "2022-08-03"
+            ;;
+            "v1.2.4")
+              echo "2022-06-27"
+            ;;
+            "v1.2.3")
+              echo "2022-06-15"
+            ;;
+            *)
+              return 1
+            ;;
+          esac
+          return 0
+        elif [[ " $* " =~ " %(committerdate:short) " ]]; then
+          echo "2021-07-29"
+          return 0
+        fi
+        ;;
+    *)
+      break
       ;;
-    'describe')
-      if [ -n "${GIT_MOCK_DESCRIBE+x}" ]; then
-        echo "${GIT_MOCK_DESCRIBE}"
-        return 0
-      elif [[ " $* " =~ " --always " ]]; then
-        echo "1abcdef"
-        return 0
-      else
-        return 1
-      fi
-      ;;
-    'for-each-ref')
-      if [[ " $* " =~ " --format %(refname)" ]]; then
-        echo "refs/tags/v1.5.0"
-        echo "refs/tags/v1.2.4"
-        echo "refs/tags/v1.2.3"
-        echo "refs/tags/v0.9.0"
-        echo "refs/tags/v0.0.1"
-        return 0
-      elif  [[ " $* " =~ " --format %(objecttype)" ]]; then
-        case "${@: -1}" in
-          "refs/tags/v1.5.0"|"refs/tags/v1.2.4"|"refs/tags/v1.2.3")
-            echo "tag"
-          ;;
-          *)
-            echo "commit"
-          ;;
-        esac
-        return 0
-      fi
-      ;;
-    'rev-list')
-      return ${GIT_MOCK_REVLIST-1}
-      ;;
-    'tag')
-      if [[ " $* " =~ " %(contents) " ]]; then
-        case "${@: -1}" in
-          "v1.5.0"|"v1.2.4"|"v1.2.3")
-            echo "Change log text for release version ${@: -1}"
-          ;;
-          *)
-            echo "Commit message for ${@: -1}"
-          ;;
-        esac
-        return 0
-      elif [[ " $* " =~ " %(taggerdate:short) " ]]; then
-        case "${@: -1}" in
-          "v1.5.0")
-            echo "2022-08-03"
-          ;;
-          "v1.2.4")
-            echo "2022-06-27"
-          ;;
-          "v1.2.3")
-            echo "2022-06-15"
-          ;;
-          *)
-            return 1
-          ;;
-        esac
-        return 0
-      elif [[ " $* " =~ " %(committerdate:short) " ]]; then
-        echo "2021-07-29"
-        return 0
-      fi
-      ;;
-  esac
+    esac
+  done
 
   echo "Error: unrecognized git command '$1'" >&2
   return 1

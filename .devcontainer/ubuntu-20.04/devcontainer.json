@@ -1,0 +1,14 @@
+{
+  "name": "Ubuntu-20.04",
+  "build": { "dockerfile": "Dockerfile" },
+
+  "customizations": {
+    "vscode": {
+      "extensions": [  
+        "iliazeus.vscode-ansi",
+        "mads-hartmann.bash-ide-vscode",
+        "timonwong.shellcheck"
+      ]
+    }
+  }
+}
