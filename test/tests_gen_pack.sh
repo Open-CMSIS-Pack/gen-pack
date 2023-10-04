@@ -163,8 +163,56 @@ EOF
   "
   apply_patches "${PACK_BUILD}"
 
-  assertEquals "$(cat "${PACK_BUILD}/input1/file11.txt")" "File 11 extended version"
-  assertEquals "$(cat "${PACK_BUILD}/input1/file12.txt")" "File 12"
+  assertEquals "File 11 extended version" "$(cat "${PACK_BUILD}/input1/file11.txt")"
+  assertEquals "File 12" "$(cat "${PACK_BUILD}/input1/file12.txt")"
+}
+
+test_apply_patches_crlf() {
+  createTestData
+
+  cp -r --parents "input1" "${PACK_BUILD}"
+
+  cat > file11.patch <<EOF
+--- input1/file11.txt
++++ input1/file11.txt
+@@ -1 +1 @@
+-File 11
++File 11 extended version
+EOF
+
+  unix2dos file11.patch
+
+  PACK_PATCH_FILES="
+    file11.patch
+  "
+  apply_patches "${PACK_BUILD}"
+
+  assertEquals "File 11 extended version" "$(cat "${PACK_BUILD}/input1/file11.txt")"
+  assertEquals "File 12" "$(cat "${PACK_BUILD}/input1/file12.txt")"
+}
+
+test_apply_patches_cr() {
+  createTestData
+
+  cp -r --parents "input1" "${PACK_BUILD}"
+
+  cat > file11.patch <<EOF
+--- input1/file11.txt
++++ input1/file11.txt
+@@ -1 +1 @@
+-File 11
++File 11 extended version
+EOF
+
+  unix2mac file11.patch
+
+  PACK_PATCH_FILES="
+    file11.patch
+  "
+  apply_patches "${PACK_BUILD}"
+
+  assertEquals "File 11 extended version" "$(cat "${PACK_BUILD}/input1/file11.txt")"
+  assertEquals "File 12" "$(cat "${PACK_BUILD}/input1/file12.txt")"
 }
 
 curl_mock() {
