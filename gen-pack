@@ -7,7 +7,7 @@
 # SPDX-License-Identifier: Apache-2.0
 #
 
-GEN_PACK_LIB_VERSION="0.8.5"
+GEN_PACK_LIB_VERSION="0.8.6"
 GEN_PACK_LIB_SOURCE="$(realpath "$(dirname "${BASH_SOURCE[0]}")")"
 
 shopt -s expand_aliases
@@ -145,6 +145,25 @@ function apply_patches {
     cwd=$(pwd)
     pushd "$1" > /dev/null || exit
     for f in ${PACK_PATCH_FILES}; do
+      local lineendings
+      lineendings=$(head -1 "${cwd}/${f}" | cat -vet | sed -E 's/^[^^$]*//' | sed -E 's/\$/LF/' | sed -E 's/.*\^M/CR/')
+      if [[ "${lineendings}" != "LF" ]]; then
+        echo_log "Patch file ${f} has ${lineendings} line terminators but should have LF only."
+        case ${lineendings} in
+          CRLF)
+            echo_log "  Converting with dos2unix..."
+            dos2unix -q "${cwd}/${f}"
+          ;;
+          CR)
+            echo_log "  Converting with mac2unix..."
+            mac2unix -q "${cwd}/${f}"
+          ;;  
+          *)
+            echo_err "  No implicit conversion rule avilable!"
+            return 1
+          ;;
+        esac
+      fi
       patch -p0 -t -i "${cwd}/${f}"
     done
     popd > /dev/null || exit
