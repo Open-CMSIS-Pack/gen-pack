@@ -351,19 +351,26 @@ function unarchive {
 #
 # Run linkchecker
 #
-# Usage: check_links [--timeout <sec>] <index> <src>
-#  <index>  Index.html file to start link scanning at."
-#  <src>    Directory with doxygen source files."
+# Usage: check_links [--timeout <sec>] [--config <rc>] <index> <src>
+#  <index>  Index.html file to start link scanning at.
+#  <src>    Directory with doxygen source files.
 #  <sec>    Timeout in seconds (default: 10)
+#  <rc>     A linkchecker.rc config file to be used (default linkchecker.rc).
 function check_links {
   local args=()
   local timeout=10
+  local default_config="${GEN_PACK_SCRIPT_SOURCE}/linkchecker.rc"
+  local config=""
   while [[ $# -gt 0 ]]
   do
     case $1 in
       '-t'|'--timeout')
         shift
-        timeout=$1
+        timeout="$1"
+      ;;
+      '-f'|'--config')
+        shift
+        config="$1"
       ;;
       *)
         args+=("$1") # save it in an array for later
@@ -391,7 +398,21 @@ function check_links {
     return 1
   fi
 
-  "${UTILITY_LINKCHECKER}" -F csv --timeout "${timeout}" --check-extern "$1"
+  if [ -n "${config}" ]; then
+    if [ -f "${config}" ]; then
+      config="--config ${config}"
+    else
+      echo_log "linkchecker config file '${config}' does not exist, ignoring."
+      config=""
+    fi
+  else
+    if [ -f "${default_config}" ]; then
+      config="--config ${default_config}"
+    fi
+  fi
+
+  # shellcheck disable=SC2086
+  "${UTILITY_LINKCHECKER}" ${config} -F csv --timeout "${timeout}" --check-extern "$1"
 
   OFS=$IFS
   IFS=$'\n'
