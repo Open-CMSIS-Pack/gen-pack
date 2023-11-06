@@ -12,7 +12,7 @@ GEN_PACK_LIB_SOURCE="$(realpath "$(dirname "${BASH_SOURCE[0]}")")"
 GEN_PACK_SCRIPT_SOURCE="$(dirname "$(readlink -f "$0")")"
 
 SCRIPT="${SCRIPT:-$(basename "$0")}"
-LOG_PREFIX="${LOG_PREFIX:-"${SCRIPT}> "}"
+LOG_PREFIX="${LOG_PREFIX:-"$(tput setaf 4 2>/dev/null)${SCRIPT}>$(tput sgr0 2>/dev/null) "}"
 
 shopt -s expand_aliases
 
