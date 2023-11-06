@@ -35,21 +35,21 @@ fi
 
 function echo_v {
   if [[ ${VERBOSE} == 1 ]]; then
-    echo -e "${LOG_COLOR_GREEN}$*${LOG_COLOR_NC}" >&2
+    echo -e "${LOG_PREFIX}${LOG_COLOR_GREEN}$*${LOG_COLOR_NC}" >&2
   fi
 }
 
 function echo_log {
-  echo -e "${LOG_COLOR_YELLOW}$*${LOG_COLOR_NC}" >&2
+  echo -e "${LOG_PREFIX}${LOG_COLOR_YELLOW}$*${LOG_COLOR_NC}" >&2
 }
 
 function echo_err {
-  echo -e "${LOG_COLOR_RED}$*${LOG_COLOR_NC}" >&2
+  echo -e "${LOG_PREFIX}${LOG_COLOR_RED}$*${LOG_COLOR_NC}" >&2
 }
 
 function fail_and_bail {
   if [[ $1 != 0 ]]; then
-    echo_err "Fatal error detected, bailing out ..."
+    echo_err "${LOG_PREFIX}Fatal error detected, bailing out ..."
     exit "$1"
   fi
 }

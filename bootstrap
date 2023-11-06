@@ -1,0 +1,52 @@
+#
+# Open-CMSIS-Pack gen-pack Bash library
+#
+# Copyright (c) 2022-2023 Arm Limited. All rights reserved.
+#
+# Provided as-is without warranty under Apache 2.0 License
+# SPDX-License-Identifier: Apache-2.0
+#
+
+SCRIPT="${SCRIPT:-$(basename "$0")}"
+LOG_PREFIX="${LOG_PREFIX:-"${SCRIPT}>"}"
+
+function install_lib() {
+  local URL="https://github.com/Open-CMSIS-Pack/gen-pack/archive/refs/tags/v$1.tar.gz"
+  local STATUS
+  STATUS=$(curl -sLI "${URL}" | grep "^HTTP" | tail -n 1 | cut -d' ' -f2 || echo "$((600+$?))")
+  if [[ $STATUS -ge 400 ]]; then
+    echo "${LOG_PREFIX}Wrong/unavailable gen-pack lib version '$1'!" >&2
+    echo "${LOG_PREFIX}Check REQUIRED_GEN_PACK_LIB variable."  >&2
+    echo "${LOG_PREFIX}For available versions see https://github.com/Open-CMSIS-Pack/gen-pack/tags." >&2
+    exit 1
+  fi
+  echo "${LOG_PREFIX}Downloading gen-pack lib version '$1' to '$2' ..."
+  mkdir -p "$2"
+  curl -L "${URL}" -s | tar -xzf - --strip-components 1 -C "$2" || exit 1
+}
+
+function load_lib() {
+  if [ -z "${REQUIRED_GEN_PACK_LIB}" ]; then
+    echo "${LOG_PREFIX}REQUIRED_GEN_PACK_LIB variable must be set to required version." >&2
+    echo "${LOG_PREFIX}For available versions see https://github.com/Open-CMSIS-Pack/gen-pack/tags." >&2
+    exit 1
+  fi
+
+  local GLOBAL_LIB="/usr/local/share/gen-pack/${REQUIRED_GEN_PACK_LIB}"
+  local USER_LIB="${HOME}/.local/share/gen-pack/${REQUIRED_GEN_PACK_LIB}"
+  if [[ ! -d "${GLOBAL_LIB}" && ! -d "${USER_LIB}" ]]; then
+    echo "${LOG_PREFIX}Required gen_pack lib not found!" >&2
+    install_lib "${REQUIRED_GEN_PACK_LIB}" "${USER_LIB}"
+  fi
+
+  if [[ -d "${GLOBAL_LIB}" ]]; then
+    . "${GLOBAL_LIB}/gen-pack"
+  elif [[ -d "${USER_LIB}" ]]; then
+    . "${USER_LIB}/gen-pack"
+  else
+    echo "${LOG_PREFIX}Required gen-pack lib is not installed!" >&2
+    exit 1
+  fi
+}
+
+load_lib
