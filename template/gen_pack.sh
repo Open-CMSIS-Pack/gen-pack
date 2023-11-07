@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Version: 2.0
+# Version: 3.0
 # Date: 2023-11-06
 # This bash script generates a CMSIS Software Pack:
 #
