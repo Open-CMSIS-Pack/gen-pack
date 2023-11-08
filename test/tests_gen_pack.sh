@@ -271,8 +271,8 @@ EOF
 
   assertEquals 0 $errorlevel
   assertContains "${result}" "Failed downloading file from URL 'PACK.xsd'."
-  assertContains "${result}" "curl_mock -sL https://github.com/Open-CMSIS-Pack/Open-CMSIS-Pack-Spec/blob/v1.7.7/schema/PACK.xsd"
-  assertNotContains "${result}" "Failed downloading file from URL 'https://github.com/Open-CMSIS-Pack/Open-CMSIS-Pack-Spec/blob/v1.7.7/schema/PACK.xsd'."
+  assertContains "${result}" "curl_mock -sL https://raw.githubusercontent.com/Open-CMSIS-Pack/Open-CMSIS-Pack-Spec/v1.7.7/schema/PACK.xsd"
+  assertNotContains "${result}" "Failed downloading file from URL 'https://raw.githubusercontent.com/Open-CMSIS-Pack/Open-CMSIS-Pack-Spec/v1.7.7/schema/PACK.xsd'."
   assertContains "${result}" "xmllint_mock"
 }
 
@@ -294,9 +294,9 @@ EOF
 
   assertEquals 0 $errorlevel
   assertContains "${result}" "Failed downloading file from URL 'PACK.xsd'."
-  assertContains "${result}" "Failed downloading file from URL 'https://github.com/Open-CMSIS-Pack/Open-CMSIS-Pack-Spec/blob/v1.7.7/schema/PACK.xsd'."
-  assertContains "${result}" "curl_mock -sL https://github.com/Open-CMSIS-Pack/Open-CMSIS-Pack-Spec/blob/main/schema/PACK.xsd"
-  assertNotContains "${result}" "Failed downloading file from URL 'https://github.com/Open-CMSIS-Pack/Open-CMSIS-Pack-Spec/blob/main/schema/PACK.xsd'."
+  assertContains "${result}" "Failed downloading file from URL 'https://raw.githubusercontent.com/Open-CMSIS-Pack/Open-CMSIS-Pack-Spec/v1.7.7/schema/PACK.xsd'."
+  assertContains "${result}" "curl_mock -sL https://raw.githubusercontent.com/Open-CMSIS-Pack/Open-CMSIS-Pack-Spec/main/schema/PACK.xsd"
+  assertNotContains "${result}" "Failed downloading file from URL 'https://raw.githubusercontent.com/Open-CMSIS-Pack/Open-CMSIS-Pack-Spec/main/schema/PACK.xsd'."
   assertContains "${result}" "xmllint_mock"
 }
 
@@ -318,8 +318,31 @@ EOF
 
   assertNotEquals 0 $errorlevel
   assertContains "${result}" "Failed downloading file from URL 'PACK.xsd'."
-  assertContains "${result}" "Failed downloading file from URL 'https://github.com/Open-CMSIS-Pack/Open-CMSIS-Pack-Spec/blob/v1.7.7/schema/PACK.xsd'."
-  assertContains "${result}" "Failed downloading file from URL 'https://github.com/Open-CMSIS-Pack/Open-CMSIS-Pack-Spec/blob/main/schema/PACK.xsd'."
+  assertContains "${result}" "Failed downloading file from URL 'https://raw.githubusercontent.com/Open-CMSIS-Pack/Open-CMSIS-Pack-Spec/v1.7.7/schema/PACK.xsd'."
+  assertContains "${result}" "Failed downloading file from URL 'https://raw.githubusercontent.com/Open-CMSIS-Pack/Open-CMSIS-Pack-Spec/main/schema/PACK.xsd'."
+  assertNotContains "${result}" "xmllint_mock"
+}
+
+test_check_schema_missing_attribiutes() {
+  cat > test.pdsc <<EOF
+<?xml version="1.0" encoding="UTF-8"?>
+<package>
+</package>
+EOF
+
+  UTILITY_CURL="curl_mock"
+  UTILITY_CURL_RESULT=(6 6 6)
+  UTILITY_XMLLINT="xmllint_mock"
+
+  result=$(check_schema test.pdsc 2>&1)
+  errorlevel=$?
+
+  echo "$result"
+
+  assertNotEquals 0 $errorlevel
+  assertContains "${result}" "PDSC file is missing schema url. Consider adding attribute 'noNamespaceSchemaLocation' to '<package>' tag."
+  assertContains "${result}" "PDSC file is missing schema version. Consider adding attribute 'schemaVersion' to '<package>' tag."
+  assertContains "${result}" "Failed downloading file from URL 'https://raw.githubusercontent.com/Open-CMSIS-Pack/Open-CMSIS-Pack-Spec/main/schema/PACK.xsd'."
   assertNotContains "${result}" "xmllint_mock"
 }
 

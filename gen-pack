@@ -7,7 +7,7 @@
 # SPDX-License-Identifier: Apache-2.0
 #
 
-GEN_PACK_LIB_VERSION="0.8.7"
+GEN_PACK_LIB_VERSION="0.8.8"
 GEN_PACK_LIB_SOURCE="$(realpath "$(dirname "${BASH_SOURCE[0]}")")"
 GEN_PACK_SCRIPT_SOURCE="$(dirname "$(readlink -f "$0")")"
 
@@ -191,33 +191,46 @@ function check_schema {
   local SCHEMA="${CMSISSCHEMA}"
   if [ ! -f "$SCHEMA" ]; then
     echo_log "Fetching schema file..."
+
     local SCHEMAURL
-    SCHEMAURL=$(grep -Pio "xs:noNamespaceSchemaLocation=\"\K[^\"]+" "$1")
+    SCHEMAURL=$(grep -Pio "noNamespaceSchemaLocation=\"\K[^\"]+" "$1")
+    if [ -z "${SCHEMAURL}" ]; then
+      echo_err "PDSC file is missing schema url. Consider adding attribute 'noNamespaceSchemaLocation' to '<package>' tag."
+    fi
+
     local SCHEMAVERSION
     SCHEMAVERSION=$(grep -Pio "schemaVersion=\"\K[^\"]+" "$1")
+    if [ -z "${SCHEMAVERSION}" ]; then
+      echo_err "PDSC file is missing schema version. Consider adding attribute 'schemaVersion' to '<package>' tag."
+    fi
+
     local SCHEMA="${TEMP:-/tmp}/PACK.xsd"
-    curl_download "${SCHEMAURL}" "${SCHEMA}"
-    local errorlevel=$?
-    if [ $errorlevel -ne 0 ]; then
-        echo_err "Schema referenced in PDSC file not found. Looking for schema with version '${SCHEMAVERSION}' ..."
-        curl_download "https://github.com/Open-CMSIS-Pack/Open-CMSIS-Pack-Spec/blob/v${SCHEMAVERSION}/schema/PACK.xsd" "${SCHEMA}"
-        errorlevel=$?
+
+    local errorlevel=1
+    if [ -n "${SCHEMAURL}" ]; then
+      curl_download "${SCHEMAURL}" "${SCHEMA}"
+      errorlevel=$?  
+    fi
+    if [ -n "${SCHEMAVERSION}" ] && [ $errorlevel -ne 0 ]; then
+      echo_err "Schema referenced in PDSC file not found. Looking for schema with version '${SCHEMAVERSION}' ..."
+      curl_download "https://raw.githubusercontent.com/Open-CMSIS-Pack/Open-CMSIS-Pack-Spec/v${SCHEMAVERSION}/schema/PACK.xsd" "${SCHEMA}"
+      errorlevel=$?
     fi
     if [ $errorlevel -ne 0 ]; then
-        echo_err "Schema referenced by PDSC file's schema version not found. Looking for latest schema ..."
-        curl_download "https://github.com/Open-CMSIS-Pack/Open-CMSIS-Pack-Spec/blob/main/schema/PACK.xsd" "${SCHEMA}"
-        errorlevel=$?
+      echo_err "Schema referenced by PDSC file's schema version not found. Looking for latest schema ..."
+      curl_download "https://raw.githubusercontent.com/Open-CMSIS-Pack/Open-CMSIS-Pack-Spec/main/schema/PACK.xsd" "${SCHEMA}"
+      errorlevel=$?
     fi
     if [ $errorlevel -ne 0 ]; then
-        echo_err "build aborted: No schema file could be found!"
-        echo_log " "
-        echo_log "  Hint: Assure one of the following to get the schema check working."
-        echo_log "        - Provide PACK.XSD into '${CMSISSCHEMA}'."
-        echo_log "        - Provide schema URL in PDSC file's xs:noNamespaceSchemaLocation attribute."
-        echo_log "        - Provide schema release tag version in PDSC file's schemaVersion attribute."
-        echo_log "        Available schema releases are listed on https://github.com/Open-CMSIS-Pack/Open-CMSIS-Pack-Spec/tags."
-        echo_log " "
-        exit $errorlevel
+      echo_err "build aborted: No schema file could be found!"
+      echo_log " "
+      echo_log "  Hint: Assure one of the following to get the schema check working."
+      echo_log "        - Provide PACK.XSD into '${CMSISSCHEMA}'."
+      echo_log "        - Provide schema URL in PDSC file's xs:noNamespaceSchemaLocation attribute."
+      echo_log "        - Provide schema release tag version in PDSC file's schemaVersion attribute."
+      echo_log "        Available schema releases are listed on https://github.com/Open-CMSIS-Pack/Open-CMSIS-Pack-Spec/tags."
+      echo_log " "
+      exit $errorlevel
     fi
   fi
   echo_v "\"${UTILITY_XMLLINT}\" --noout --schema \"${SCHEMA}\" \"$1\""
