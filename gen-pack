@@ -7,37 +7,40 @@
 # SPDX-License-Identifier: Apache-2.0
 #
 
-GEN_PACK_LIB_VERSION="0.8.8"
+GEN_PACK_LIB_VERSION="0.9.0"
 GEN_PACK_LIB_SOURCE="$(realpath "$(dirname "${BASH_SOURCE[0]}")")"
 GEN_PACK_SCRIPT_SOURCE="$(dirname "$(readlink -f "$0")")"
+
+SCRIPT="${SCRIPT:-$(basename "$0")}"
+LOG_PREFIX="${LOG_PREFIX:-"$(tput setaf 4 2>/dev/null)${SCRIPT}>$(tput sgr0 2>/dev/null) "}"
 
 shopt -s expand_aliases
 
 if [ "$(cut -d. -f1 <<<"${BASH_VERSION}")" -lt 5 ]; then
-  echo "gen-pack requires Bash version 5 or later." >&2
-  echo "Running Bash version is ${BASH_VERSION}!" >&2
+  echo "${LOG_PREFIX}gen-pack requires Bash version 5 or later." >&2
+  echo "${LOG_PREFIX}Running Bash version is ${BASH_VERSION}!" >&2
   case $(uname -s) in
     'WindowsNT'|MINGW*|CYGWIN*)
-      echo "Update MSYS2/MinGW, or install latest Git for Windows." >&2
+      echo "${LOG_PREFIX}Update MSYS2/MinGW, or install latest Git for Windows." >&2
       ;;
     'Darwin')
-      echo "Get Homebrew and run brew install bash." >&2
+      echo "${LOG_PREFIX}Get Homebrew and run brew install bash." >&2
       ;;
     *)
-      echo "Check your OS package manager for Bach v5." >&2
+      echo "${LOG_PREFIX}Check your OS package manager for Bach v5." >&2
       ;;
   esac
-  echo ""
-  echo "If Bash v5 is installed but not used as the interpreter,"
-  echo "check the shebang line of the enclosing gen_pack.sh."
-  echo "To be OS agnostic the shebang should be #!/usr/bin/env bash"
-  echo "and Bash v5 executable must be the default one according"
-  echo "to your systems PATH order."
-  echo ""
+  echo "${LOG_PREFIX}"
+  echo "${LOG_PREFIX}If Bash v5 is installed but not used as the interpreter,"
+  echo "${LOG_PREFIX}check the shebang line of the enclosing gen_pack.sh."
+  echo "${LOG_PREFIX}To be OS agnostic the shebang should be #!/usr/bin/env bash"
+  echo "${LOG_PREFIX}and Bash v5 executable must be the default one according"
+  echo "${LOG_PREFIX}to your systems PATH order."
+  echo "${LOG_PREFIX}"
   exit 1
 fi
 
-echo "Loading gen-pack library ${GEN_PACK_LIB_VERSION} from ${GEN_PACK_LIB_SOURCE}"
+echo "${LOG_PREFIX}Loading gen-pack library ${GEN_PACK_LIB_VERSION} from ${GEN_PACK_LIB_SOURCE}"
 
 . "${GEN_PACK_LIB_SOURCE}/lib/patches"
 . "${GEN_PACK_LIB_SOURCE}/lib/usage"
