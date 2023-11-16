@@ -18,15 +18,45 @@ function git_describe {
 
   if "${UTILITY_GIT}" rev-parse --git-dir 2>/dev/null >/dev/null; then
     local gitversion
+    local major
+    local minor
     local patch
+    local qualifier
+    local delta
+    local commit
     local version
     gitversion=$("${UTILITY_GIT}" describe --tags --long --match "${PREFIX}*" --abbrev=7 || echo "0.0.0-dirty-1-g$("${UTILITY_GIT}" describe --tags --match "${PREFIX}*" --always --abbrev=7 2>/dev/null)")
-    patch=$(sed -r -e 's/[0-9]+\.[0-9]+\.([0-9]+).*/\1/' <<< "${gitversion#"${PREFIX}"}")
-    ((patch+=1))
-    version=$(sed -r -e 's/-0-(g[0-9a-f]{7})//' <<< "${gitversion#"${PREFIX}"}")
-    version=$(sed -r -e "s/\.[0-9]+-([0-9]+)-(g[0-9a-f]{7})/.${patch}-dev\1+\2/" <<< "${version}")
-    version=$(sed -r -e "s/-([^0-9]+[0-9]+)-([0-9]+)-(g[0-9a-f]{7})/-\1.\2+\3/" <<< "${version}")
-    version=$(sed -r -e "s/-([^0-9]+)-([0-9]+)-(g[0-9a-f]{7})/-\1\2+\3/" <<< "${version}")
+
+    if [[ "${gitversion}" =~ ^${PREFIX}([0-9]+)\.([0-9]+)\.([0-9]+)?(-([a-zA-Z0-9.]+))?-([0-9]+)-g([0-9a-f]{7})$ ]]; then
+      major=${BASH_REMATCH[1]}
+      minor=${BASH_REMATCH[2]}
+      patch=${BASH_REMATCH[3]:-0}
+      qualifier=${BASH_REMATCH[5]}
+      delta=${BASH_REMATCH[6]}
+      commit=${BASH_REMATCH[7]}
+      if [ -z "$qualifier" ]; then
+          if [[ $delta -gt 0 ]]; then
+              ((patch+=1))
+              qualifier="dev${delta}+g${commit}"
+          fi
+      else
+          if [[ "${qualifier}" =~ .*([0-9]+)$ ]]; then
+              if [[ $delta -gt 0 ]]; then
+                  qualifier="${qualifier}.${delta}+g${commit}"
+              fi
+          else
+              qualifier="${qualifier}${delta}+g${commit}"
+          fi
+      fi
+      if [ -z "$qualifier" ]; then
+          version="${major}.${minor}.${patch}"
+      else
+          version="${major}.${minor}.${patch}-${qualifier}"
+      fi
+    else
+      echo_err "Tag '${gitversion}' doesn't match semver rules!"
+      version="0.0.0"
+    fi
     echo_log "Git version: '${version}'"
     echo "${version}"
   else
@@ -205,6 +235,8 @@ function git_changelog {
   mapfile -t TAGS < <(\
     "${UTILITY_GIT}" -c 'versionsort.suffix=-' for-each-ref --format "%(refname)" --sort="-v:refname" "refs/tags/${PREFIX}*"\
   )
+  for index in "${!TAGS[@]}"; do [[ ${TAGS[$index]} =~ v.*-.*$ ]] && unset -v 'TAGS[$index]'; done
+
   local LATEST
   LATEST=$(git_describe "${PREFIX}")
 

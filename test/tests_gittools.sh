@@ -8,6 +8,8 @@
 # SPDX-License-Identifier: Apache-2.0
 #
 
+# shellcheck disable=SC2317
+
 . "$(dirname "$0")/../lib/logging"
 . "$(dirname "$0")/../lib/gittools"
 
@@ -50,6 +52,7 @@ git_mock() {
       'for-each-ref')
         if [[ " $* " =~ " --format %(refname)" ]]; then
           echo "refs/tags/v1.5.0"
+          echo "refs/tags/v1.5.0-dev"
           echo "refs/tags/v1.2.4"
           echo "refs/tags/v1.2.3"
           echo "refs/tags/v0.9.0"
@@ -143,6 +146,10 @@ test_git_describe() {
   local version=$(git_describe v 2>/dev/null)
   assertEquals "1.2.3-dev1" "${version}"
 
+  GIT_MOCK_DESCRIBE="v1.2.3-dev1-1-g1abcdef"
+  local version=$(git_describe v 2>/dev/null)
+  assertEquals "1.2.3-dev1.1+g1abcdef" "${version}"
+
   GIT_MOCK_DESCRIBE="v1.2.3-3-g1abcdef"
   local version=$(git_describe v 2>/dev/null)
   assertEquals "1.2.4-dev3+g1abcdef" "${version}"
@@ -155,6 +162,10 @@ test_git_describe() {
   local version=$(git_describe 2>/dev/null)
   assertEquals "1.2.3-rc2" "${version}"
 
+  GIT_MOCK_DESCRIBE="1.2.3-dev-0-g1abcdef"
+  local version=$(git_describe 2>/dev/null)
+  assertEquals "1.2.3-dev0+g1abcdef" "${version}"
+
   GIT_MOCK_DESCRIBE="1.2.3-dev-3-g1abcdef"
   local version=$(git_describe 2>/dev/null)
   assertEquals "1.2.3-dev3+g1abcdef" "${version}"
@@ -162,6 +173,10 @@ test_git_describe() {
   GIT_MOCK_DESCRIBE="v1.1.0-preview1-67-g895850a"
   local version=$(git_describe "v" 2>/dev/null)
   assertEquals "1.1.0-preview1.67+g895850a" "${version}"
+
+  GIT_MOCK_DESCRIBE="v1.1.0-preview1-0-g895850a"
+  local version=$(git_describe "v" 2>/dev/null)
+  assertEquals "1.1.0-preview1" "${version}"
 
   unset GIT_MOCK_DESCRIBE
   local version=$(git_describe 2>/dev/null)
