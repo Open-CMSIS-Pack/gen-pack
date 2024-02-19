@@ -1,7 +1,7 @@
 #
 # Open-CMSIS-Pack gen-pack Bash library
 #
-# Copyright (c) 2022-2023 Arm Limited. All rights reserved.
+# Copyright (c) 2022-2024 Arm Limited. All rights reserved.
 #
 # Provided as-is without warranty under Apache 2.0 License
 # SPDX-License-Identifier: Apache-2.0
@@ -54,4 +54,87 @@ function check_placeholder {
     echo_log "Remove placeholders from gen-pack settings!"
     exit 1
   fi
+}
+
+#
+# Get filesystem permissions
+# Returns the octal representation for Unix file permissions.
+#
+# Usage get_perms <path>
+#  <path>   File or directory to get permissions for
+#
+function get_perms {
+  case $(uname -s) in
+    'WindowsNT'|MINGW*|CYGWIN*)
+      echo "777"
+      echo_log "Filesystem permissions not supported on Windows"
+    ;;
+    *)
+      stat -c "%a" "$1"
+      return $?
+    ;;
+  esac
+  return 1
+}
+
+#
+# Check a file/folder's write flag
+# Returns yes if no write permission flag is set.
+#
+# Usage has_write_protect <path>
+#  <path>   File or directory to get write permission for
+#
+function has_write_protect {
+  local perms
+  local result
+  perms="$(get_perms "$1")"
+  result=$?
+  if [ $((8#${perms} & 8#222)) -eq 0 ]; then
+    echo_v "has_write_protect $1 => yes (${perms})"
+    echo "yes"
+    return $result
+  fi
+  echo_v "has_write_protect $1 => no (${perms})"
+  echo "no"
+  return $result
+}
+
+#
+# Remove a file/folder's write flag
+#
+# Usage set_write_protect <path>
+#  <path>   File or directory to remove all write permissions for
+#
+function set_write_protect {
+  case $(uname -s) in
+    'WindowsNT'|MINGW*|CYGWIN*)
+      echo_log "set_write_protect not supported on Windows"
+    ;;
+    *)
+      echo_v "set_write_protect $1"
+      chmod a-w "$1"
+      return $?
+    ;;
+  esac
+  return 1
+}
+
+#
+# Set a file/folder's user-write flag
+#
+# Usage remove_write_protect <path>
+#  <path>   File or directory to set user-write permission for
+#
+function remove_write_protect {
+  case $(uname -s) in
+    'WindowsNT'|MINGW*|CYGWIN*)
+      echo_log "remove_write_protect not supported on Windows"
+    ;;
+    *)
+      echo_v "remove_write_protect $1"
+      chmod u+w "$1"
+      return $?
+    ;;
+  esac
+  return 1
 }

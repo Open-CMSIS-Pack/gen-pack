@@ -1,13 +1,13 @@
 #
 # Open-CMSIS-Pack gen-pack Bash library
 #
-# Copyright (c) 2022-2023 Arm Limited. All rights reserved.
+# Copyright (c) 2022-2024 Arm Limited. All rights reserved.
 #
 # Provided as-is without warranty under Apache 2.0 License
 # SPDX-License-Identifier: Apache-2.0
 #
 
-GEN_PACK_LIB_VERSION="0.9.1"
+GEN_PACK_LIB_VERSION="0.9.2"
 GEN_PACK_LIB_SOURCE="$(realpath "$(dirname "${BASH_SOURCE[0]}")")"
 GEN_PACK_SCRIPT_SOURCE="$(dirname "$(readlink -f "$0")")"
 
@@ -259,16 +259,39 @@ function check_pack {
    | sed -E 's/vendor="([^"]*)"[ ]*name="([^"]*)"/\1.\2.pdsc/')
   declare -a include
   local webdir="${CMSIS_PACK_ROOT}/.Web"
+  local webdir_write_protect="no"
   if [ ! -d "${webdir}" ]; then
+    if [ -d "${CMSIS_PACK_ROOT}" ]; then
+      webdir_write_protect=$(has_write_protect "${CMSIS_PACK_ROOT}")
+      if [[ "${webdir_write_protect}" == "yes" ]]; then
+        remove_write_protect "${CMSIS_PACK_ROOT}"
+      fi
+    fi 
+    echo_v "Creating ${webdir} ..."
     mkdir -p "${webdir}"
+    if [[ "${webdir_write_protect}" == "yes" ]]; then
+      set_write_protect "${CMSIS_PACK_ROOT}"
+    fi
+  else
+    webdir_write_protect=$(has_write_protect "${CMSIS_PACK_ROOT}/.Web")
+  fi
+  if [[ "${webdir_write_protect}" == "yes" ]]; then
+    remove_write_protect "${webdir}"
   fi
   for dep in ${PACKCHK_DEPS} ${dependencies}; do
-    if [ ! -f "${webdir}/${dep}" ]; then
-      curl_download "https://www.keil.com/pack/${dep}" "${webdir}/${dep}"
+    local depfile="${webdir}/${dep}"
+    if [ ! -f "${depfile}" ]; then
+      curl_download "https://www.keil.com/pack/${dep}" "${depfile}"
+      if [[ "${webdir_write_protect}" == "yes" ]]; then
+        set_write_protect "${depfile}"
+      fi
     fi
-    include+=(-i "${webdir}/${dep}")
+    include+=(-i "${depfile}")
   done
-  if [ "${UTILITY_PACKCHK_HAS_SCHEMACHECK}" -eq 0 ]; then
+  if [[ "${webdir_write_protect}" == "yes" ]]; then
+    set_write_protect "${webdir}"
+  fi
+  if [ "${UTILITY_PACKCHK_HAS_SCHEMACHECK:-1}" -eq 0 ]; then
     PACKCHK_ARGS+=(--disable-validation)
   fi
   # shellcheck disable=SC2086

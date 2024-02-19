@@ -1,7 +1,7 @@
 #
 # Open-CMSIS-Pack gen-pack Bash library
 #
-# Copyright (c) 2022-2023 Arm Limited. All rights reserved.
+# Copyright (c) 2022-2024 Arm Limited. All rights reserved.
 #
 # Provided as-is without warranty under Apache 2.0 License
 # SPDX-License-Identifier: Apache-2.0
@@ -21,10 +21,15 @@ case $(uname -s) in
     if ! which ggrep > /dev/null; then
       echo "GNU Grep is required, run brew install grep!" >&2
       exit 1
-    fi    
+    fi
+    if ! which gstat > /dev/null; then
+      echo "GNU stat is required, run brew install coreutils!" >&2
+      exit 1
+    fi
     alias "cp"="gcp"
     alias "grep"="ggrep"
     alias "realpath"="grealpath"
+    alias "stat"="gstat"
     ;;
 esac
 

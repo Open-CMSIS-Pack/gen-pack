@@ -2,18 +2,20 @@
 #
 # Open-CMSIS-Pack gen-pack Bash library
 #
-# Copyright (c) 2022-2023 Arm Limited. All rights reserved.
+# Copyright (c) 2022-2024 Arm Limited. All rights reserved.
 #
 # Provided as-is without warranty under Apache 2.0 License
 # SPDX-License-Identifier: Apache-2.0
 #
+
+# shellcheck disable=SC2317
 
 . "$(dirname "$0")/../gen-pack"
 
 setUp() {
   TESTDIR="${SHUNIT_TMPDIR}/${_shunit_test_}/pack"
   mkdir -p "${TESTDIR}"
-  pushd "${TESTDIR}" >/dev/null
+  pushd "${TESTDIR}" >/dev/null || exit
   mkdir build
   mkdir output
 
@@ -216,16 +218,29 @@ EOF
 }
 
 curl_mock() {
-  CURL_MOCK_ARGS="$@"
-  echo "curl_mock $@"
+  CURL_MOCK_ARGS="$*"
+  echo "curl_mock $*"
+
+  while [[ $# -gt 0 ]]; do 
+      case $1 in
+        '--output')
+          shift
+          touch "$1"
+          shift
+        ;;
+        *) shift;;
+      esac
+  done
+
   local result=${UTILITY_CURL_RESULT[0]:-0}
-  UTILITY_CURL_RESULT=(${UTILITY_CURL_RESULT[@]:1})
-  return $result
+  UTILITY_CURL_RESULT=("${UTILITY_CURL_RESULT[@]:1}")
+
+  return "${result}"
 }
 
 xmllint_mock() {
-  XMLLINT_MOCK_ARGS="$@"
-  echo "xmllint_mock $@"
+  XMLLINT_MOCK_ARGS="$*"
+  echo "xmllint_mock $*"
   return 0
 }
 
@@ -269,7 +284,7 @@ EOF
 
   echo "$result"
 
-  assertEquals 0 $errorlevel
+  assertEquals 0 "$errorlevel"
   assertContains "${result}" "Failed downloading file from URL 'PACK.xsd'."
   assertContains "${result}" "curl_mock -sL https://raw.githubusercontent.com/Open-CMSIS-Pack/Open-CMSIS-Pack-Spec/v1.7.7/schema/PACK.xsd"
   assertNotContains "${result}" "Failed downloading file from URL 'https://raw.githubusercontent.com/Open-CMSIS-Pack/Open-CMSIS-Pack-Spec/v1.7.7/schema/PACK.xsd'."
@@ -292,7 +307,7 @@ EOF
 
   echo "$result"
 
-  assertEquals 0 $errorlevel
+  assertEquals 0 "$errorlevel"
   assertContains "${result}" "Failed downloading file from URL 'PACK.xsd'."
   assertContains "${result}" "Failed downloading file from URL 'https://raw.githubusercontent.com/Open-CMSIS-Pack/Open-CMSIS-Pack-Spec/v1.7.7/schema/PACK.xsd'."
   assertContains "${result}" "curl_mock -sL https://raw.githubusercontent.com/Open-CMSIS-Pack/Open-CMSIS-Pack-Spec/main/schema/PACK.xsd"
@@ -316,7 +331,7 @@ EOF
 
   echo "$result"
 
-  assertNotEquals 0 $errorlevel
+  assertNotEquals 0 "$errorlevel"
   assertContains "${result}" "Failed downloading file from URL 'PACK.xsd'."
   assertContains "${result}" "Failed downloading file from URL 'https://raw.githubusercontent.com/Open-CMSIS-Pack/Open-CMSIS-Pack-Spec/v1.7.7/schema/PACK.xsd'."
   assertContains "${result}" "Failed downloading file from URL 'https://raw.githubusercontent.com/Open-CMSIS-Pack/Open-CMSIS-Pack-Spec/main/schema/PACK.xsd'."
@@ -339,7 +354,7 @@ EOF
 
   echo "$result"
 
-  assertNotEquals 0 $errorlevel
+  assertNotEquals 0 "$errorlevel"
   assertContains "${result}" "PDSC file is missing schema url. Consider adding attribute 'noNamespaceSchemaLocation' to '<package>' tag."
   assertContains "${result}" "PDSC file is missing schema version. Consider adding attribute 'schemaVersion' to '<package>' tag."
   assertContains "${result}" "Failed downloading file from URL 'https://raw.githubusercontent.com/Open-CMSIS-Pack/Open-CMSIS-Pack-Spec/main/schema/PACK.xsd'."
@@ -347,7 +362,7 @@ EOF
 }
 
 packchk_mock() {
-  PACKCHK_MOCK_ARGS="$@"
+  PACKCHK_MOCK_ARGS="$*"
   return 0
 }
 
@@ -390,6 +405,8 @@ EOF
   UTILITY_CURL="curl_mock"
   check_pack test.pdsc
 
+  rm -rf "${CMSIS_PACK_ROOT}"
+
   assertContains "${PACKCHK_MOCK_ARGS[@]}" "test.pdsc"
   assertContains "${PACKCHK_MOCK_ARGS[@]}" "path/to/packs/.Web/ARM.CMSIS.pdsc"
   assertContains "${PACKCHK_MOCK_ARGS[@]}" "path/to/packs/.Web/Keil.ARM_Compiler.pdsc"
@@ -412,9 +429,38 @@ test_check_pack_with_deps() {
   assertNotContains "${PACKCHK_MOCK_ARGS[@]}" "path/to/packs/.Web/ARM.CMSIS.pdsc"
   assertContains "${PACKCHK_MOCK_ARGS[@]}" "path/to/packs/.Web/Keil.ARM_Compiler.pdsc"
 
+  rm -rf "${CMSIS_PACK_ROOT}"
+
   result=$(check_pack test.pdsc)
   assertNotContains "${result}" "curl_mock -sL https://www.keil.com/pack/ARM.CMSIS.pdsc --output path/to/packs/.Web/ARM.CMSIS.pdsc"
   assertContains "${result}" "curl_mock -sL https://www.keil.com/pack/Keil.ARM_Compiler.pdsc --output path/to/packs/.Web/Keil.ARM_Compiler.pdsc"
+
+  assertTrue "test $(has_write_protect ${CMSIS_PACK_ROOT}/.Web) == no"
+  assertTrue "test $(has_write_protect ${CMSIS_PACK_ROOT}/.Web/Keil.ARM_Compiler.pdsc) == no"
+}
+
+test_check_pack_with_write_protect() {
+  touch test.pdsc
+
+  CMSIS_PACK_ROOT="path/to/packs"
+  UTILITY_PACKCHK="packchk_mock"
+  UTILITY_CURL="curl_mock"
+  PACKCHK_DEPS="Keil.ARM_Compiler.pdsc"
+
+  mkdir -p "${CMSIS_PACK_ROOT}"  
+  chmod a-w "${CMSIS_PACK_ROOT}"
+
+  check_pack test.pdsc
+
+  assertTrue "test -d \"${CMSIS_PACK_ROOT}/.Web\""
+  assertTrue "test -f \"${CMSIS_PACK_ROOT}/.Web/Keil.ARM_Compiler.pdsc\""
+  
+  if has_write_protect "${CMSIS_PACK_ROOT}/.Web" > /dev/null; then
+    assertTrue "test $(has_write_protect "${CMSIS_PACK_ROOT}/.Web") == yes"
+    assertTrue "test $(has_write_protect "${CMSIS_PACK_ROOT}/.Web/Keil.ARM_Compiler.pdsc") == yes"
+  fi;
+
+  chmod -R u+w "${CMSIS_PACK_ROOT}"
 }
 
 test_create_sha1() {
