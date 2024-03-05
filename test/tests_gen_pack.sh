@@ -362,7 +362,8 @@ EOF
 }
 
 packchk_mock() {
-  PACKCHK_MOCK_ARGS="$*"
+  PACKCHK_MOCK_ARGS=("$@")
+  echo "packchk_mock" "$@"
   return 0
 }
 
@@ -375,9 +376,9 @@ test_check_pack() {
   UTILITY_CURL="curl_mock"
   check_pack test.pdsc
 
-  assertContains "${PACKCHK_MOCK_ARGS[@]}" "test.pdsc"
-  assertContains "${PACKCHK_MOCK_ARGS[@]}" "path/to/packs/.Web/ARM.CMSIS.pdsc"
-  assertContains "${PACKCHK_MOCK_ARGS[@]}" "--disable-validation"
+  assertContains "${PACKCHK_MOCK_ARGS[*]}" "test.pdsc"
+  assertContains "${PACKCHK_MOCK_ARGS[*]}" "path/to/packs/.Web/ARM.CMSIS.pdsc"
+  assertContains "${PACKCHK_MOCK_ARGS[*]}" "--disable-validation"
 }
 
 test_check_pack_with_args() {
@@ -389,10 +390,10 @@ test_check_pack_with_args() {
   PACKCHK_ARGS=(-x M300)
   check_pack test.pdsc
 
-  assertContains "${PACKCHK_MOCK_ARGS[@]}" "test.pdsc"
-  assertContains "${PACKCHK_MOCK_ARGS[@]}" "path/to/packs/.Web/ARM.CMSIS.pdsc"
-  assertContains "${PACKCHK_MOCK_ARGS[@]}" "-x"
-  assertContains "${PACKCHK_MOCK_ARGS[@]}" "M300"
+  assertContains "${PACKCHK_MOCK_ARGS[*]}" "test.pdsc"
+  assertContains "${PACKCHK_MOCK_ARGS[*]}" "path/to/packs/.Web/ARM.CMSIS.pdsc"
+  assertContains "${PACKCHK_MOCK_ARGS[*]}" "-x"
+  assertContains "${PACKCHK_MOCK_ARGS[*]}" "M300"
 }
 
 test_check_pack_with_reqs() {
@@ -407,9 +408,9 @@ EOF
 
   rm -rf "${CMSIS_PACK_ROOT}"
 
-  assertContains "${PACKCHK_MOCK_ARGS[@]}" "test.pdsc"
-  assertContains "${PACKCHK_MOCK_ARGS[@]}" "path/to/packs/.Web/ARM.CMSIS.pdsc"
-  assertContains "${PACKCHK_MOCK_ARGS[@]}" "path/to/packs/.Web/Keil.ARM_Compiler.pdsc"
+  assertContains "${PACKCHK_MOCK_ARGS[*]}" "test.pdsc"
+  assertContains "${PACKCHK_MOCK_ARGS[*]}" "path/to/packs/.Web/ARM.CMSIS.pdsc"
+  assertContains "${PACKCHK_MOCK_ARGS[*]}" "path/to/packs/.Web/Keil.ARM_Compiler.pdsc"
 
   result=$(check_pack test.pdsc)
   assertContains "${result}" "curl_mock -sL https://www.keil.com/pack/ARM.CMSIS.pdsc --output path/to/packs/.Web/ARM.CMSIS.pdsc"
@@ -422,21 +423,62 @@ test_check_pack_with_deps() {
   CMSIS_PACK_ROOT="path/to/packs"
   UTILITY_PACKCHK="packchk_mock"
   UTILITY_CURL="curl_mock"
-  PACKCHK_DEPS="Keil.ARM_Compiler.pdsc"
+  PACKCHK_DEPS="
+    Keil.ARM_Compiler.pdsc
+    path/to/Local.Pack.pdsc
+    https://get.from/Somewhere.Else.pdsc
+  "
+
+  local webdir="${CMSIS_PACK_ROOT}/.Web"
+
+  prepare_webdir() {
+    mkdir -p "${webdir}"
+    cat > "${webdir}/index.pidx" <<EOF
+<<?xml version="1.0" encoding="UTF-8" ?> 
+<index schemaVersion="1.1.0" xs:noNamespaceSchemaLocation="PackIndex.xsd" xmlns:xs="http://www.w3.org/2001/XMLSchema-instance">
+<vendor>Keil</vendor>
+<url>https://www.keil.com/pack/</url>
+<timestamp>2024-02-22T04:08:17.5071375+00:00</timestamp>
+<pindex>
+  <pdsc url="https://url.to/" vendor="Keil" name="ARM_Compiler" version="1.0.0"/>
+</pindex>
+</index>
+EOF
+    chmod -R a-w "${CMSIS_PACK_ROOT}"
+  }
+
+  prepare_webdir
+
   check_pack test.pdsc
 
-  assertContains "${PACKCHK_MOCK_ARGS[@]}" "test.pdsc"
-  assertNotContains "${PACKCHK_MOCK_ARGS[@]}" "path/to/packs/.Web/ARM.CMSIS.pdsc"
-  assertContains "${PACKCHK_MOCK_ARGS[@]}" "path/to/packs/.Web/Keil.ARM_Compiler.pdsc"
+  assertContains "${PACKCHK_MOCK_ARGS[*]}" "test.pdsc"
+  assertNotContains "${PACKCHK_MOCK_ARGS[*]}" "${webdir}/ARM.CMSIS.pdsc"
+  assertContains "${PACKCHK_MOCK_ARGS[*]}" "${webdir}/Keil.ARM_Compiler.pdsc"
 
-  rm -rf "${CMSIS_PACK_ROOT}"
+  chmod -R a+w "${CMSIS_PACK_ROOT}"
+  rm -rf "${webdir}"
+  prepare_webdir
 
-  result=$(check_pack test.pdsc)
-  assertNotContains "${result}" "curl_mock -sL https://www.keil.com/pack/ARM.CMSIS.pdsc --output path/to/packs/.Web/ARM.CMSIS.pdsc"
-  assertContains "${result}" "curl_mock -sL https://www.keil.com/pack/Keil.ARM_Compiler.pdsc --output path/to/packs/.Web/Keil.ARM_Compiler.pdsc"
+  result=$(check_pack test.pdsc 2>&1)
+  assertNotContains "${result}" "--output ${webdir}/ARM.CMSIS.pdsc"
+  assertNotContains "${result}" "--output ${webdir}/Local.Pack.pdsc"
+  assertContains "${result}" "curl_mock -sL https://url.to/Keil.ARM_Compiler.pdsc --output ${webdir}/Keil.ARM_Compiler.pdsc"
+  assertContains "${result}" "curl_mock -sL https://get.from/Somewhere.Else.pdsc --output ${webdir}/Somewhere.Else.pdsc"
+  assertContains "${result}" "-i ${webdir}/Keil.ARM_Compiler.pdsc"
+  assertContains "${result}" "-i ${webdir}/Somewhere.Else.pdsc"
+  assertContains "${result}" "-i path/to/Local.Pack.pdsc"
 
-  assertTrue "test $(has_write_protect ${CMSIS_PACK_ROOT}/.Web) == no"
-  assertTrue "test $(has_write_protect ${CMSIS_PACK_ROOT}/.Web/Keil.ARM_Compiler.pdsc) == no"
+  if has_write_protect "${CMSIS_PACK_ROOT}" > /dev/null; then
+    assertTrue "test $(has_write_protect "${webdir}") == yes"
+    assertTrue "test $(has_write_protect "${webdir}/Keil.ARM_Compiler.pdsc") == yes"
+    assertTrue "test $(has_write_protect "${webdir}/Somewhere.Else.pdsc") == yes"
+  else
+    assertTrue "test $(has_write_protect "${webdir}") == no"
+    assertTrue "test $(has_write_protect "${webdir}/Keil.ARM_Compiler.pdsc") == no"
+    assertTrue "test $(has_write_protect "${webdir}/Somewhere.Else.pdsc") == no"
+  fi
+
+  chmod -R a+w "${CMSIS_PACK_ROOT}"
 }
 
 test_check_pack_with_write_protect() {
