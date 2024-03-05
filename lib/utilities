@@ -140,8 +140,7 @@ function find_packchk {
   UTILITY_PACKCHK_HAS_SCHEMACHECK=$([[ -f "${UTILITY_PACKCHK}" && $(packchk --help) == *--disable-validation* ]]; echo $?)
   report_utility "PackChk" "${UTILITY_PACKCHK}" && return 0
 
-  echo_v "Hint: Included in CMSIS Pack:"
-  echo_v "\${CMSIS_PACK_ROOT}/ARM/CMSIS/<version>/CMSIS/Utilities/<os>/"
+  echo_log "Hint: PackChk is part of CMSIS-Toolbox (https://github.com/Open-CMSIS-Pack/cmsis-toolbox)"
   echo_log " "
 
   exit 1

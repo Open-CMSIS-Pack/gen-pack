@@ -60,7 +60,7 @@ function check_placeholder {
 # Get filesystem permissions
 # Returns the octal representation for Unix file permissions.
 #
-# Usage get_perms <path>
+# Usage: get_perms <path>
 #  <path>   File or directory to get permissions for
 #
 function get_perms {
@@ -70,8 +70,12 @@ function get_perms {
       echo_log "Filesystem permissions not supported on Windows"
     ;;
     *)
-      stat -c "%a" "$1"
-      return $?
+      if [ -e "$1" ]; then
+        stat -c "%a" "$1"
+        return $?
+      else
+        get_perms "$(dirname "$1")"
+      fi
     ;;
   esac
   return 1
@@ -81,12 +85,11 @@ function get_perms {
 # Check a file/folder's write flag
 # Returns yes if no write permission flag is set.
 #
-# Usage has_write_protect <path>
+# Usage: has_write_protect <path>
 #  <path>   File or directory to get write permission for
 #
 function has_write_protect {
-  local perms
-  local result
+  local perms result
   perms="$(get_perms "$1")"
   result=$?
   if [ $((8#${perms} & 8#222)) -eq 0 ]; then
@@ -102,7 +105,7 @@ function has_write_protect {
 #
 # Remove a file/folder's write flag
 #
-# Usage set_write_protect <path>
+# Usage: set_write_protect <path>
 #  <path>   File or directory to remove all write permissions for
 #
 function set_write_protect {
@@ -122,7 +125,7 @@ function set_write_protect {
 #
 # Set a file/folder's user-write flag
 #
-# Usage remove_write_protect <path>
+# Usage: remove_write_protect <path>
 #  <path>   File or directory to set user-write permission for
 #
 function remove_write_protect {
@@ -136,5 +139,47 @@ function remove_write_protect {
       return $?
     ;;
   esac
+  return 1
+}
+
+#
+# Check if a filename denotes a remote URL
+#
+# Usage: is_url <filename>
+#  <filename>    Name of a file or a remote http(s):// URL
+#
+function is_url {
+  local re="^http(s)?://"
+  if [[ "${1}" =~ $re ]]; then
+    return 0
+  fi
+  return 1
+}
+
+#
+# Check if a filename denotes a local file URI
+#
+# Usage: is_file_uri <filename>
+#  <filename>    Name of a file or file:// URI
+#
+function is_file_uri {
+  local re="^file://"
+  if [[ "${1}" =~ $re ]]; then
+    return 0
+  fi
+  return 1
+}
+
+#
+# Check if a filename denotes an absolute path
+#
+# Usage: is_absolute <filename>
+#  <filename>   Path or filename to check
+#
+function is_absolute {
+  local re="^/"
+  if [[ "${1}" =~ $re ]]; then
+    return 0
+  fi
   return 1
 }

@@ -8,7 +8,15 @@
 # SPDX-License-Identifier: Apache-2.0
 #
 
+# shellcheck disable=SC2317
+
 shopt -s expand_aliases
+
+curl_download_mock() {
+  echo "curl_download $*"
+  touch "${2}"
+  return 0
+}
 
 git_changelog_mock() {
 
@@ -25,21 +33,27 @@ EOF
   return 0
 }
 
+alias curl_download='curl_download_mock'
 alias git_changelog='git_changelog_mock'
 
+. "$(dirname "$0")/../lib/patches"
 . "$(dirname "$0")/../lib/logging"
+. "$(dirname "$0")/../lib/helper"
 . "$(dirname "$0")/../lib/pdsc"
 
 setUp() {
+  VERBOSE=1
+
   TESTDIR="${SHUNIT_TMPDIR}/${_shunit_test_}"
   mkdir -p "${TESTDIR}"
-  pushd "${TESTDIR}" >/dev/null
+  pushd "${TESTDIR}" >/dev/null || exit
 }
 
 test_locate_pdsc_auto() {
   touch "ARM.GenPack.pdsc"
 
-  local pdsc=$(locate_pdsc)
+  local pdsc
+  pdsc=$(locate_pdsc)
 
   assertEquals "$(realpath ARM.GenPack.pdsc)" "$pdsc"
 }
@@ -48,18 +62,21 @@ test_locate_pdsc_specific() {
   touch "ARM.GenPack.pdsc"
   touch "ARM.GenPack2.pdsc"
 
-  local pdsc=$(locate_pdsc "ARM.GenPack.pdsc")
+  local pdsc
+  pdsc=$(locate_pdsc "ARM.GenPack.pdsc")
 
   assertEquals "$(realpath ARM.GenPack.pdsc)" "$pdsc"
 }
 
 test_pdsc_vendor() {
-  local vendor=$(pdsc_vendor "$(pwd)/ARM.GenPack.pdsc")
+  local vendor
+  vendor=$(pdsc_vendor "$(pwd)/ARM.GenPack.pdsc")
   assertEquals "ARM" "$vendor"
 }
 
 test_pdsc_name() {
-  local name=$(pdsc_name "$(pwd)/ARM.GenPack.pdsc")
+  local name
+  name=$(pdsc_name "$(pwd)/ARM.GenPack.pdsc")
   assertEquals "GenPack" "$name"
 }
 
@@ -251,7 +268,8 @@ EOF
 
   assertTrue "[ -f output/ARM.GenPack.pdsc ]"
 
-  local pdsc=$(cat "output/ARM.GenPack.pdsc")
+  local pdsc
+  pdsc=$(cat "output/ARM.GenPack.pdsc")
   assertContains    "${pdsc}"  "    <release version=\"1.2.3\">"
   assertNotContains "${pdsc}"  "<release version=\"0.0.0\">"
 }
@@ -292,7 +310,8 @@ EOF
 
   assertTrue "[ -f output/ARM.GenPack.pdsc ]"
 
-  local pdsc=$(cat "output/ARM.GenPack.pdsc")
+  local pdsc
+  pdsc=$(cat "output/ARM.GenPack.pdsc")
   assertContains    "${pdsc}"  "Active development..."
   assertContains    "${pdsc}"  "- Dev change log 1"
   assertContains    "${pdsc}"  "- Dev change log 2"
@@ -344,7 +363,8 @@ EOF
 
   assertTrue "[ -f output/ARM.GenPack.pdsc ]"
 
-  local pdsc=$(cat "output/ARM.GenPack.pdsc")
+  local pdsc
+  pdsc=$(cat "output/ARM.GenPack.pdsc")
   assertContains    "${pdsc}"  "Active development..."
   assertContains    "${pdsc}"  "- Dev change log 1"
   assertContains    "${pdsc}"  "- Dev change log 2"
@@ -393,11 +413,161 @@ EOF
 
   assertTrue "[ -f output/ARM.GenPack.pdsc ]"
 
-  local pdsc=$(cat "output/ARM.GenPack.pdsc")
+  local pdsc
+  pdsc=$(cat "output/ARM.GenPack.pdsc")
   assertContains "${pdsc}"  "    <release version=\"1.2.3\">"
   assertContains "${pdsc}"  "    <release version=\"5.9.0\" date=\"2022-05-02\">"
   assertContains "${pdsc}"  "    <release version=\"5.8.0\" date=\"2021-06-24\">"
 }
 
+test_pdsc_assure_pack_webdir_noexist() {
+  CMSIS_PACK_ROOT="path/to/packs"
+
+  local webdir
+  webdir=$(assure_pack_webdir)
+
+  assertEquals "path/to/packs/.Web" "${webdir}"
+  assertTrue "[ -w ${webdir} ]"
+}
+
+test_pdsc_assure_pack_webdir_writeable() {
+  CMSIS_PACK_ROOT="path/to/packs"
+
+  mkdir -p "${CMSIS_PACK_ROOT}"
+
+  local webdir
+  webdir=$(assure_pack_webdir)
+
+  assertEquals "path/to/packs/.Web" "${webdir}"
+  assertTrue "[ -w ${webdir} ]"
+}
+
+test_pdsc_assure_pack_webdir_writeprotect() {
+  CMSIS_PACK_ROOT="path/to/packs"
+
+  mkdir -p "${CMSIS_PACK_ROOT}"
+  chmod a-w "${CMSIS_PACK_ROOT}"
+
+  local webdir
+  webdir=$(assure_pack_webdir)
+
+  assertEquals "path/to/packs/.Web" "${webdir}"
+  assertTrue "[ -d ${webdir} ]"
+  
+  if has_write_protect "${CMSIS_PACK_ROOT}" > /dev/null; then
+    assertTrue "[ ! -w ${webdir} ]"
+  fi
+
+  chmod -R a+w "${CMSIS_PACK_ROOT}"
+}
+
+test_pdsc_cache_file() {
+  CMSIS_PACK_ROOT="path/to/packs"
+  
+  local pdsc
+  pdsc=$(pdsc_cache_file "ARM.CMSIS.pdsc")
+
+  assertEquals "path/to/packs/.Web/ARM.CMSIS.pdsc" "${pdsc}"
+}
+
+test_pdsc_cache_file_with_path() {
+  CMSIS_PACK_ROOT="path/to/packs"
+  
+  local pdsc
+  pdsc=$(pdsc_cache_file "path/to/ARM.CMSIS.pdsc")
+
+  assertEquals "path/to/packs/.Web/ARM.CMSIS.pdsc" "${pdsc}"
+}
+
+test_pdsc_cache_file_with_url() {
+  CMSIS_PACK_ROOT="path/to/packs"
+  
+  local pdsc
+  pdsc=$(pdsc_cache_file "http://path.to/ARM.CMSIS.pdsc")
+
+  assertEquals "path/to/packs/.Web/ARM.CMSIS.pdsc" "${pdsc}"
+}
+
+test_pdsc_url() {
+  CMSIS_PACK_ROOT="path/to/packs"
+  local webdir="${CMSIS_PACK_ROOT}/.Web"
+
+  mkdir -p "${webdir}"
+  cat > "${webdir}/index.pidx" <<EOF
+<<?xml version="1.0" encoding="UTF-8" ?> 
+<index schemaVersion="1.1.0" xs:noNamespaceSchemaLocation="PackIndex.xsd" xmlns:xs="http://www.w3.org/2001/XMLSchema-instance">
+<vendor>Keil</vendor>
+<url>https://www.keil.com/pack/</url>
+<timestamp>2024-02-22T04:08:17.5071375+00:00</timestamp>
+<pindex>
+  <pdsc url="https://url.to/" vendor="ARM" name="CMSIS" version="6.0.0"/>
+  <pdsc url="https://url.to" vendor="ARM" name="Test" version="1.2.3"/>
+  <pdsc vendor="ARM" name="Nourl" version="1.1.0"/>
+</pindex>
+</index>
+EOF
+
+  assertEquals "https://url.to/ARM.CMSIS.pdsc" "$(pdsc_url "ARM.CMSIS.pdsc")"
+  assertEquals "https://url.to/ARM.Test.pdsc" "$(pdsc_url "ARM.Test.pdsc")"
+  assertEquals "file:/$(cwd)/path/to/Local.Pack.pdsc" "$(pdsc_url "path/to/Local.Pack.pdsc")"
+  assertEquals "https://www.keil.com/pack/Local.Pack.pdsc" "$(pdsc_url "../invalid/path/to/Local.Pack.pdsc")"
+  assertEquals "https://www.keil.com/pack/ARM.Nourl.pdsc" "$(pdsc_url "ARM.Nourl.pdsc")"
+  assertEquals "https://www.keil.com/pack/Unknown.Pack.pdsc" "$(pdsc_url "Unknown.Pack.pdsc")"
+  assertEquals "https://get.from/Somewhere.Else.pdsc" "$(pdsc_url "https://get.from/Somewhere.Else.pdsc")"
+}
+
+test_pdsc_url_without_index() {
+  CMSIS_PACK_ROOT="path/to/packs"
+
+  local url error
+  url=$(pdsc_url "ARM.CMSIS.pdsc" 2>/dev/null)
+  error=$(pdsc_url "ARM.CMSIS.pdsc" 2>&1 1>/dev/null)
+
+  assertEquals "https://www.keil.com/pack/ARM.CMSIS.pdsc" "${url}"
+  assertContains "${error}" "Pack index at 'path/to/packs/.Web/index.pidx' is not readable!"
+}
+
+test_fetch_pdsc_files() {
+  CMSIS_PACK_ROOT="path/to/packs"
+  local webdir="${CMSIS_PACK_ROOT}/.Web"
+
+  mkdir -p "${webdir}"
+  cat > "${webdir}/index.pidx" <<EOF
+<<?xml version="1.0" encoding="UTF-8" ?> 
+<index schemaVersion="1.1.0" xs:noNamespaceSchemaLocation="PackIndex.xsd" xmlns:xs="http://www.w3.org/2001/XMLSchema-instance">
+<vendor>Keil</vendor>
+<url>https://www.keil.com/pack/</url>
+<timestamp>2024-02-22T04:08:17.5071375+00:00</timestamp>
+<pindex>
+  <pdsc url="https://url.to/" vendor="ARM" name="CMSIS" version="6.0.0"/>
+  <pdsc url="https://url.to" vendor="ARM" name="Test" version="1.2.3"/>
+  <pdsc vendor="ARM" name="Nourl" version="1.1.0"/>
+</pindex>
+</index>
+EOF
+
+  chmod -R a-w "${CMSIS_PACK_ROOT}"
+
+  local deps=("ARM.CMSIS.pdsc" "ARM.Test.pdsc" "ARM.Nourl.pdsc" "path/to/Local.Pack.pdsc")
+
+  local result fetched=()
+  result=$(fetch_pdsc_files fetched "${deps[@]}")
+
+  assertContains "${result}" "curl_download https://url.to/ARM.CMSIS.pdsc path/to/packs/.Web/ARM.CMSIS.pdsc"
+  assertContains "${result}" "curl_download https://url.to/ARM.Test.pdsc path/to/packs/.Web/ARM.Test.pdsc"
+  assertContains "${result}" "curl_download https://www.keil.com/pack/ARM.Nourl.pdsc path/to/packs/.Web/ARM.Nourl.pdsc"
+  assertNotContains "${result}" "Local.Pack.pdsc"
+
+  if has_write_protect "${CMSIS_PACK_ROOT}" > /dev/null; then
+    assertTrue "[ ! -w path/to/packs/.Web/ARM.CMSIS.pdsc ]"
+    assertTrue "[ ! -w path/to/packs/.Web/ARM.Test.pdsc ]"
+    assertTrue "[ ! -w path/to/packs/.Web/ARM.Nourl.pdsc ]"
+  fi
+
+  fetch_pdsc_files fetched "${deps[@]}"
+  echo "fetched: ${fetched[*]}"
+
+  chmod -R a+w "${CMSIS_PACK_ROOT}"
+}
 
 . "$(dirname "$0")/shunit2/shunit2"

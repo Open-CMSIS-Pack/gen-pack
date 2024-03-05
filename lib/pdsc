@@ -100,9 +100,7 @@ function pdsc_release_desc {
 #
 function pdsc_update_releases {
   local PREFIX=()
-  local DEV
-  local first
-  local last
+  local DEV first last
 
   DEV=$(pdsc_release_desc "$1")
   first=$(grep -n "<releases>" "$1" | cut -d: -f1)
@@ -118,4 +116,139 @@ function pdsc_update_releases {
   fi
   git_changelog "${PREFIX[@]}" -d "${DEV}" -f pdsc | sed "s/^/    /" >> "$2"
   tail -n +${last} "$1" >> "$2"
+}
+
+#
+# Assure <CMSIS_PACK_ROOT>/.Web exists
+#
+# Usage: assure_pack_webdir
+#
+function assure_pack_webdir {
+  local basedir webdir="${CMSIS_PACK_ROOT}/.Web"
+  local webdir_write_protect="no"
+  if [ ! -d "${webdir}" ]; then
+    basedir=$(dirname "${webdir}")
+    if [ -d "${basedir}" ]; then
+      webdir_write_protect=$(has_write_protect "${basedir}")
+      if [[ "${webdir_write_protect}" == "yes" ]]; then
+        remove_write_protect "${basedir}"
+      fi
+    fi 
+    echo_v "Creating ${webdir} ..."
+    mkdir -p "${webdir}"
+    if [[ "${webdir_write_protect}" == "yes" ]]; then
+      set_write_protect "${basedir}"
+      set_write_protect "${webdir}"
+    fi
+  fi
+  echo "${webdir}"
+  return 0
+}
+
+#
+# Get pdsc cache filename in .Web dir
+# 
+# Usage: pdsc_cache_file <pdsc>
+#  <pdsc>   Name of a pack description file in format <vendor>.<name>.pdsc
+#
+function pdsc_cache_file {
+  local webdir="${CMSIS_PACK_ROOT}/.Web"
+  local pdsc="${1}"
+  pdsc=$(basename "${pdsc}")
+  echo "${webdir}/${pdsc}"
+}
+
+#
+# Get URL for a given pdsc file from the index
+#
+# Usage: pdsc_url <pdsc>
+#  <pdsc>   Name of a pack description file in format <vendor>.<name>.pdsc
+#
+function pdsc_url {
+  local pdsc="${1}"
+  echo_v "Looking up URL for '${pdsc}'..."
+
+  if is_url "${pdsc}"; then
+    echo_v "Input already pointing to an URL."
+    echo "${pdsc}"
+    return 0
+  elif [[ "$(basename "${pdsc}")" != "${pdsc}" ]]; then
+    pdsc=$(realpath -m --relative-base="$(cwd)" "${pdsc}")
+    if is_absolute "${pdsc}"; then
+      echo_err "Reference to locale pdsc file outside of current tree not allowed!"
+      pdsc="$(basename "${pdsc}")"
+    else
+      echo_v "Using local pdsc file."
+      echo "file:/$(cwd)/${pdsc}"
+      return 0
+    fi
+  fi
+
+  local vendor name index url
+  local webdir="${CMSIS_PACK_ROOT}/.Web"
+  local pidx="${webdir}/index.pidx"
+  local default="https://www.keil.com/pack/${pdsc}"
+  
+  if [ ! -r "${pidx}" ]; then
+    echo_err "Pack index at '${pidx}' is not readable!"
+    echo_v "Using fallback '${default}'..."
+    echo "${default}"
+    return 0
+  fi
+
+  vendor=$(pdsc_vendor "${pdsc}")
+  name=$(pdsc_name "${pdsc}")
+  index=$(grep "vendor=\"${vendor}\"" "${pidx}" | \
+          grep "name=\"${name}\"" | \
+          grep "url=\"[^\"]*\"")
+  url=$(sed -E "s/.*url=\"([^\"]*)\".*/\1/" <<<"${index}")
+
+  if [ -z "${url}" ]; then
+    echo_log "No URL for '${pdsc}' found in pack index."
+    echo_v "Using fallback '${default}'..."
+    echo "${default}"
+    return 0
+  fi
+
+  echo_v "Resolved URL '${url%/}/${pdsc}'..."
+  echo "${url%/}/${pdsc}"
+
+  return 0
+}
+
+#
+# Fetch a list of PDSC files into the .Web folder
+#
+# Usage: fetch_pdsc_files <outvar> <pdsc> [...]
+#  <outvar>   Variable to place output array with all local pdsc files to
+#  <pdsc>     One or more names of pack description file(s) in format <vendor>.<name>.pdsc
+#
+function fetch_pdsc_files {
+  local webdir webdir_write_protect
+  local -n outvar=$1
+  shift
+  webdir=$(assure_pack_webdir)
+  webdir_write_protect=$(has_write_protect "${webdir}")
+  if [[ "${webdir_write_protect}" == "yes" ]]; then
+    remove_write_protect "${webdir}"
+  fi
+  for dep in "$@"; do
+    local depurl depfile
+    depfile="$(pdsc_cache_file "${dep}")"
+    if [ ! -f "${depfile}" ]; then
+      depurl="$(pdsc_url "${dep}")"
+      if is_url "${depurl}"; then
+        curl_download "${depurl}" "${depfile}"
+        if [[ "${webdir_write_protect}" == "yes" ]]; then
+          set_write_protect "${depfile}"
+        fi
+        outvar+=("${depfile}")
+      elif is_file_uri "${depurl}"; then
+        outvar+=("${dep}")
+      fi
+    fi
+  done
+  if [[ "${webdir_write_protect}" == "yes" ]]; then
+    set_write_protect "${webdir}"
+  fi
 }

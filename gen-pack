@@ -7,7 +7,7 @@
 # SPDX-License-Identifier: Apache-2.0
 #
 
-GEN_PACK_LIB_VERSION="0.9.2"
+GEN_PACK_LIB_VERSION="0.10.0"
 GEN_PACK_LIB_SOURCE="$(realpath "$(dirname "${BASH_SOURCE[0]}")")"
 GEN_PACK_SCRIPT_SOURCE="$(dirname "$(readlink -f "$0")")"
 
@@ -254,49 +254,26 @@ function check_schema {
 #
 function check_pack {
   PACKCHK_DEPS="${PACKCHK_DEPS:-ARM.CMSIS.pdsc}"
-  local dependencies
-  dependencies=$(grep -Pio "<package\s+\Kvendor=\"[^\"]+\"\s+name=\"[^\"]+\"" "$1" \
-   | sed -E 's/vendor="([^"]*)"[ ]*name="([^"]*)"/\1.\2.pdsc/')
-  declare -a include
+  local dependencies include=()
+
+  mapfile -t dependencies < <( \
+    grep -Pio "<package\s+\Kvendor=\"[^\"]+\"\s+name=\"[^\"]+\"" "$1" | \
+    sed -E 's/vendor="([^"]*)"[ ]*name="([^"]*)"/\1.\2.pdsc/' \
+  )
+
+  # shellcheck disable=SC2206
+  dependencies+=(${PACKCHK_DEPS})
+
+  fetch_pdsc_files include "${dependencies[@]}"
   local webdir="${CMSIS_PACK_ROOT}/.Web"
-  local webdir_write_protect="no"
-  if [ ! -d "${webdir}" ]; then
-    if [ -d "${CMSIS_PACK_ROOT}" ]; then
-      webdir_write_protect=$(has_write_protect "${CMSIS_PACK_ROOT}")
-      if [[ "${webdir_write_protect}" == "yes" ]]; then
-        remove_write_protect "${CMSIS_PACK_ROOT}"
-      fi
-    fi 
-    echo_v "Creating ${webdir} ..."
-    mkdir -p "${webdir}"
-    if [[ "${webdir_write_protect}" == "yes" ]]; then
-      set_write_protect "${CMSIS_PACK_ROOT}"
-    fi
-  else
-    webdir_write_protect=$(has_write_protect "${CMSIS_PACK_ROOT}/.Web")
-  fi
-  if [[ "${webdir_write_protect}" == "yes" ]]; then
-    remove_write_protect "${webdir}"
-  fi
-  for dep in ${PACKCHK_DEPS} ${dependencies}; do
-    local depfile="${webdir}/${dep}"
-    if [ ! -f "${depfile}" ]; then
-      curl_download "https://www.keil.com/pack/${dep}" "${depfile}"
-      if [[ "${webdir_write_protect}" == "yes" ]]; then
-        set_write_protect "${depfile}"
-      fi
-    fi
-    include+=(-i "${depfile}")
-  done
-  if [[ "${webdir_write_protect}" == "yes" ]]; then
-    set_write_protect "${webdir}"
-  fi
+
   if [ "${UTILITY_PACKCHK_HAS_SCHEMACHECK:-1}" -eq 0 ]; then
     PACKCHK_ARGS+=(--disable-validation)
   fi
+
   # shellcheck disable=SC2086
-  echo_v "\"${UTILITY_PACKCHK}\" ${include[*]} -n \"${PACK_OUTPUT}/PackName.txt\"" "${PACKCHK_ARGS[@]}" \"$1\"
-  "${UTILITY_PACKCHK}" "${include[@]}" -n "${PACK_OUTPUT}/PackName.txt" "${PACKCHK_ARGS[@]}" "$1"
+  echo_v "\"${UTILITY_PACKCHK}\" ${include[*]/#/-i } -n \"${PACK_OUTPUT}/PackName.txt\"" "${PACKCHK_ARGS[@]}" \"$1\"
+  "${UTILITY_PACKCHK}" "${include[@]/#/-i }" -n "${PACK_OUTPUT}/PackName.txt" "${PACKCHK_ARGS[@]}" "$1"
   local errorlevel=$?
   if [ $errorlevel -ne 0 ]; then
     echo_err "build aborted: pack check failed"
@@ -337,9 +314,7 @@ function gen_pack {
   find_packchk
   find_xmllint
   find_sha1sum
-  if [ -n "${UTILITY_XMLLINT}" ]; then
-    find_curl
-  fi
+  find_curl
   if [ -n "${CHANGELOG+x}" ]; then
     find_git
     case ${PACK_CHANGELOG_MODE} in
