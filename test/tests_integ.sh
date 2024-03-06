@@ -13,21 +13,25 @@
 DIRNAME="$(realpath "$(dirname "$0")")"
 
 setUp() {
+  # shellcheck disable=SC2155
   export GEN_PACK_LIB="$(realpath "${DIRNAME}/../")"
   TESTDIR="${SHUNIT_TMPDIR}/${_shunit_test_}"
   mkdir -p "${TESTDIR}"
-  pushd "${TESTDIR}" >/dev/null
+  pushd "${TESTDIR}" >/dev/null || exit
+ 
+  export GIT_COMMITTER_NAME="github-actions"
+  export GIT_COMMITTER_EMAIL="github-actions@github.com"
 }
 
 teardown() {
   unset GEN_PACK_LIB
   unset TESTDIR
-  popd >/dev/null
+  popd >/dev/null || exit
 }
 
 test_integ_default() {
   cp -r "${DIRNAME}/test_integ_default" .
-  cd test_integ_default
+  cd test_integ_default || return
 
   rm -rf build output
 
@@ -55,10 +59,10 @@ test_integ_default() {
 test_integ_with_git_release() {
   mkdir -p test_integ_with_git
   tar -xjf "${DIRNAME}/test_integ_with_git.tbz2" -C test_integ_with_git
-  cd test_integ_with_git
+  cd test_integ_with_git || return
 
-  git --git-dir=$(pwd)/.git clean -fdxq
-  git --git-dir=$(pwd)/.git checkout -fq v1.0.0
+  git --git-dir="$(pwd)/.git" clean -fdxq
+  git --git-dir="$(pwd)/.git" checkout -fq v1.0.0
 
   ./gen_pack.sh -k
 
@@ -83,15 +87,16 @@ test_integ_with_git_release() {
 test_integ_with_git_prerelease() {
   mkdir -p test_integ_with_git
   tar -xjf "${DIRNAME}/test_integ_with_git.tbz2" -C test_integ_with_git
-  cd test_integ_with_git
+  cd test_integ_with_git || return
 
-  git --git-dir=$(pwd)/.git clean -fdxq
-  git --git-dir=$(pwd)/.git checkout -fq v1.0.0
+  git --git-dir="$(pwd)/.git" config --global user.email "you@example.com"
+  git --git-dir="$(pwd)/.git" config --global user.name "Your Name"
 
-  GIT_COMMITTER_NAME="github-actions"
-  GIT_COMMITTER_EMAIL="github-actions@github.com"
-  GIT_COMMITTER_DATE="2022-08-04T16:00:00Z"
-  git --git-dir=$(pwd)/.git tag -m "Active development ..." v1.0.0-dev v1.0.0^
+  git --git-dir="$(pwd)/.git" clean -fdxq
+  git --git-dir="$(pwd)/.git" checkout -fq v1.0.0
+
+  export GIT_COMMITTER_DATE="2022-08-04T16:00:00Z"
+  git --git-dir="$(pwd)/.git" tag -m "Active development ..." v1.0.0-dev v1.0.0^
 
   ./gen_pack.sh -k
 
@@ -117,10 +122,10 @@ test_integ_with_git_prerelease() {
 test_integ_with_git_devdrop() {
   mkdir -p test_integ_with_git
   tar -xjf "${DIRNAME}/test_integ_with_git.tbz2" -C test_integ_with_git
-  cd test_integ_with_git
+  cd test_integ_with_git || exit
 
-  git --git-dir=$(pwd)/.git clean -fdxq
-  git --git-dir=$(pwd)/.git checkout -fq main
+  git --git-dir="$(pwd)/.git" clean -fdxq
+  git --git-dir="$(pwd)/.git" checkout -fq main
 
   ./gen_pack.sh -k
 
@@ -146,10 +151,10 @@ test_integ_with_git_devdrop() {
 test_integ_with_git_v2_dev() {
   mkdir -p test_integ_with_git
   tar -xjf "${DIRNAME}/test_integ_with_git.tbz2" -C test_integ_with_git
-  cd test_integ_with_git
+  cd test_integ_with_git || return
 
-  git --git-dir=$(pwd)/.git clean -fdxq
-  git --git-dir=$(pwd)/.git checkout -fq v2
+  git --git-dir="$(pwd)/.git" clean -fdxq
+  git --git-dir="$(pwd)/.git" checkout -fq v2
 
   ./gen_pack.sh -k
 
