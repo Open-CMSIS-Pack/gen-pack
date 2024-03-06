@@ -273,7 +273,8 @@ function check_pack {
 
   # shellcheck disable=SC2086
   echo_v "\"${UTILITY_PACKCHK}\" ${include[*]/#/-i } -n \"${PACK_OUTPUT}/PackName.txt\"" "${PACKCHK_ARGS[@]}" \"$1\"
-  "${UTILITY_PACKCHK}" "${include[@]/#/-i }" -n "${PACK_OUTPUT}/PackName.txt" "${PACKCHK_ARGS[@]}" "$1"
+  # shellcheck disable=SC2048,SC2086
+  "${UTILITY_PACKCHK}" ${include[*]/#/-i } -n "${PACK_OUTPUT}/PackName.txt" "${PACKCHK_ARGS[@]}" "$1"
   local errorlevel=$?
   if [ $errorlevel -ne 0 ]; then
     echo_err "build aborted: pack check failed"

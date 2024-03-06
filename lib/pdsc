@@ -234,18 +234,18 @@ function fetch_pdsc_files {
   fi
   for dep in "$@"; do
     local depurl depfile
-    depfile="$(pdsc_cache_file "${dep}")"
-    if [ ! -f "${depfile}" ]; then
-      depurl="$(pdsc_url "${dep}")"
-      if is_url "${depurl}"; then
+    depurl="$(pdsc_url "${dep}")"    
+    if is_url "${depurl}"; then
+      depfile="$(pdsc_cache_file "${dep}")"
+      if [ ! -f "${depfile}" ]; then
         curl_download "${depurl}" "${depfile}"
         if [[ "${webdir_write_protect}" == "yes" ]]; then
           set_write_protect "${depfile}"
         fi
-        outvar+=("${depfile}")
-      elif is_file_uri "${depurl}"; then
-        outvar+=("${dep}")
       fi
+      outvar+=("${depfile}")
+    elif is_file_uri "${depurl}"; then
+      outvar+=("${dep}")
     fi
   done
   if [[ "${webdir_write_protect}" == "yes" ]]; then

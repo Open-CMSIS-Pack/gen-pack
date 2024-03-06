@@ -565,7 +565,10 @@ EOF
   fi
 
   fetch_pdsc_files fetched "${deps[@]}"
-  echo "fetched: ${fetched[*]}"
+  assertContains "${fetched[*]}" "path/to/packs/.Web/ARM.CMSIS.pdsc"
+  assertContains "${fetched[*]}" "path/to/packs/.Web/ARM.Test.pdsc"
+  assertContains "${fetched[*]}" "path/to/packs/.Web/ARM.Nourl.pdsc"
+  assertContains "${fetched[*]}" "path/to/Local.Pack.pdsc"
 
   chmod -R a+w "${CMSIS_PACK_ROOT}"
 }
