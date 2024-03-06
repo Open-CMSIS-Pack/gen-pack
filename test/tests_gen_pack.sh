@@ -170,6 +170,10 @@ EOF
 }
 
 test_apply_patches_crlf() {
+  declare -g -A UTILITY_EOL_CONVERTER=()
+  UTILITY_EOL_CONVERTER["CRLF-to-LF"]="$(which dos2unix)"
+  UTILITY_EOL_CONVERTER["LF-to-CRLF"]="$(which unix2dos)"
+
   createTestData
 
   cp -r --parents "input1" "${PACK_BUILD}"
@@ -183,17 +187,29 @@ test_apply_patches_crlf() {
 EOF
 
   unix2dos file11.patch
+  unix2dos "${PACK_BUILD}/input1/file11.txt"
 
   PACK_PATCH_FILES="
     file11.patch
   "
+
   apply_patches "${PACK_BUILD}"
+
+  assertEquals "CRLF" "$(detect_eol_style "${PACK_BUILD}/input1/file11.txt")"
+
+  dos2unix "${PACK_BUILD}/input1/file11.txt"
 
   assertEquals "File 11 extended version" "$(cat "${PACK_BUILD}/input1/file11.txt")"
   assertEquals "File 12" "$(cat "${PACK_BUILD}/input1/file12.txt")"
+  
+  unset UTILITY_EOL_CONVERTER
 }
 
 test_apply_patches_cr() {
+  declare -g -A UTILITY_EOL_CONVERTER=()
+  UTILITY_EOL_CONVERTER["CR-to-LF"]="$(which mac2unix)"
+  UTILITY_EOL_CONVERTER["LF-to-CR"]="$(which unix2mac)"
+
   createTestData
 
   cp -r --parents "input1" "${PACK_BUILD}"
@@ -207,14 +223,22 @@ test_apply_patches_cr() {
 EOF
 
   unix2mac file11.patch
+  unix2mac "${PACK_BUILD}/input1/file11.txt"
 
   PACK_PATCH_FILES="
     file11.patch
   "
+
   apply_patches "${PACK_BUILD}"
+
+  assertEquals "CR" "$(detect_eol_style "${PACK_BUILD}/input1/file11.txt")"
+
+  mac2unix "${PACK_BUILD}/input1/file11.txt"
 
   assertEquals "File 11 extended version" "$(cat "${PACK_BUILD}/input1/file11.txt")"
   assertEquals "File 12" "$(cat "${PACK_BUILD}/input1/file12.txt")"
+
+  unset UTILITY_EOL_CONVERTER
 }
 
 curl_mock() {

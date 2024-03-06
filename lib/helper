@@ -183,3 +183,49 @@ function is_absolute {
   fi
   return 1
 }
+
+#
+# Detect the end of line style used in a file
+#
+# Usage: detect_eol_style <file>
+#  <file>   File to analyze
+#
+function detect_eol_style {
+  local file="$1"
+  file="$(realpath "${file}")"
+  if [ ! -r "${file}" ]; then
+    echo_err "File '${file}' does not exist!"
+    return 1
+  fi
+
+  eol=$(head -1 "${file}"                    | \
+          cat -vet                           | \
+          sed -E 's/\^[^M]//'                | \
+          sed -E 's/[^^$]*((\^.|\$)*).*/\1/' | \
+          sed -E 's/\^M/CR/'                 | \
+          sed -E 's/\$/LF/'
+        )
+  
+  echo "${eol:-LF}"
+}
+
+#
+# Convert the end of line style 
+#
+# Usage: convert_eol <to> <file> [<file>...]
+#  <to>     End of line style
+#  <file>   One or more files to convert
+#
+function convert_eol {
+  local from to=$1
+  shift
+  for f in "$@"; do
+    from=$(detect_eol_style "$f")
+    local convert="${UTILITY_EOL_CONVERTER["${from}-to-${to}"]}" 
+    if [ -x "${convert}" ]; then
+      echo_v "$("${convert}" "$f" 2>&1)"
+    elif [[ "${from}" != "${to}" ]]; then
+      echo_log "No eol converter for ${from}-to-${to}"
+    fi
+  done
+}

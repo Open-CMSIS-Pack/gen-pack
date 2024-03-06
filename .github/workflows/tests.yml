@@ -43,6 +43,7 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install \
+            dos2unix \
             kcov
 
       - name: Run kcov
@@ -94,6 +95,7 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install \
+            dos2unix \
             libxml2-utils
 
       - name: Install MacOS deps
@@ -102,6 +104,7 @@ jobs:
           brew install \
             bash \
             coreutils \
+            dos2unix \
             grep
 
       - name: Install CMSIS-Toolbox

@@ -125,4 +125,41 @@ test_has_write_protect() {
   chmod -R a+w protected
 }
 
+test_detect_eol_style() {
+  printf "This file has no line endings." > none_style.txt
+  printf "This file\nuses Unix-style\nLF line endings." > unix_style.txt
+  printf "This file\twith tabs\nuses Unix-style\nLF line endings." > unix_style_with_tabs.txt
+  printf "This file\r\nuses Windows-style\r\nCRLF line endings." > windows_style.txt
+  printf "This file\ruses classic Mac-style\rCR line endings." > mac_style.txt
+
+  assertEquals "LF"   "$(detect_eol_style "none_style.txt")"
+  assertEquals "LF"   "$(detect_eol_style "unix_style.txt")"
+  assertEquals "LF"   "$(detect_eol_style "unix_style_with_tabs.txt")"
+  assertEquals "CRLF" "$(detect_eol_style "windows_style.txt")"
+  assertEquals "CR"   "$(detect_eol_style "mac_style.txt")"
+}
+
+test_convert_eol() {
+  declare -g -A UTILITY_EOL_CONVERTER=()
+
+  UTILITY_EOL_CONVERTER["CRLF-to-LF"]="$(which dos2unix)"
+  UTILITY_EOL_CONVERTER["CR-to-LF"]="$(which mac2unix)"
+
+  printf "This file\nuses Unix-style\nLF line endings." > unix_style.txt
+  printf "This file\r\nuses Windows-style\r\nCRLF line endings." > windows_style.txt
+  printf "This file\ruses classic Mac-style\rCR line endings." > mac_style.txt
+
+  convert_eol "LF" unix_style.txt windows_style.txt mac_style.txt
+
+  assertEquals "LF" "$(detect_eol_style "unix_style.txt")"
+  assertEquals "LF" "$(detect_eol_style "windows_style.txt")"
+  assertEquals "LF" "$(detect_eol_style "mac_style.txt")"
+
+  local output
+  output=$(convert_eol "CRLF" windows_style.txt 2>&1)
+  assertContains "${output}" "No eol converter for LF-to-CRLF"
+
+  unset UTILITY_EOL_CONVERTER
+}
+
 . "$(dirname "$0")/shunit2/shunit2"

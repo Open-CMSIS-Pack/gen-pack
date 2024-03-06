@@ -62,13 +62,13 @@ function find_utility {
       local VERSION
       VERSION=$(bash -c "'${executable}' ${2}")
       if [[ "$VERSION" == "$3" ]]; then
-        realpath -q "${executable}"
+        realpath -s -q "${executable}"
         return $?
       fi
     done
     return 1
   fi
-  realpath -q "${UTILS[0]}"
+  realpath -s -q "${UTILS[0]}"
   return $?
 }
 
@@ -265,6 +265,41 @@ function find_linkchecker {
 function find_doxygen {
   UTILITY_DOXYGEN=$(find_utility doxygen "-v | cut -d' ' -f1" "$1")
   report_utility "doxygen" "$UTILITY_DOXYGEN" $? "$1" && return
+}
+
+#
+# Find end-of-line converters
+#
+function find_eol_converter {
+  declare -g -A UTILITY_EOL_CONVERTER=()
+
+  UTILITY_EOL_CONVERTER['CRLF-to-LF']=$(find_utility dos2unix)
+  report_utility "dos2unix" "${UTILITY_EOL_CONVERTER['CRLF-to-LF']}" $?
+  local result=$?
+
+  UTILITY_EOL_CONVERTER['LF-to-CRLF']=$(find_utility unix2dos)
+  report_utility "unix2dos" "${UTILITY_EOL_CONVERTER['LF-to-CRLF']}" $?
+  ((result+=$?))
+
+  if [[ $result != 0 ]] ; then
+    echo_err "Warning: File conversion for files using Windows line endings may cause issues"
+    echo_log "Action: Install dos2unix/unix2dos converter"
+    echo_log ""
+  fi
+
+  UTILITY_EOL_CONVERTER['CR-to-LF']=$(find_utility mac2unix)
+  report_utility "mac2unix" "${UTILITY_EOL_CONVERTER['CR-to-LF']}" $?
+  result=$?
+
+  UTILITY_EOL_CONVERTER['LF-to-CR']=$(find_utility unix2mac)
+  report_utility "unix2mac" "${UTILITY_EOL_CONVERTER['LF-to-CR']}" $?
+  ((result+=$?))
+
+  if [[ $result != 0 ]] ; then
+    echo_err "Warning: File conversion for files using classic Mac line endings may cause issues"
+    echo_log "Action: Install mac2unix/unix2mac converter"
+    echo_log ""
+  fi
 }
 
 #

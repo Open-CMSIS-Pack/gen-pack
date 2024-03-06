@@ -11,12 +11,23 @@ ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && \
     apt-get install -y \
         curl \
+        dos2unix \
         git \
         libxml2-utils \
+        locales \
+        sudo \
         zip && \
-    apt-get autoremove -y && \
-    apt-get autoclean -y && \
+    apt-get clean autoclean && \
+    apt-get autoremove --yes && \
     rm -rf /var/lib/apt/lists/*
+
+# Generate locale
+RUN echo "en_US.UTF-8 UTF-8" >> /etc/locale.gen && \
+    locale-gen
+
+# removing sh and pointing /bin/sh to /bin/bash
+RUN rm /bin/sh && \
+    ln -s /bin/bash /bin/sh
 
 # Install GitHub CLI
 
@@ -39,14 +50,15 @@ RUN curl -LO https://github.com/Open-CMSIS-Pack/cmsis-toolbox/releases/download/
 
 ENV PATH=$PATH:/opt/cmsis-toolbox/bin
 
-# Create runner user
+# Create user
 
-RUN groupadd ${USERNAME} && \
-    useradd -m -s /bin/bash -g ${USERNAME} ${USERNAME}
+RUN groupadd --gid 1000 ${USERNAME} \
+    && useradd --uid 1000 --gid 1000 -m ${USERNAME} -s /bin/bash \
+    && echo ${USERNAME} ALL=\(root\) NOPASSWD:ALL > /etc/sudoers.d/${USERNAME} \
+    && chmod 0440 /etc/sudoers.d/${USERNAME}
 
 USER ${USERNAME}
-
-WORKDIR /home/runner
+WORKDIR /home/${USERNAME}
 
 # Initialite CMSIS-Pack repo and add ARM.CMSIS pack
 

@@ -26,10 +26,10 @@ case $(uname -s) in
       echo "GNU stat is required, run brew install coreutils!" >&2
       exit 1
     fi
-    alias "cp"="gcp"
+        alias "cp"="gcp"
     alias "grep"="ggrep"
     alias "realpath"="grealpath"
-    alias "stat"="gstat"
+        alias "stat"="gstat"
     ;;
 esac
 

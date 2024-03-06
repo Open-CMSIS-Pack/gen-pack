@@ -15,17 +15,22 @@ This library is written for Bash v5 or later and uses a couple of standard
 - cp
 - curl
 - dirname
+- dos2unix (optional)
 - echo
 - find
 - git (optional)
 - gh (optional)
 - grep
+- mac2unix (optional)
 - mkdir
 - mv
+- patch (optional)
 - realpath
 - sed
 - sha1sum
 - test
+- unix2dos (optional)
+- unix2mac (optional)
 - xmllint (optional)
 
 In addition the `packchk` utility from [CMSIS-Toolbox](https://github.com/Open-CMSIS-Pack/cmsis-toolbox)

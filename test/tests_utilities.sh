@@ -314,7 +314,7 @@ EOF
 test_integ_archive_7zip() {
   remove_from_path "zip"
 
-  if $(find_zip 1>/dev/null 2>&1); then
+  if (find_zip 1>/dev/null 2>&1); then
     find_zip
 
     mkdir -p input
@@ -337,7 +337,7 @@ test_integ_archive_gnuzip() {
   PROGRAMFILES=""
   remove_from_path "7z"
 
-  if $(find_zip 1>/dev/null 2>&1); then
+  if (find_zip 1>/dev/null 2>&1); then
     find_zip
 
     mkdir -p input
@@ -431,15 +431,15 @@ EOF
 
   UTIL=$(find_utility "util")
   assertEquals 0 $?
-  assertEquals "$(realpath $(cwd))/util-1.0/util" "$UTIL"
+  assertEquals "$(realpath "$(cwd)")/util-1.0/util" "$UTIL"
 
   UTIL=$(find_utility "util" "-v" "1.0.0")
   assertEquals 0 $?
-  assertEquals "$(realpath $(cwd))/util-1.0/util" "$UTIL"
+  assertEquals "$(realpath "$(cwd)")/util-1.0/util" "$UTIL"
 
   UTIL=$(find_utility "util" "-v" "2.0.3")
   assertEquals 0 $?
-  assertEquals "$(realpath $(cwd))/util-2.0/util" "$UTIL"
+  assertEquals "$(realpath "$(cwd)")/util-2.0/util" "$UTIL"
 }
 
 test_find_utility_version_na() {
@@ -490,11 +490,11 @@ EOF
 
   UTIL=$(find_utility "util" "-v" "1.0.0")
   assertEquals 0 $?
-  assertEquals "$(realpath $(cwd))/util 1.0/util" "$UTIL"
+  assertEquals "$(realpath "$(cwd)")/util 1.0/util" "$UTIL"
 
   UTIL=$(find_utility "util" "-v" "2.0.3")
   assertEquals 0 $?
-  assertEquals "$(realpath $(cwd))/util 2.0/util" "$UTIL"
+  assertEquals "$(realpath "$(cwd)")/util 2.0/util" "$UTIL"
 }
 
 _test_find_() {
@@ -512,11 +512,11 @@ EOF
   remove_from_path "$1"
   PATH="$(cwd)/bin:$PATH"
 
-  find_${utility}
+  "find_${utility}"
   assertEquals 0 $?
   assertEquals "$(cwd)/bin/$1" "${!utility_var}"
 
-  OUTPUT=$(find_${utility} 2>&1 > /dev/null)
+  OUTPUT=$("find_${utility}" 2>&1 > /dev/null)
   assertNotContains "Error" "$OUTPUT"
   assertNotContains "Warning" "$OUTPUT"
   assertNotContains "Info" "$OUTPUT"
@@ -565,11 +565,11 @@ EOF
 
   find_doxygen "1.8.6"
   assertEquals 0 $?
-  assertEquals "$(realpath $(cwd))/doxygen-1.8.6/doxygen" "$UTILITY_DOXYGEN"
+  assertEquals "$(realpath "$(cwd)")/doxygen-1.8.6/doxygen" "$UTILITY_DOXYGEN"
 
   find_doxygen "1.9.2"
   assertEquals 0 $?
-  assertEquals "$(realpath $(cwd))/doxygen-1.9.2/doxygen" "$UTILITY_DOXYGEN"
+  assertEquals "$(realpath "$(cwd)")/doxygen-1.9.2/doxygen" "$UTILITY_DOXYGEN"
 }
 
 test_find_doxygen_version() {
@@ -608,6 +608,15 @@ test_find_sha1sum() {
 
 test_find_linkchecker() {
   _test_find_ linkchecker
+}
+
+test_find_eol_converter() {
+  find_eol_converter
+
+  assertContains "${!UTILITY_EOL_CONVERTER[*]}" "CRLF-to-LF"
+  assertContains "${!UTILITY_EOL_CONVERTER[*]}" "CR-to-LF"
+  assertContains "${!UTILITY_EOL_CONVERTER[*]}" "LF-to-CRLF"
+  assertContains "${!UTILITY_EOL_CONVERTER[*]}" "LF-to-CR"
 }
 
 . "$(dirname "$0")/shunit2/shunit2"
