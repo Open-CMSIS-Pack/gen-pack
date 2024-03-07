@@ -79,10 +79,11 @@ function add_dirs {
   echo_log " "
   for d in ${PACK_DIRS}; do
     d=$(realpath --relative-to="$(pwd)" "$d")
+    local tar_opts=(--exclude-vcs --exclude-ignore=.gpignore --exclude=.gpignore)
     if [[ $d = ../* ]]; then
-      cp -r "$d" "$1"
+      tar "${tar_opts[@]}" -C "$(dirname "$d")" -cf - "$(basename "$d")" | tar -C "$1" -xf -
     else
-      cp -r --parents "$d" "$1"
+      tar "${tar_opts[@]}" -cf - "$d" | tar -C "$1" -xf -
     fi
   done
 }

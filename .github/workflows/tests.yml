@@ -105,6 +105,7 @@ jobs:
             bash \
             coreutils \
             dos2unix \
+            gnu-tar \
             grep
 
       - name: Install CMSIS-Toolbox

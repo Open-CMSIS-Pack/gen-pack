@@ -101,6 +101,54 @@ test_add_dirs_default() {
   assertTrue  "[ -f \"${PACK_BUILD}/input3/file33.txt\" ]"
 }
 
+test_add_dirs_with_exclude_vcs() { 
+  mkdir -p "input1/.svn"
+  mkdir -p "input1/sub/.svn"
+  mkdir -p "../input5/.svn"
+    
+  # run add_dirs
+  PACK_DIRS="
+    input1
+     ../input5
+  "
+  add_dirs "${PACK_BUILD}"
+
+  assertFalse "[ -d \"${PACK_BUILD}/input1/.svn\" ]"
+  assertFalse "[ -d \"${PACK_BUILD}/input1/sub/.svn\" ]"
+  assertFalse "[ -d \"${PACK_BUILD}/input5/.svn\" ]"
+}
+
+test_add_dirs_with_exclude_gpignore() { 
+  createTestData
+
+  touch "input1/do_not_copy.txt"
+  cat > input1/.gpignore <<EOF
+    do_not_copy.txt
+    file12.txt
+EOF
+
+  cat > ../input5/.gpignore <<EOF
+     file51.txt
+EOF
+
+  # run add_dirs
+  PACK_DIRS="
+    input1
+    ../input5
+  "
+  add_dirs "${PACK_BUILD}"
+
+  assertTrue  "[ -d \"${PACK_BUILD}/input1\" ]"
+  assertTrue  "[ -f \"${PACK_BUILD}/input1/file11.txt\" ]"
+  assertFalse "[ -f \"${PACK_BUILD}/input1/file12.txt\" ]"
+  assertTrue  "[ -f \"${PACK_BUILD}/input1/file13.txt\" ]"
+  assertFalse "[ -f \"${PACK_BUILD}/input5/file51.txt\" ]"
+
+  assertFalse "[ -f \"${PACK_BUILD}/input1/do_not_copy.txt\" ]"
+  assertFalse "[ -f \"${PACK_BUILD}/input1/.gpignore\" ]"
+  assertFalse "[ -f \"${PACK_BUILD}/input5/.gpignore\" ]"
+}
+
 test_add_files() {
   createTestData
 
