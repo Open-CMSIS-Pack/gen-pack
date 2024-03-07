@@ -26,10 +26,15 @@ case $(uname -s) in
       echo "GNU stat is required, run brew install coreutils!" >&2
       exit 1
     fi
-        alias "cp"="gcp"
+    if ! which gtar > /dev/null; then
+      echo "GNU tar is required, run brew install gnu-tar!" >&2
+      exit 1
+    fi
+    alias "cp"="gcp"
     alias "grep"="ggrep"
     alias "realpath"="grealpath"
-        alias "stat"="gstat"
+    alias "stat"="gstat"
+    alias "tar=gtar"
     ;;
 esac
 
