@@ -8,3 +8,16 @@
 +void test() {
 +  /* some additional code */   
 +}
+--- src/win.c
++++ src/win.c
+@@ -1,2 +1,3 @@
+ void win() {
++  /* some additional code */   
+ }
+--- src/mac.c
++++ src/mac.c
+@@ -1,2 +1,3 @@
+ void mac() {
++  /* some additional code */   
+ }
+ 

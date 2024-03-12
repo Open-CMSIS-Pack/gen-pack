@@ -1,0 +1,4 @@
+test/test_integ_default/src/mac.c    text eol=cr
+test/test_integ_default/src/test.c   text eol=lf
+test/test_integ_default/src/win.c    text eol=crlf
+
