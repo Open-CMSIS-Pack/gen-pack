@@ -343,6 +343,7 @@ function gen_pack {
       ;;
     esac
   fi
+  find_eol_converter
 
   echo_log " "
 

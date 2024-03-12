@@ -12,6 +12,14 @@
 
 DIRNAME="$(realpath "$(dirname "$0")")"
 
+shopt -s expand_aliases
+
+case $(uname -s) in
+  'Darwin')
+    alias "stat"="gstat"
+  ;;
+esac
+
 setUp() {
   # shellcheck disable=SC2155
   export GEN_PACK_LIB="$(realpath "${DIRNAME}/../")"
@@ -35,19 +43,25 @@ test_integ_default() {
 
   rm -rf build output
 
-  ./gen_pack.sh -k
+  ./gen_pack.sh --verbose -k
 
-  assertTrue  "Pack description file missing"  "[ -f build/ARM.GenPack.pdsc ]"
-  assertTrue  "Pack checksum file missing"     "[ -f build/ARM.GenPack.sha1 ]"
-  assertTrue  "LICENSE file"                   "[ -f build/LICENSE ]"
-  assertTrue  "Doc top level index missing"    "[ -f build/doc/index.html ]"
-  assertFalse "Doxyfile found in build"        "[ -f build/doc/test.dxy ]"
-  assertTrue  "Doc index file missing"         "[ -f build/doc/html/index.html ]"
-  assertTrue  "Header file missing"            "[ -f build/inc/test.h ]"
-  assertTrue  "Source file missing"            "[ -f build/src/test.c ]"
-  assertTrue  "Pack archive missing"           "[ -f output/ARM.GenPack.1.0.1-dev1.pack ]"
+  assertTrue   "Pack description file missing"  "[ -f build/ARM.GenPack.pdsc ]"
+  assertTrue   "Pack checksum file missing"     "[ -f build/ARM.GenPack.sha1 ]"
+  assertTrue   "LICENSE file"                   "[ -f build/LICENSE ]"
+  assertTrue   "Doc top level index missing"    "[ -f build/doc/index.html ]"
+  assertFalse  "Doxyfile found in build"        "[ -f build/doc/test.dxy ]"
+  assertTrue   "Doc index file missing"         "[ -f build/doc/html/index.html ]"
+  assertTrue   "Header file missing"            "[ -f build/inc/test.h ]"
+  assertEquals "test.h seems not patched"       "13" "$(stat -c "%s" build/inc/test.h)"
+  assertTrue   "Source file missing"            "[ -f build/src/test.c ]"
+  assertEquals "test.c seems not patched"       "48" "$(stat -c "%s" build/src/test.c)"
+  assertTrue   "Source file missing"            "[ -f build/src/win.c ]"
+  assertEquals "win.c seems not patched"        "50" "$(stat -c "%s" build/src/win.c)"
+  assertTrue   "Source file missing"            "[ -f build/src/mac.c ]"
+  assertEquals "mac.c seems not patched"        "47" "$(stat -c "%s" build/src/mac.c)"
+  assertTrue   "Pack archive missing"           "[ -f output/ARM.GenPack.1.0.1-dev1.pack ]"
 
-  assertTrue  "Checksum file verification failed" "cd build; sha1sum ARM.GenPack.sha1"
+  assertTrue   "Checksum file verification failed" "cd build; sha1sum ARM.GenPack.sha1"
 
   pdsc=$(cat build/ARM.GenPack.pdsc)
   assertContains "$pdsc" '<release version="1.0.1-dev1">'
@@ -64,7 +78,7 @@ test_integ_with_git_release() {
   git --git-dir="$(pwd)/.git" clean -fdxq
   git --git-dir="$(pwd)/.git" checkout -fq v1.0.0
 
-  ./gen_pack.sh -k
+  ./gen_pack.sh --verbose -k
 
   assertTrue  "Pack description file missing"  "[ -f build/ARM.GenPack.pdsc ]"
   assertTrue  "Pack checksum file missing"     "[ -f build/ARM.GenPack.sha1 ]"
@@ -98,7 +112,7 @@ test_integ_with_git_prerelease() {
   export GIT_COMMITTER_DATE="2022-08-04T16:00:00Z"
   git --git-dir="$(pwd)/.git" tag -m "Active development ..." v1.0.0-dev v1.0.0^
 
-  ./gen_pack.sh -k
+  ./gen_pack.sh --verbose -k
 
   assertTrue  "Pack description file missing"  "[ -f build/ARM.GenPack.pdsc ]"
   assertTrue  "Pack checksum file missing"     "[ -f build/ARM.GenPack.sha1 ]"
@@ -127,7 +141,7 @@ test_integ_with_git_devdrop() {
   git --git-dir="$(pwd)/.git" clean -fdxq
   git --git-dir="$(pwd)/.git" checkout -fq main
 
-  ./gen_pack.sh -k
+  ./gen_pack.sh --verbose -k
 
   assertTrue  "Pack description file missing"  "[ -f build/ARM.GenPack.pdsc ]"
   assertTrue  "Pack checksum file missing"     "[ -f build/ARM.GenPack.sha1 ]"
@@ -156,7 +170,7 @@ test_integ_with_git_v2_dev() {
   git --git-dir="$(pwd)/.git" clean -fdxq
   git --git-dir="$(pwd)/.git" checkout -fq v2
 
-  ./gen_pack.sh -k
+  ./gen_pack.sh --verbose -k
 
   assertTrue  "Pack description file missing"  "[ -f build/ARM.GenPack.pdsc ]"
   assertTrue  "Pack checksum file missing"     "[ -f build/ARM.GenPack.sha1 ]"
