@@ -586,12 +586,50 @@ test_create_sha1() {
 
   create_sha1 "${PACK_BUILD}" "ARM" "GenPack"
 
-  assertTrue     "[ -f \"${PACK_BUILD}/ARM.GenPack.sha1\" ]"
-  assertContains "$(cat "${PACK_BUILD}/ARM.GenPack.sha1")" "./input1/file11.txt"
-  assertContains "$(cat "${PACK_BUILD}/ARM.GenPack.sha1")" "./input1/file12.txt"
-  assertContains "$(cat "${PACK_BUILD}/ARM.GenPack.sha1")" "./input1/file13.txt"
+  assertTrue        "[ -f \"${PACK_BUILD}/ARM.GenPack.sha1\" ]"
+  assertContains    "$(cat "${PACK_BUILD}/ARM.GenPack.sha1")" "./input1/file11.txt"
+  assertContains    "$(cat "${PACK_BUILD}/ARM.GenPack.sha1")" "./input1/file12.txt"
+  assertContains    "$(cat "${PACK_BUILD}/ARM.GenPack.sha1")" "./input1/file13.txt"
   assertNotContains "$(cat "${PACK_BUILD}/ARM.GenPack.sha1")" "./input2"
   assertNotContains "$(cat "${PACK_BUILD}/ARM.GenPack.sha1")" "./input3"
 }
+
+test_create_sha1_with_ignore() {
+  createTestData
+
+  cp -r --parents "input1" "${PACK_BUILD}"
+  cp -r --parents "input2" "${PACK_BUILD}"
+
+  UTILITY_SHA1SUM="sha1sum"
+  PACK_CHECKSUM_EXCLUDE="
+    input1/file11.txt
+    input2/*  
+  "
+
+  create_sha1 "${PACK_BUILD}" "ARM" "GenPack"
+
+  assertTrue        "[ -f \"${PACK_BUILD}/ARM.GenPack.sha1\" ]"
+  assertNotContains "$(cat "${PACK_BUILD}/ARM.GenPack.sha1")" "./input1/file11.txt"
+  assertContains    "$(cat "${PACK_BUILD}/ARM.GenPack.sha1")" "./input1/file12.txt"
+  assertContains    "$(cat "${PACK_BUILD}/ARM.GenPack.sha1")" "./input1/file13.txt"
+  assertNotContains "$(cat "${PACK_BUILD}/ARM.GenPack.sha1")" "./input2"
+  assertNotContains "$(cat "${PACK_BUILD}/ARM.GenPack.sha1")" "./input3"
+}
+
+test_create_sha1_with_ignore_all() {
+  createTestData
+
+  cp -r --parents "input1" "${PACK_BUILD}"
+
+  UTILITY_SHA1SUM="sha1sum"
+  PACK_CHECKSUM_EXCLUDE="*"
+
+  create_sha1 "${PACK_BUILD}" "ARM" "GenPack"
+
+  ls -lah "${PACK_BUILD}/ARM.GenPack.sha1"
+
+  assertFalse       "[ -f \"${PACK_BUILD}/ARM.GenPack.sha1\" ]"
+}
+
 
 . "$(dirname "$0")/shunit2/shunit2"

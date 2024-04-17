@@ -182,6 +182,9 @@ can use the same relative file names as within the `.pdsc` file.
 
    If no changelog text can be retrieved pack generation is aborted.
 
+1. Replace `<list file patterns here>` for `PACK_CHECKSUM_EXCLUDE` wit glob patterns to exclude files from the
+   checksum file, or provide `*` (match all pattern) to skip checksum file creation completely.
+
 1. Put custom commands to be executed before/after populating the pack build folder
    into the `preprocess` and `postprocess` functions. The working directory (`pwd`) for
    both functions is the base folder containing the pack description file. The first
