@@ -7,7 +7,7 @@
 # SPDX-License-Identifier: Apache-2.0
 #
 
-GEN_PACK_LIB_VERSION="0.10.0"
+GEN_PACK_LIB_VERSION="0.11.0"
 GEN_PACK_LIB_SOURCE="$(realpath "$(dirname "${BASH_SOURCE[0]}")")"
 GEN_PACK_SCRIPT_SOURCE="$(dirname "$(readlink -f "$0")")"
 
@@ -60,6 +60,7 @@ check_placeholder "PACK_PATCH_FILES"
 check_placeholder "PACKCHK_DEPS"
 PACK_CHANGELOG_MODE="${PACK_CHANGELOG_MODE:-full}"
 check_placeholder "PACK_CHANGELOG_MODE"
+check_placeholder "PACK_CHECKSUM_EXCLUDE"
 
 #
 # Add directories listed in PACK_DIRS to build folder.
@@ -296,6 +297,9 @@ function check_pack {
 # Create checksum file for the pack content
 # The checksum file is placed to <build>/<vendor>.<pack>.sha1
 #
+# By default all packaged files are considered.
+# Files matching a pattern specified in PACK_CHECKSUM_EXCLUDE are excluded.
+#
 # Usage: create_sha1 <build> <vendor> <pack>
 #   <build>   Pack build folder
 #   <vendor>  Pack vendor name
@@ -303,8 +307,24 @@ function check_pack {
 #
 function create_sha1 {
   pushd "$1" > /dev/null || exit
-  find . -type f -exec "${UTILITY_SHA1SUM}" -b {} + > "${TEMP:-/tmp}/$2.$3.sha1"
-  mv "${TEMP:-/tmp}/$2.$3.sha1" "$2.$3.sha1"
+  
+  local ignore
+  local find_args=()
+  mapfile -t ignore <<< "${PACK_CHECKSUM_EXCLUDE:-}"
+  for p in "${ignore[@]}"; do
+    p="${p#"${p%%[![:space:]]*}"}"
+    p="${p%"${p##*[![:space:]]}"}"
+    if [ -n "$p" ]; then
+      find_args+=("-not" "-path" "*$p")
+    fi
+  done
+
+  find . -type f "${find_args[@]}" -exec "${UTILITY_SHA1SUM}" -b {} + > "${TEMP:-/tmp}/$2.$3.sha1"
+
+  if [ -s "${TEMP:-/tmp}/$2.$3.sha1" ]; then
+    mv "${TEMP:-/tmp}/$2.$3.sha1" "$2.$3.sha1"
+  fi
+
   popd > /dev/null || exit
 }
 

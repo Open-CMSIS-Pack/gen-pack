@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Version: 3.0
-# Date: 2023-11-06
+# Version: 3.1
+# Date: 2024-04-17
 # This bash script generates a CMSIS Software Pack:
 #
 
@@ -74,6 +74,18 @@ DEFAULT_ARGS=()
 # - tag       Tag annotations only
 #
 # PACK_CHANGELOG_MODE="<full|release|tag>"
+
+# Specify file patterns to be excluded from the checksum file
+# Default: <empty>
+# Values:
+# - empty          All files packaged are included in the checksum file
+# - glob pattern   One glob pattern per line. Files matching a given pattern are excluded
+#                  from the checksum file
+# - "*"            The * (match all pattern) can be used to skip checksum file creating completely.
+# 
+# PACK_CHECKSUM_EXCLUDE="
+#   <list file patterns here>
+# "
 
 #
 # custom pre-processing steps
