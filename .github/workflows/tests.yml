@@ -62,6 +62,16 @@ jobs:
           attempt_limit: 3
           attempt_delay: 5000
 
+      - name: Publish code coverage to CodeClimate
+        uses: paambaati/codeclimate-action@v5.0.0
+        env:
+          CC_TEST_REPORTER_ID: 014aa60d63fc69bc3b476cf84ce1fa07d0067d537da95a367d1fedddb5022c2b
+        with:
+          coverageLocations: |
+            ${{github.workspace}}/test/cov/all/kcov-merged/cov.xml:cobertura
+          prefix: ${{github.workspace}}//
+          debug: true
+
   tests:
     runs-on: ${{ matrix.os }}
     timeout-minutes: 5

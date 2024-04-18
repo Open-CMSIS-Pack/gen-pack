@@ -53,7 +53,7 @@ This library requires Bash v5 and some additional GNU tools to be installed usin
 
 ```sh
 $ brew install \
-    bash \ 
+    bash \
     coreutils \
     gnu-tar \
     grep
@@ -74,7 +74,9 @@ xmllint is provided by the [Chocolatey](https://chocolatey.org/install) [xsltpro
 Installing choco and xsltproc can be done from an administrative PowerShell prompt:
 
 ```ps
-> Set-ExecutionPolicy Bypass -Scope Process -Force; [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; iex ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
+> Set-ExecutionPolicy Bypass -Scope Process -Force
+> [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072
+> iex ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
 > choco install xsltproc
 ```
 
@@ -105,7 +107,8 @@ can use the same relative file names as within the `.pdsc` file.
 
 1. Put the [template](template/gen_pack.sh) into the root of your package source.
 
-1. **Windows only**! Run `git update-index --chmod=+x gen_pack.sh` to set the eXecute permission. Otherwise the script will not be executable in a Linux/Mac checkout by default such as running in a GitHub Action.
+1. **Windows only**! Run `git update-index --chmod=+x gen_pack.sh` to set the eXecute permission. Otherwise
+  the script will not be executable in a Linux/Mac checkout by default such as running in a GitHub Action.
 
 1. Replace `<pin lib version here>` with the version of the library you want to use, e.g. `1.0.0`.
 
@@ -155,24 +158,26 @@ can use the same relative file names as within the `.pdsc` file.
 
    For example, add `-x M353` to suppress this warning.
 
-1. Replace `<list pdsc files here>` with additional `.pdsc` files required to resolve references into other packs during `packchk`.
+1. Replace `<list pdsc files here>` with additional `.pdsc` files required to resolve references into
+   other packs during `packchk`.
 
    The following formats can be used:
 
    - Plain `.pdsc` file looked up via `index.pidx`. File will be downloaded if not already in cache.
-     E.g., `ARM.CMSIS.pdsc`.
+      E.g., `ARM.CMSIS.pdsc`.
 
    - Path to local `.pdsc` file relative to enclosing `gen_pack.sh`.
-     E.g., `./path/to/Local.Pack.pdsc`. Relative or absolute paths leaving the scripts base directory are not accepted for security reasons.
+      E.g., `./path/to/Local.Pack.pdsc`. Relative or absolute paths leaving the scripts base directory
+      are not accepted for security reasons.
 
    - URL to remote `.pdsc` file. File will be downloaded if not already in cache.
-     E.g., `https://url.to/Remove.Pack.pdsc`.
+      E.g., `https://url.to/Remove.Pack.pdsc`.
 
    Packs specified in the `<requirements>` section are considered automatically and do not need to be listed.
 
-1. Replace `<full|release|tag>` for `PACK_CHANGELOG_MODE` with either of these choices. It defaults to `full`. This setting
-   is only effective when generating the changelog from Git history. It affects the fallback solutions
-   used to retrieve the changelog text from git:
+1. Replace `<full|release|tag>` for `PACK_CHANGELOG_MODE` with either of these choices.
+   It defaults to `full`. This setting is only effective when generating the changelog from Git history.
+   It affects the fallback solutions used to retrieve the changelog text from git:
 
    `full` allows fallback to GitHub release description or commit message.
 
