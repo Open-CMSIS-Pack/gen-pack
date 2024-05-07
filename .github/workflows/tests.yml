@@ -78,18 +78,26 @@ jobs:
     strategy:
       fail-fast: true
       matrix:
-        os: [ macos-12, ubuntu-20.04, windows-2022 ]
+        os: [ macos-13, macos-14, ubuntu-20.04, ubuntu-22.04, windows-2022 ]
         include:
-          - os: macos-12
-            target: darwin64
+          - os: macos-13
+            target: darwin-amd64
+            archiveext: tar.gz
+            unarcmd: tar -xzf
+          - os: macos-14
+            target: darwin-arm64
             archiveext: tar.gz
             unarcmd: tar -xzf
           - os: ubuntu-20.04
-            target: linux64
+            target: linux-amd64
+            archiveext: tar.gz
+            unarcmd: tar -xzf
+          - os: ubuntu-22.04
+            target: linux-amd64
             archiveext: tar.gz
             unarcmd: tar -xzf
           - os: windows-2022
-            target: windows64
+            target: windows-amd64
             archiveext: zip
             unarcmd: 7z x
     env:
@@ -121,7 +129,7 @@ jobs:
       - name: Install CMSIS-Toolbox
         shell: bash
         run: |
-          curl -L https://github.com/Open-CMSIS-Pack/devtools/releases/download/tools%2Ftoolbox%2F1.0.0/cmsis-toolbox-${{ matrix.target }}.${{ matrix.archiveext }} -o cmsis-toolbox-${{ matrix.target }}.${{ matrix.archiveext }}
+          curl -L https://github.com/Open-CMSIS-Pack/cmsis-toolbox/releases/download/2.3.0/cmsis-toolbox-${{ matrix.target }}.${{ matrix.archiveext }} -o cmsis-toolbox-${{ matrix.target }}.${{ matrix.archiveext }}
           ${{ matrix.unarcmd }} cmsis-toolbox-${{ matrix.target }}.${{ matrix.archiveext }}
           echo "$(pwd)/cmsis-toolbox-${{ matrix.target }}/bin" >> $GITHUB_PATH
 
@@ -129,7 +137,7 @@ jobs:
         shell: bash
         run: |
           cpackget init https://www.keil.com/pack/index.pidx
-          cpackget pack add ARM.CMSIS
+          cpackget add ARM.CMSIS
 
       - name: Run unit tests
         shell: bash
