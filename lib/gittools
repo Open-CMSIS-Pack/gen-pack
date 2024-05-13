@@ -232,17 +232,25 @@ function git_changelog {
     shift # past argument
   done
 
-  mapfile -t TAGS < <(\
-    "${UTILITY_GIT}" -c 'versionsort.suffix=-' for-each-ref --format "%(refname)" --sort="-v:refname" "refs/tags/${PREFIX}*"\
-  )
-  for index in "${!TAGS[@]}"; do [[ ${TAGS[$index]} =~ v.*-.*$ ]] && unset -v 'TAGS[$index]'; done
-
-  local LATEST
+  local HEADSHA
+  HEADSHA=$("${UTILITY_GIT}" rev-list -n 1 "HEAD")
+  local LATEST  
   LATEST=$(git_describe "${PREFIX}")
+
+  mapfile -t TAGS < <(\
+    "${UTILITY_GIT}" -c 'versionsort.suffix=-' for-each-ref --format "%(refname)" --sort="-v:refname" "refs/tags/${PREFIX}*" --merged \
+  )
+  for index in "${!TAGS[@]}"; do 
+    if [[ "${TAGS[${index}]}" =~ ${PREFIX}.*-.*$ ]]; then
+      if [[ $("${UTILITY_GIT}" rev-list -n 1 "${TAGS[${index}]}") != "${HEADSHA}" ]]; then
+        unset -v 'TAGS[${index}]'
+      fi
+    fi
+  done
 
   "git_changelog_${FORMAT}_head"
 
-  if [[ -n "${DEVDROP}" ]] && !  "${UTILITY_GIT}" rev-list "${PREFIX}${LATEST}" 1>/dev/null 2>/dev/null; then
+  if [[ -n "${DEVDROP}" ]] && ! "${UTILITY_GIT}" rev-list "${PREFIX}${LATEST}" 1>/dev/null 2>/dev/null; then
     "git_changelog_${FORMAT}" "${LATEST}" "" "${DEVDROP}"
   fi
 

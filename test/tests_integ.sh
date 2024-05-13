@@ -98,6 +98,72 @@ test_integ_with_git_release() {
   assertNotContains "$pdsc" "Active development ..."
 }
 
+test_integ_with_git_recreate_release() {
+  mkdir -p test_integ_with_git
+  tar -xjf "${DIRNAME}/test_integ_with_git.tbz2" -C test_integ_with_git
+  cd test_integ_with_git || return
+
+  git --git-dir="$(pwd)/.git" clean -fdxq
+  export GIT_COMMITTER_DATE="2023-06-16T13:00:00Z"
+  git --git-dir="$(pwd)/.git" tag -m "Release v1.1.0" v1.1.0
+  git --git-dir="$(pwd)/.git" checkout -fq v1.0.0
+
+  ./gen_pack.sh --verbose -k
+
+  assertTrue  "Pack description file missing"  "[ -f build/ARM.GenPack.pdsc ]"
+  assertTrue  "Pack checksum file missing"     "[ -f build/ARM.GenPack.sha1 ]"
+  assertTrue  "LICENSE file"                   "[ -f build/LICENSE ]"
+  assertTrue  "Doc top level index missing"    "[ -f build/doc/index.html ]"
+  assertFalse "Doxyfile found in build"        "[ -f build/doc/test.dxy ]"
+  assertTrue  "Doc index file missing"         "[ -f build/doc/html/index.html ]"
+  assertTrue  "Header file missing"            "[ -f build/inc/test.h ]"
+  assertTrue  "Source file missing"            "[ -f build/src/test.c ]"
+  assertTrue  "Pack archive missing"           "[ -f output/ARM.GenPack.1.0.0.pack ]"
+
+  assertTrue  "Checksum file verification failed" "cd build; sha1sum ARM.GenPack.sha1"
+
+  pdsc=$(cat build/ARM.GenPack.pdsc)
+  assertContains "$pdsc" '<release version="1.0.0" date="2023-05-22" tag="v1.0.0">'
+  assertContains "$pdsc" "Initial release 1.0.0"
+  assertNotContains "$pdsc" "Active development ..."
+  assertNotContains "$pdsc" '<release version="1.1.0"'
+  assertNotContains "$pdsc" "Release v1.1.0"
+}
+
+test_integ_with_git_release_candidate() {
+  mkdir -p test_integ_with_git
+  tar -xjf "${DIRNAME}/test_integ_with_git.tbz2" -C test_integ_with_git
+  cd test_integ_with_git || return
+
+  git --git-dir="$(pwd)/.git" clean -fdxq
+  git --git-dir="$(pwd)/.git" checkout -fq v1.0.0
+  export GIT_COMMITTER_DATE="2023-05-22T16:00:00Z"
+  git --git-dir="$(pwd)/.git" tag -m "Pre-release" v1.0.0-rc0
+  export GIT_COMMITTER_DATE="2022-08-04T16:00:00Z"
+  git --git-dir="$(pwd)/.git" tag -m "Old release" v0.9.0 v1.0.0^
+  git --git-dir="$(pwd)/.git" tag -d v1.0.0
+  
+  ./gen_pack.sh --verbose -k
+
+  assertTrue  "Pack description file missing"  "[ -f build/ARM.GenPack.pdsc ]"
+  assertTrue  "Pack checksum file missing"     "[ -f build/ARM.GenPack.sha1 ]"
+  assertTrue  "LICENSE file"                   "[ -f build/LICENSE ]"
+  assertTrue  "Doc top level index missing"    "[ -f build/doc/index.html ]"
+  assertFalse "Doxyfile found in build"        "[ -f build/doc/test.dxy ]"
+  assertTrue  "Doc index file missing"         "[ -f build/doc/html/index.html ]"
+  assertTrue  "Header file missing"            "[ -f build/inc/test.h ]"
+  assertTrue  "Source file missing"            "[ -f build/src/test.c ]"
+  assertTrue  "Pack archive missing"           "[ -f output/ARM.GenPack.1.0.0-rc0.pack ]"
+
+  assertTrue  "Checksum file verification failed" "cd build; sha1sum ARM.GenPack.sha1"
+
+  pdsc=$(cat build/ARM.GenPack.pdsc)
+  assertContains "$pdsc" '<release version="1.0.0-rc0" date="2023-05-22" tag="v1.0.0-rc0">'
+  assertContains "$pdsc" "Pre-release"
+  assertContains "$pdsc" '<release version="0.9.0" date="2022-08-04" tag="v0.9.0">'
+  assertContains "$pdsc" "Old release"
+}
+
 test_integ_with_git_prerelease() {
   mkdir -p test_integ_with_git
   tar -xjf "${DIRNAME}/test_integ_with_git.tbz2" -C test_integ_with_git

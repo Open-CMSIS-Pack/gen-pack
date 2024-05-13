@@ -14,16 +14,26 @@
 . "$(dirname "$0")/../lib/gittools"
 
 setUp() {
+  PACK_CHANGELOG_MODE="full"
   TESTDIR="${SHUNIT_TMPDIR}/${_shunit_test_}"
   mkdir -p "${TESTDIR}"
-  pushd "${TESTDIR}" >/dev/null
+  pushd "${TESTDIR}" >/dev/null || exit
+
+  declare -A GIT_MOCK_REVLIST
+  GIT_MOCK_REFS=(           \
+    "refs/tags/v1.5.0"      \
+    "refs/tags/v1.5.0-dev"  \
+    "refs/tags/v1.2.4"      \
+    "refs/tags/v1.2.3"      \
+    "refs/tags/v0.9.0"      \
+    "refs/tags/v0.0.1"      \
+  )
 }
 
 tearDown() {
   unset GIT_MOCK_DESCRIBE
   unset GIT_MOCK_REVPARSE
-  unset GIT_MOCK_REVLIST
-  PACK_CHANGELOG_MODE="full"
+  unset GIT_MOCK_REVLIST  
 }
 
 git_mock() {
@@ -36,7 +46,7 @@ git_mock() {
         shift
         ;;
       'rev-parse')
-        return ${GIT_MOCK_REVPARSE-0}
+        return "${GIT_MOCK_REVPARSE-0}"
         ;;
       'describe')
         if [ -n "${GIT_MOCK_DESCRIBE+x}" ]; then
@@ -50,17 +60,12 @@ git_mock() {
         fi
         ;;
       'for-each-ref')
-        if [[ " $* " =~ " --format %(refname)" ]]; then
-          echo "refs/tags/v1.5.0"
-          echo "refs/tags/v1.5.0-dev"
-          echo "refs/tags/v1.2.4"
-          echo "refs/tags/v1.2.3"
-          echo "refs/tags/v0.9.0"
-          echo "refs/tags/v0.0.1"
+        if [[ " $* " == *" --format %(refname)"* ]]; then
+          printf '%s\n' "${GIT_MOCK_REFS[@]}"
           return 0
-        elif  [[ " $* " =~ " --format %(objecttype)" ]]; then
-          case "${@: -1}" in
-            "refs/tags/v1.5.0"|"refs/tags/v1.2.4"|"refs/tags/v1.2.3")
+        elif [[ " $* " == *" --format %(objecttype)"* ]]; then
+          case "${*: -1}" in
+            refs/tags/v1.5.0*|refs/tags/v1.2.4|refs/tags/v1.2.3)
               echo "tag"
             ;;
             *)
@@ -71,28 +76,45 @@ git_mock() {
         fi
         ;;
       'rev-list')
-        return ${GIT_MOCK_REVLIST-1}
-        ;;
-      'tag')
-        if [[ " $* " =~ " %(contents) " ]]; then
-          case "${@: -1}" in
-            "v1.5.0"|"v1.2.4"|"v1.2.3")
-              echo "Change log text for release version ${@: -1}"
+        shift
+        while [[ $# -gt 0 ]]; do 
+          case $1 in
+            "-n")
+              shift
+              shift
             ;;
             *)
-              echo "Commit message for ${@: -1}"
+              if [ "${GIT_MOCK_REVLIST[$1]+x}" ]; then
+                echo "${GIT_MOCK_REVLIST[$1]}"
+                return 0
+              else
+                return 1
+              fi
+            ;;
+          esac
+        done
+        return 1
+        ;;
+      'tag')
+        if [[ " $* " == *" %(contents) "* ]]; then
+          case "${@: -1}" in
+            v1.5.0*|v1.2.4|v1.2.3)
+              echo "Change log text for release version ${*: -1}"
+            ;;
+            *)
+              echo "Commit message for ${*: -1}"
             ;;
           esac
           return 0
-        elif [[ " $* " =~ " %(taggerdate:short) " ]]; then
+        elif [[ " $* " == *" %(taggerdate:short) "* ]]; then
           case "${@: -1}" in
-            "v1.5.0")
+            v1.5.0*)
               echo "2022-08-03"
             ;;
-            "v1.2.4")
+            v1.2.4)
               echo "2022-06-27"
             ;;
-            "v1.2.3")
+            v1.2.3)
               echo "2022-06-15"
             ;;
             *)
@@ -100,7 +122,7 @@ git_mock() {
             ;;
           esac
           return 0
-        elif [[ " $* " =~ " %(committerdate:short) " ]]; then
+        elif [[ " $* " == *" %(committerdate:short) "* ]]; then
           echo "2021-07-29"
           return 0
         fi
@@ -192,6 +214,111 @@ test_git_changelog_pdsc() {
   UTILITY_GHCLI="ghcli_mock"
 
   GIT_MOCK_DESCRIBE="v1.5.0-3-g1abcdef"
+  declare -A GIT_MOCK_REVLIST
+  GIT_MOCK_REVLIST["HEAD"]="deadbeef"
+
+  changelog=$(git_changelog -f pdsc -p v)
+
+  read -r -d '' expected <<EOF
+<release version="1.5.0" date="2022-08-03" tag="v1.5.0">
+  Change log text for release version v1.5.0
+</release>
+<release version="1.2.4" date="2022-06-27" tag="v1.2.4">
+  Change log text for release version v1.2.4
+</release>
+<release version="1.2.3" date="2022-06-15" tag="v1.2.3">
+  Change log text for release version v1.2.3
+</release>
+<release version="0.9.0" date="2021-07-29" tag="v0.9.0">
+  Release description for version v0.9.0
+</release>
+<release version="0.0.1" date="2021-07-29" tag="v0.0.1">
+  Commit message for v0.0.1
+</release>
+EOF
+
+  assertEquals "${expected}" "${changelog}"
+}
+
+test_git_changelog_pdsc_release() {
+  UTILITY_GIT="git_mock"
+  UTILITY_GHCLI="ghcli_mock"
+
+  GIT_MOCK_DESCRIBE="v1.5.0-0-g1abcdef"
+  declare -A GIT_MOCK_REVLIST
+  GIT_MOCK_REVLIST["HEAD"]="deadbeef"
+  GIT_MOCK_REVLIST["refs/tags/v1.5.0"]="deadbeef"
+
+  changelog=$(git_changelog -f pdsc -p v)
+
+  read -r -d '' expected <<EOF
+<release version="1.5.0" date="2022-08-03" tag="v1.5.0">
+  Change log text for release version v1.5.0
+</release>
+<release version="1.2.4" date="2022-06-27" tag="v1.2.4">
+  Change log text for release version v1.2.4
+</release>
+<release version="1.2.3" date="2022-06-15" tag="v1.2.3">
+  Change log text for release version v1.2.3
+</release>
+<release version="0.9.0" date="2021-07-29" tag="v0.9.0">
+  Release description for version v0.9.0
+</release>
+<release version="0.0.1" date="2021-07-29" tag="v0.0.1">
+  Commit message for v0.0.1
+</release>
+EOF
+
+  assertEquals "${expected}" "${changelog}"
+}
+
+test_git_changelog_pdsc_prerelease() {
+  UTILITY_GIT="git_mock"
+  UTILITY_GHCLI="ghcli_mock"
+
+  GIT_MOCK_REFS=(           \
+    "refs/tags/v1.5.0-rc0"  \
+    "refs/tags/v1.5.0-dev"  \
+    "refs/tags/v1.2.4"      \
+    "refs/tags/v1.2.3"      \
+    "refs/tags/v0.9.0"      \
+    "refs/tags/v0.0.1"      \
+  )
+  GIT_MOCK_DESCRIBE="v1.5.0-rc0-0-g1abcdef"
+  declare -A GIT_MOCK_REVLIST
+  GIT_MOCK_REVLIST["HEAD"]="deadbeef"
+  GIT_MOCK_REVLIST["refs/tags/v1.5.0-rc0"]="deadbeef"
+
+  changelog=$(git_changelog -f pdsc -p v)
+
+  read -r -d '' expected <<EOF
+<release version="1.5.0-rc0" date="2022-08-03" tag="v1.5.0-rc0">
+  Change log text for release version v1.5.0-rc0
+</release>
+<release version="1.2.4" date="2022-06-27" tag="v1.2.4">
+  Change log text for release version v1.2.4
+</release>
+<release version="1.2.3" date="2022-06-15" tag="v1.2.3">
+  Change log text for release version v1.2.3
+</release>
+<release version="0.9.0" date="2021-07-29" tag="v0.9.0">
+  Release description for version v0.9.0
+</release>
+<release version="0.0.1" date="2021-07-29" tag="v0.0.1">
+  Commit message for v0.0.1
+</release>
+EOF
+
+  assertEquals "${expected}" "${changelog}"
+}
+
+test_git_changelog_pdsc_with_default_devlog() {
+  UTILITY_GIT="git_mock"
+  UTILITY_GHCLI="ghcli_mock"
+
+  GIT_MOCK_DESCRIBE="v1.5.0-3-g1abcdef"
+  declare -A GIT_MOCK_REVLIST
+  GIT_MOCK_REVLIST["HEAD"]="deadbeef"
 
   changelog=$(git_changelog -f pdsc -d -p v)
 
@@ -223,6 +350,8 @@ test_git_changelog_pdsc_with_empty_devlog() {
   UTILITY_GIT="git_mock"
 
   GIT_MOCK_DESCRIBE="v1.5.0-3-g1abcdef"
+  declare -A GIT_MOCK_REVLIST
+  GIT_MOCK_REVLIST["HEAD"]="deadbeef"
 
   changelog=$(git_changelog -f pdsc -d "" -p v)
 
@@ -254,6 +383,8 @@ test_git_changelog_pdsc_with_devlog() {
   UTILITY_GIT="git_mock"
 
   GIT_MOCK_DESCRIBE="v1.5.0-3-g1abcdef"
+  declare -A GIT_MOCK_REVLIST
+  GIT_MOCK_REVLIST["HEAD"]="deadbeef"
 
   changelog=$(git_changelog -f pdsc -d "Custom dev log" -p v)
 
@@ -285,6 +416,8 @@ test_git_changelog_html() {
   UTILITY_GIT="git_mock"
 
   GIT_MOCK_DESCRIBE="v1.5.0-3-g1abcdef"
+  declare -A GIT_MOCK_REVLIST
+  GIT_MOCK_REVLIST["HEAD"]="deadbeef"
 
   changelog=$(git_changelog -f html -p v)
 
@@ -338,6 +471,9 @@ test_git_changelog_fail_tag() {
   UTILITY_GHCLI="ghcli_mock"
 
   GIT_MOCK_DESCRIBE="v1.5.0-3-g1abcdef"
+  declare -A GIT_MOCK_REVLIST
+  GIT_MOCK_REVLIST["HEAD"]="deadbeef"
+  GIT_MOCK_REVLIST["refs/tags/v1.5.0-dev"]="3faee"
   PACK_CHANGELOG_MODE="tag"
 
   changelog=$(git_changelog -f text -p v 2>&1)
@@ -352,6 +488,9 @@ test_git_changelog_fail_release() {
   UTILITY_GHCLI="ghcli_mock"
 
   GIT_MOCK_DESCRIBE="v1.5.0-3-g1abcdef"
+  declare -A GIT_MOCK_REVLIST
+  GIT_MOCK_REVLIST["HEAD"]="deadbeef"
+
   PACK_CHANGELOG_MODE="release"
 
   changelog=$(git_changelog -f text -p v 2>&1)
