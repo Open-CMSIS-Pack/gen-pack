@@ -105,24 +105,42 @@ the [template](template/gen_pack.sh) as a starting point.
 All file references are evaluated relative to the `.pdsc` files parent directory, i.e. you
 can use the same relative file names as within the `.pdsc` file.
 
-1. Put the [template](template/gen_pack.sh) into the root of your package source.
+1. Copy template
 
-1. **Windows only**! Run `git update-index --chmod=+x gen_pack.sh` to set the eXecute permission. Otherwise
-  the script will not be executable in a Linux/Mac checkout by default such as running in a GitHub Action.
+   Copy the [gen_pack.sh](template/gen_pack.sh) template into the root of your package source.
 
-1. Replace `<pin lib version here>` with the version of the library you want to use, e.g. `1.0.0`.
+1. Set eXecute permission (**Windows only**!)
+
+   Run `git update-index --chmod=+x gen_pack.sh` to set the eXecute permission. Otherwise
+   the script will not be executable in a Linux/Mac checkout by default such as running in a GitHub Action.
+
+1. Prepare variable `REQUIRED_GEN_PACK_LIB`
+
+   Replace `<pin lib version here>` with the version of the library you want to use, e.g. `1.0.0`.
 
    For available versions see [Open-CMSIS-Pack/gen-pack/tags](https://github.com/Open-CMSIS-Pack/gen-pack/tags).
 
    Use the tag name without the prefix "v", e.g., 0.7.0
 
-1. Add any required default command line arguments to the line `DEFAULT_ARGS=()`.
+1. Prepare variable `DEFAULT_ARGS`
+
+   Add any required default command line arguments to the line `DEFAULT_ARGS=()`.
 
    For example, add `-c [<prefix>]` here to force creating release history from Git.
 
    The `<prefix>` is the version prefixed used for release tags if any.
 
-1. Replace `<list directories here>` with a list of directories that shall be included in the pack.
+1. Prepare variable `PACK_OUTPUT`
+
+   This variable holds the path for the output files relative to the script location.
+
+1. Prepare variable `PACK_BUILD`
+
+   This variable holds the path for the build files relative to the script location.
+
+1. Prepare variable `PACK_DIRS`
+
+   Replace `<list directories here>` with a list of directories that shall be included in the pack.
 
    The directories are included recursively with all contained files. If left empty (i.e. `PACK_DIRS=""`),
    all folders next to the `.pdsc` file are copied.
@@ -139,7 +157,9 @@ can use the same relative file names as within the `.pdsc` file.
 
    For customizing the layout any further consider the `postprocess` hook.
 
-1. Replace `<list files here>` with a list of files that shall be included in the pack.
+1. Prepare variable `PACK_BASE_FILES`
+
+   Replace `<list files here>` with a list of files that shall be included in the pack.
 
    This can be used as an alternative to including whole directories.
    Files from subdirectories (e.g., `path/to/file`) are copied with same hierarchy
@@ -148,17 +168,26 @@ can use the same relative file names as within the `.pdsc` file.
    Files from outside the pack root (e.g., `../path/to/file`) are copied without hierarchy into the build
    folder (i.e., resulting in `<build>/file`). For customizing the layout consider the `postprocess` hook.
 
-1. Replace `<list files here>` with a list of files to be removed again.
+1. Prepare variable `PACK_DELETE_FILES`
+
+   Replace `<list files here>` with a list of files to be removed again.
 
    This can be used to copy whole directories and remove files afterwards.
 
-1. Replace `<list patches here>` with a list of patches that shall be applied.
+1. Prepare variable `PACK_PATCH_FILES`
 
-1. Add additional required command line arguments for packchk to the line `PACKCHK_ARGS=()`.
+   Replace `<list patches here>` with a list of patches that shall be applied.
+   The patch files are for use with the patch utility (see [Prerequisites](#prerequisites)).
+
+1. Prepare variable `PACKCHK_ARGS`
+
+   Add additional required command line arguments for packchk to the line `PACKCHK_ARGS=()`.
 
    For example, add `-x M353` to suppress this warning.
 
-1. Replace `<list pdsc files here>` with additional `.pdsc` files required to resolve references into
+1. Prepare variable `PACKCHK_DEPS`
+
+   Replace `<list pdsc files here>` with additional `.pdsc` files required to resolve references into
    other packs during `packchk`.
 
    The following formats can be used:
@@ -175,7 +204,9 @@ can use the same relative file names as within the `.pdsc` file.
 
    Packs specified in the `<requirements>` section are considered automatically and do not need to be listed.
 
-1. Replace `<full|release|tag>` for `PACK_CHANGELOG_MODE` with either of these choices.
+1. Prepare variable `PACK_CHANGELOG_MODE`
+
+   Replace `<full|release|tag>` for `PACK_CHANGELOG_MODE` with either of these choices.
    It defaults to `full`. This setting is only effective when generating the changelog from Git history.
    It affects the fallback solutions used to retrieve the changelog text from git:
 
@@ -187,10 +218,14 @@ can use the same relative file names as within the `.pdsc` file.
 
    If no changelog text can be retrieved pack generation is aborted.
 
-1. Replace `<list file patterns here>` for `PACK_CHECKSUM_EXCLUDE` wit glob patterns to exclude files from the
+1. Prepare variable `PACK_CHECKSUM_EXCLUDE`
+
+   Replace `<list file patterns here>` for `PACK_CHECKSUM_EXCLUDE` wit glob patterns to exclude files from the
    checksum file, or provide `*` (match all pattern) to skip checksum file creation completely.
 
-1. Put custom commands to be executed before/after populating the pack build folder
+1. Prepare functions `preprocess`, `postprocess`
+
+   Put custom commands to be executed before/after populating the pack build folder
    into the `preprocess` and `postprocess` functions. The working directory (`pwd`) for
    both functions is the base folder containing the pack description file. The first
    parameter of the functions (`$1`) points to the build folder.
