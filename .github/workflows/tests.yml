@@ -9,7 +9,7 @@ on:
 
 jobs:
   lint:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     timeout-minutes: 5
     steps:
       - name: Checkout
@@ -30,7 +30,7 @@ jobs:
           shellcheck -s bash -f gcc gen-pack lib/*
 
   cov:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     timeout-minutes: 5 
     steps:
       - name: Checkout
@@ -78,7 +78,7 @@ jobs:
     strategy:
       fail-fast: true
       matrix:
-        os: [ macos-13, macos-14, ubuntu-22.04, ubuntu-22.04, windows-2022 ]
+        os: [ macos-13, macos-14, ubuntu-22.04, ubuntu-24.04, ubuntu-22.04-arm, ubuntu-24.04-arm, windows-2022 ]
         include:
           - os: macos-13
             target: darwin-amd64
@@ -92,8 +92,16 @@ jobs:
             target: linux-amd64
             archiveext: tar.gz
             unarcmd: tar -xzf
-          - os: ubuntu-22.04
+          - os: ubuntu-24.04
             target: linux-amd64
+            archiveext: tar.gz
+            unarcmd: tar -xzf
+          - os: ubuntu-22.04-arm
+            target: linux-arm64
+            archiveext: tar.gz
+            unarcmd: tar -xzf
+          - os: ubuntu-24.04-arm
+            target: linux-arm64
             archiveext: tar.gz
             unarcmd: tar -xzf
           - os: windows-2022
@@ -129,7 +137,7 @@ jobs:
       - name: Install CMSIS-Toolbox
         shell: bash
         run: |
-          curl -L https://github.com/Open-CMSIS-Pack/cmsis-toolbox/releases/download/2.3.0/cmsis-toolbox-${{ matrix.target }}.${{ matrix.archiveext }} -o cmsis-toolbox-${{ matrix.target }}.${{ matrix.archiveext }}
+          curl -L https://github.com/Open-CMSIS-Pack/cmsis-toolbox/releases/download/2.7.0/cmsis-toolbox-${{ matrix.target }}.${{ matrix.archiveext }} -o cmsis-toolbox-${{ matrix.target }}.${{ matrix.archiveext }}
           ${{ matrix.unarcmd }} cmsis-toolbox-${{ matrix.target }}.${{ matrix.archiveext }}
           echo "$(pwd)/cmsis-toolbox-${{ matrix.target }}/bin" >> $GITHUB_PATH
 
