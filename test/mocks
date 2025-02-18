@@ -7,6 +7,18 @@
 # SPDX-License-Identifier: Apache-2.0
 #
 
+#
+# Launch local HTTP server
+#
+# Requires 
+#  - python3 
+#  - http.server module
+#
+# Usage: start_http_server [<port>] [<dir>] [<pid>]
+#   <port>  Port number to listen on, defaults to 8080
+#   <dir>   Directory to serve, defaults to '.'
+#   <pid>   Variable to store the PID of the server process
+#
 start_http_server() {
   local port=${1:-8080}
   local dir=${2:-.}
@@ -16,13 +28,19 @@ start_http_server() {
   # shellcheck disable=SC2034
   outvar=$!
 
-  sleep 1s
+  sleep 1
 }
 
+#
+# Stop HTTP server
+#
+# Usage: stop_http_server <pid>
+#   <pid>  PID of the server process
+#
 stop_http_server() {
   if ps -p "${1}" > /dev/null; then
     kill -s TERM "${1}"
-    sleep 1s
+    sleep 1
   fi
   if ps -p "${1}" > /dev/null; then
     kill -s KILL "${1}"
