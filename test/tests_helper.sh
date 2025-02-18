@@ -2,7 +2,7 @@
 #
 # Open-CMSIS-Pack gen-pack Bash library
 #
-# Copyright (c) 2022-2023 Arm Limited. All rights reserved.
+# Copyright (c) 2022-2025 Arm Limited. All rights reserved.
 #
 # Provided as-is without warranty under Apache 2.0 License
 # SPDX-License-Identifier: Apache-2.0
@@ -15,6 +15,7 @@ shopt -s expand_aliases
 . "$(dirname "$0")/../lib/patches"
 . "$(dirname "$0")/../lib/logging"
 . "$(dirname "$0")/../lib/helper"
+. "$(dirname "$0")/helper"
 
 setUp() {
   TESTDIR="${SHUNIT_TMPDIR}/${_shunit_test_}/pack"
@@ -160,6 +161,47 @@ test_convert_eol() {
   assertContains "${output}" "No eol converter for LF-to-CRLF"
 
   unset UTILITY_EOL_CONVERTER
+}
+
+test_init_pack_cache() {
+    local pack_index
+    pack_index=$(cat <<EOF
+  <pdsc url="https://www.keil.com/pack/ARM.CMSIS.pdsc" vendor="ARM" name="CMSIS" version="1.0.0"/>
+  <pdsc url="file://localhost/$(cwd)/local_repo/" vendor="Vendor" name="DFP" version="1.0.0"/>
+EOF
+  )
+
+  init_pack_cache "path/to/packs" "${pack_index}"
+
+  assertTrue "[ -f path/to/packs/.Web/index.pidx ]"
+  assertTrue "[ -f path/to/packs/.Local/local_repository.pidx ]"
+
+  local web_index local_index
+  web_index=$(cat path/to/packs/.Web/index.pidx)
+  local_index=$(cat path/to/packs/.Local/local_repository.pidx)
+
+  assertContains "${web_index}" "https://www.keil.com/pack/ARM.CMSIS.pdsc"
+  assertNotContains "${web_index}" "file://"
+  assertContains "${local_index}" "file://localhost/$(cwd)/local_repo/" 
+  assertNotContains "${local_index}" "https://"
+}
+
+test_init_pack_cache_only_web() {
+    local pack_index
+    pack_index=$(cat <<EOF
+  <pdsc url="https://www.keil.com/pack/ARM.CMSIS.pdsc" vendor="ARM" name="CMSIS" version="1.0.0"/>
+EOF
+  )
+
+  init_pack_cache "path/to/packs" "${pack_index}"
+
+  assertTrue "[ -f path/to/packs/.Web/index.pidx ]"
+  assertFalse "[ -f path/to/packs/.Local/local_repository.pidx ]"
+
+  local web_index
+  web_index=$(cat path/to/packs/.Web/index.pidx)
+
+  assertContains "${web_index}" "https://www.keil.com/pack/ARM.CMSIS.pdsc" 
 }
 
 . "$(dirname "$0")/shunit2/shunit2"

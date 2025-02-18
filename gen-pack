@@ -1,13 +1,13 @@
 #
 # Open-CMSIS-Pack gen-pack Bash library
 #
-# Copyright (c) 2022-2024 Arm Limited. All rights reserved.
+# Copyright (c) 2022-2025 Arm Limited. All rights reserved.
 #
 # Provided as-is without warranty under Apache 2.0 License
 # SPDX-License-Identifier: Apache-2.0
 #
 
-GEN_PACK_LIB_VERSION="0.11.0"
+GEN_PACK_LIB_VERSION="0.11.2"
 GEN_PACK_LIB_SOURCE="$(realpath "$(dirname "${BASH_SOURCE[0]}")")"
 GEN_PACK_SCRIPT_SOURCE="$(dirname "$(readlink -f "$0")")"
 
@@ -275,7 +275,6 @@ function check_pack {
   dependencies+=(${PACKCHK_DEPS})
 
   fetch_pdsc_files include "${dependencies[@]}"
-  local webdir="${CMSIS_PACK_ROOT}/.Web"
 
   if [ "${UTILITY_PACKCHK_HAS_SCHEMACHECK:-1}" -eq 0 ]; then
     PACKCHK_ARGS+=(--disable-validation)

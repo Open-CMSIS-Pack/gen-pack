@@ -2,7 +2,7 @@
 #
 # Open-CMSIS-Pack gen-pack Bash library
 #
-# Copyright (c) 2022-2023 Arm Limited. All rights reserved.
+# Copyright (c) 2022-2025 Arm Limited. All rights reserved.
 #
 # Provided as-is without warranty under Apache 2.0 License
 # SPDX-License-Identifier: Apache-2.0
@@ -491,6 +491,7 @@ test_pdsc_cache_file_with_url() {
 test_pdsc_url() {
   CMSIS_PACK_ROOT="path/to/packs"
   local webdir="${CMSIS_PACK_ROOT}/.Web"
+  local localdir="${CMSIS_PACK_ROOT}/.Local"
 
   mkdir -p "${webdir}"
   cat > "${webdir}/index.pidx" <<EOF
@@ -507,13 +508,24 @@ test_pdsc_url() {
 </index>
 EOF
 
+  mkdir -p "${localdir}"
+  cat > "${localdir}/local_repository.pidx" <<EOF
+<<?xml version="1.0" encoding="UTF-8" ?> 
+<index schemaVersion="1.1.0" xs:noNamespaceSchemaLocation="PackIndex.xsd" xmlns:xs="http://www.w3.org/2001/XMLSchema-instance">
+<pindex>
+  <pdsc url="file://localhost/$(cwd)/some/repo/" vendor="Vendor" name="DFP" version="1.0.0"/>
+</pindex>
+</index>
+EOF
+
   assertEquals "https://url.to/ARM.CMSIS.pdsc" "$(pdsc_url "ARM.CMSIS.pdsc")"
   assertEquals "https://url.to/ARM.Test.pdsc" "$(pdsc_url "ARM.Test.pdsc")"
-  assertEquals "file:/$(cwd)/path/to/Local.Pack.pdsc" "$(pdsc_url "path/to/Local.Pack.pdsc")"
+  assertEquals "file://$(cwd)/path/to/Local.Pack.pdsc" "$(pdsc_url "path/to/Local.Pack.pdsc")"
   assertEquals "https://www.keil.com/pack/Local.Pack.pdsc" "$(pdsc_url "../invalid/path/to/Local.Pack.pdsc")"
   assertEquals "https://www.keil.com/pack/ARM.Nourl.pdsc" "$(pdsc_url "ARM.Nourl.pdsc")"
   assertEquals "https://www.keil.com/pack/Unknown.Pack.pdsc" "$(pdsc_url "Unknown.Pack.pdsc")"
   assertEquals "https://get.from/Somewhere.Else.pdsc" "$(pdsc_url "https://get.from/Somewhere.Else.pdsc")"
+  assertEquals "file://localhost/$(cwd)/some/repo/Vendor.DFP.pdsc" "$(pdsc_url "Vendor.DFP.pdsc")"
 }
 
 test_pdsc_url_without_index() {

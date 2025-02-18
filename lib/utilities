@@ -1,7 +1,7 @@
 #
 # Open-CMSIS-Pack gen-pack Bash library
 #
-# Copyright (c) 2022-2023 Arm Limited. All rights reserved.
+# Copyright (c) 2022-2025 Arm Limited. All rights reserved.
 #
 # Provided as-is without warranty under Apache 2.0 License
 # SPDX-License-Identifier: Apache-2.0
@@ -482,16 +482,33 @@ function check_links {
 #
 # Download a file
 #
-# Usage: curl_download <url> <dest>
-#  <url>   URL to download file from
-#  <dest>  Path to download file to
+# Usage: curl_download <url> [<dest>]
+#   <url>   URL to download file from
+#   <dest>  Path to download file to, defaults to basename of URL
 function curl_download {
-    echo_v "\"${UTILITY_CURL}\" -sL $1 --output \"$2\""
-    "${UTILITY_CURL}" -sL "$1" --output "$2"
+    local url="${1:-}" dest dest_dir dest_file temp_file
+    if ! is_url "${url}" ; then
+      echo_err "Invalid URL: '${url}'"
+      return 1
+    fi
+    dest="${2:-"$(basename "${url}")"}"
+    dest_dir="$(dirname "${dest}")"
+    dest_file="$(basename "${dest}")"
+    if [ -z "${dest_file}" ]; then
+      echo_err "Invalid dest: '${dest}'"
+      return 1
+    fi
+    temp_file="$(mktemp -u)"
+
+    echo_v "\"${UTILITY_CURL}\" -sL --fail-with-body \"${url}\" --output \"${temp_file}\""
+    "${UTILITY_CURL}" -sL --fail-with-body "${url}" --output "${temp_file}"
     local errorlevel=$?
     if [ $errorlevel -ne 0 ]; then
+      rm -f "${temp_file}"
       echo_err "Failed downloading file from URL '$1'."
       return $errorlevel
     fi
+    test -n "${dest_dir}" && mkdir -p "${dest_dir}" 
+    mv "${temp_file}" "${dest}"
     return 0
 }
