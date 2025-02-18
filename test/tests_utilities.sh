@@ -2,7 +2,7 @@
 #
 # Open-CMSIS-Pack gen-pack Bash library
 #
-# Copyright (c) 2022-2023 Arm Limited. All rights reserved.
+# Copyright (c) 2022-2025 Arm Limited. All rights reserved.
 #
 # Provided as-is without warranty under Apache 2.0 License
 # SPDX-License-Identifier: Apache-2.0
@@ -14,7 +14,9 @@ shopt -s expand_aliases
 
 . "$(dirname "$0")/../lib/patches"
 . "$(dirname "$0")/../lib/logging"
+. "$(dirname "$0")/../lib/helper"
 . "$(dirname "$0")/../lib/utilities"
+. "$(dirname "$0")/mocks"
 
 ffind() {
   if [[ "$(uname)" == "Darwin"  ]]; then
@@ -617,6 +619,55 @@ test_find_eol_converter() {
   assertContains "${!UTILITY_EOL_CONVERTER[*]}" "CR-to-LF"
   assertContains "${!UTILITY_EOL_CONVERTER[*]}" "LF-to-CRLF"
   assertContains "${!UTILITY_EOL_CONVERTER[*]}" "LF-to-CR"
+}
+
+test_curl_download_valid_file() {
+  find_curl 
+
+  mkdir -p "web"
+  echo "Test curl_download with valid file" > "web/valid_file.txt"
+
+  local pid
+  start_http_server 10080 "web" pid
+
+  curl_download "http://localhost:10080/valid_file.txt"
+  assertTrue "curl_download should succeed" $? 
+  assertTrue "File should be downloaded" "test -f valid_file.txt" 
+
+  FILE=$(cat "valid_file.txt")
+  assertContains "$FILE" "Test curl_download with valid file"
+
+  stop_http_server "${pid}"
+}
+
+test_curl_download_invalid_file() {
+  find_curl 
+
+  mkdir -p "web"
+  echo "Test curl_download with valid file" > "web/valid_file.txt"
+
+  local pid
+  start_http_server 10080 "web" pid
+
+  curl_download "http://localhost:10080/invalid_file.txt" "invalid_file.txt"
+  assertFalse "curl_download should fail" $? 
+  assertFalse "File should not be downloaded" "test -f invalid_file.txt" 
+
+  stop_http_server "${pid}"
+}
+
+test_curl_download_no_params() {
+  local output
+  output=$(curl_download 2>&1)
+  assertFalse "curl_download should fail" $? 
+  assertContains "$output" "Invalid URL"
+}
+
+test_curl_download_invalid_url() {
+  local output
+  output=$(curl_download "ssh://host/file" 2>&1)
+  assertFalse "curl_download should fail" $? 
+  assertContains "$output" "Invalid URL"
 }
 
 . "$(dirname "$0")/shunit2/shunit2"

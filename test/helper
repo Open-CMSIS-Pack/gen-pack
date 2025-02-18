@@ -1,0 +1,56 @@
+#
+# Open-CMSIS-Pack gen-pack Bash library
+#
+# Copyright (c) 2025 Arm Limited. All rights reserved.
+#
+# Provided as-is without warranty under Apache 2.0 License
+# SPDX-License-Identifier: Apache-2.0
+#
+
+# shellcheck disable=SC2317
+
+#
+# Initialize a pack cache with the given index
+# 
+# Usage:
+# init_pack_cache [<pack_root>] [<pack_index>]
+#   <pack_root>   Path to the pack cache root directory, defaults to 'path/to/packs'
+#   <pack_index>  List of pdsc elements to include in the cache, defaults to empty
+#                 http(s) URLs are stored in .Web/index.pidx
+#                 file URLs are stored in .Local/local_repository.pidx
+init_pack_cache() {
+  local pack_root="${1:-path/to/packs}"
+  local pack_index="${2:-}"
+
+  local web_index local_index
+  web_index=$(grep 'url="http' <<< "${pack_index}")
+  local_index=$(grep 'url="file' <<< "${pack_index}")
+
+  if [ -n "${web_index}" ]; then
+    mkdir -p "${pack_root}/.Web"
+    cat > "${pack_root}/.Web/index.pidx" <<EOF
+<<?xml version="1.0" encoding="UTF-8" ?> 
+<index schemaVersion="1.1.0" xs:noNamespaceSchemaLocation="PackIndex.xsd" xmlns:xs="http://www.w3.org/2001/XMLSchema-instance">
+  <vendor>Keil</vendor>
+  <url>https://www.keil.com/pack/</url>
+  <timestamp>$(date -Iseconds)</timestamp>
+  <pindex>
+    ${web_index}
+  </pindex>
+</index>
+EOF
+  fi
+
+  if [ -n "${local_index}" ]; then
+    mkdir -p "${pack_root}/.Local"
+    cat > "${pack_root}/.Local/local_repository.pidx" <<EOF
+<?xml version="1.0" encoding="UTF-8"?>
+<index schemaVersion="1.1.0">
+  <vendor>local_repository</vendor>
+  <pindex>
+    ${local_index}
+  </pindex>
+</index>
+EOF
+  fi
+}
