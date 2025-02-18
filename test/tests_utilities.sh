@@ -16,6 +16,7 @@ shopt -s expand_aliases
 . "$(dirname "$0")/../lib/logging"
 . "$(dirname "$0")/../lib/helper"
 . "$(dirname "$0")/../lib/utilities"
+. "$(dirname "$0")/mocks"
 
 ffind() {
   if [[ "$(uname)" == "Darwin"  ]]; then
@@ -620,35 +621,14 @@ test_find_eol_converter() {
   assertContains "${!UTILITY_EOL_CONVERTER[*]}" "LF-to-CR"
 }
 
-_serve() {
-  local port=${1:-8080}
-  local dir=${2:-.}
-  local -n outvar=${3:pid}
-
-  python3 -m http.server "${port}" --directory "${dir}" &
-  outvar=$!
-
-  sleep 1s
-}
-
-_unserve() {
-  if ps -p "$pid" > /dev/null; then
-    kill -s TERM "${1}"
-    sleep 1s
-  fi
-  if ps -p "$pid" > /dev/null; then
-    kill -s KILL "${1}"
-  fi
-}
-
 test_curl_download_valid_file() {
   find_curl 
 
   mkdir -p "web"
   echo "Test curl_download with valid file" > "web/valid_file.txt"
 
-  pwd
-  _serve 10080 "web" pid
+  local pid
+  start_http_server 10080 "web" pid
 
   curl_download "http://localhost:10080/valid_file.txt"
   assertTrue "curl_download should succeed" $? 
@@ -657,7 +637,7 @@ test_curl_download_valid_file() {
   FILE=$(cat "valid_file.txt")
   assertContains "$FILE" "Test curl_download with valid file"
 
-  _unserve ${pid}
+  stop_http_server "${pid}"
 }
 
 test_curl_download_invalid_file() {

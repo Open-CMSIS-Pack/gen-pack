@@ -1,0 +1,30 @@
+#
+# Open-CMSIS-Pack gen-pack Bash library
+#
+# Copyright (c) 2025 Arm Limited. All rights reserved.
+#
+# Provided as-is without warranty under Apache 2.0 License
+# SPDX-License-Identifier: Apache-2.0
+#
+
+start_http_server() {
+  local port=${1:-8080}
+  local dir=${2:-.}
+  local -n outvar=${3:pid}
+
+  python3 -m http.server "${port}" --directory "${dir}" &
+  # shellcheck disable=SC2034
+  outvar=$!
+
+  sleep 1s
+}
+
+stop_http_server() {
+  if ps -p "${1}" > /dev/null; then
+    kill -s TERM "${1}"
+    sleep 1s
+  fi
+  if ps -p "${1}" > /dev/null; then
+    kill -s KILL "${1}"
+  fi
+}
