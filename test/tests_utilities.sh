@@ -646,14 +646,14 @@ test_curl_download_invalid_file() {
   mkdir -p "web"
   echo "Test curl_download with valid file" > "web/valid_file.txt"
 
-  pwd
-  _serve 10080 "web" pid
+  local pid
+  start_http_server 10080 "web" pid
 
   curl_download "http://localhost:10080/invalid_file.txt" "invalid_file.txt"
   assertFalse "curl_download should fail" $? 
   assertFalse "File should not be downloaded" "test -f invalid_file.txt" 
 
-  _unserve ${pid}
+  stop_http_server "${pid}"
 }
 
 test_curl_download_no_params() {
