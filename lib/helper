@@ -8,6 +8,23 @@
 #
 
 #
+# Sanity check script shebang lint
+# 
+# Usage: check_shebang
+#
+function check_shebang {
+  local shebang
+  shebang="$(head -1 "${0}")"
+
+  if [[ "${shebang}" != "#!/usr/bin/env bash" ]]; then
+    echo_log "Your script '${SCRIPT}' is using the non-OS agnostic shebang line:"
+    echo_log "  ${shebang}"
+    echo_v "To be OS agnostic the shebang line should be"
+    echo_v "  #!/usr/bin/env bash"
+  fi
+}
+
+#
 # Sanity check locale setting (LANG)
 # 
 # Usage: check_locale
