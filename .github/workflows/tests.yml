@@ -145,7 +145,7 @@ jobs:
         shell: bash
         run: |
           cpackget init https://www.keil.com/pack/index.pidx
-          cpackget add ARM.CMSIS
+          cpackget add -a ARM.CMSIS
 
       - name: Run unit tests
         shell: bash
