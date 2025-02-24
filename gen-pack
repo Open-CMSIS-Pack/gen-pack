@@ -7,7 +7,7 @@
 # SPDX-License-Identifier: Apache-2.0
 #
 
-GEN_PACK_LIB_VERSION="0.11.2"
+GEN_PACK_LIB_VERSION="0.11.3"
 GEN_PACK_LIB_SOURCE="$(realpath "$(dirname "${BASH_SOURCE[0]}")")"
 GEN_PACK_SCRIPT_SOURCE="$(dirname "$(readlink -f "$0")")"
 
@@ -16,27 +16,33 @@ LOG_PREFIX="${LOG_PREFIX:-"$(tput setaf 4 2>/dev/null)${SCRIPT}>$(tput sgr0 2>/d
 
 shopt -s expand_aliases
 
-if [ "$(cut -d. -f1 <<<"${BASH_VERSION}")" -lt 5 ]; then
+if [ "${BASH_VERSION%%.*}" -lt 5 ]; then
   echo "${LOG_PREFIX}gen-pack requires Bash version 5 or later." >&2
   echo "${LOG_PREFIX}Running Bash version is ${BASH_VERSION}!" >&2
-  case $(uname -s) in
-    'WindowsNT'|MINGW*|CYGWIN*)
-      echo "${LOG_PREFIX}Update MSYS2/MinGW, or install latest Git for Windows." >&2
-      ;;
-    'Darwin')
-      echo "${LOG_PREFIX}Get Homebrew and run brew install bash." >&2
-      ;;
-    *)
-      echo "${LOG_PREFIX}Check your OS package manager for Bach v5." >&2
-      ;;
-  esac
-  echo "${LOG_PREFIX}"
-  echo "${LOG_PREFIX}If Bash v5 is installed but not used as the interpreter,"
-  echo "${LOG_PREFIX}check the shebang line of the enclosing gen_pack.sh."
-  echo "${LOG_PREFIX}To be OS agnostic the shebang should be #!/usr/bin/env bash"
-  echo "${LOG_PREFIX}and Bash v5 executable must be the default one according"
-  echo "${LOG_PREFIX}to your systems PATH order."
-  echo "${LOG_PREFIX}"
+  echo "${LOG_PREFIX}" >&2
+
+  ENV_BASH="$(which bash)"
+  ENV_BASH_VERSION="$("${ENV_BASH}" --version | head -n1 | grep -Eo "version [1-9]+\\.[0-9]+\\.[0-9]+" | grep -Eo "[1-9]+\\.[0-9]+\\.[0-9]+" )"
+  if [ "${ENV_BASH_VERSION%%.*}" -lt 5 ]; then
+    case $(uname -s) in
+      'WindowsNT'|MINGW*|CYGWIN*)
+        echo "${LOG_PREFIX}Update MSYS2/MinGW, or install latest Git for Windows." >&2
+        ;;
+      'Darwin')
+        echo "${LOG_PREFIX}Get Homebrew and run: brew install bash." >&2
+        ;;
+      *)
+        echo "${LOG_PREFIX}Check your OS package manager for Bash v5." >&2
+        ;;
+    esac
+  else 
+    echo "${LOG_PREFIX}Bash version ${ENV_BASH_VERSION} found at ${ENV_BASH}." >&2
+    echo "${LOG_PREFIX}" >&2
+    echo "${LOG_PREFIX}Check the shebang line of the enclosing ${SCRIPT} script." >&2
+    echo "${LOG_PREFIX}To be OS agnostic the shebang should be" >&2
+    echo "${LOG_PREFIX}   #!/usr/bin/env bash" >&2
+  fi
+  echo "${LOG_PREFIX}" >&2
   exit 1
 fi
 
@@ -50,17 +56,6 @@ echo "${LOG_PREFIX}Loading gen-pack library ${GEN_PACK_LIB_VERSION} from ${GEN_P
 . "${GEN_PACK_LIB_SOURCE}/lib/gittools"
 . "${GEN_PACK_LIB_SOURCE}/lib/logging"
 . "${GEN_PACK_LIB_SOURCE}/lib/helper"
-
-check_locale
-
-check_placeholder "PACK_DIRS"
-check_placeholder "PACK_BASE_FILES"
-check_placeholder "PACK_DELETE_FILES"
-check_placeholder "PACK_PATCH_FILES"
-check_placeholder "PACKCHK_DEPS"
-PACK_CHANGELOG_MODE="${PACK_CHANGELOG_MODE:-full}"
-check_placeholder "PACK_CHANGELOG_MODE"
-check_placeholder "PACK_CHECKSUM_EXCLUDE"
 
 #
 # Add directories listed in PACK_DIRS to build folder.
@@ -337,6 +332,18 @@ function gen_pack {
   echo_log "Starting CMSIS-Pack Generation: $(date)"
   echo_log "  in $(pwd)"
   echo_log ""
+
+  check_shebang
+  check_locale
+
+  check_placeholder "PACK_DIRS"
+  check_placeholder "PACK_BASE_FILES"
+  check_placeholder "PACK_DELETE_FILES"
+  check_placeholder "PACK_PATCH_FILES"
+  check_placeholder "PACKCHK_DEPS"
+  PACK_CHANGELOG_MODE="${PACK_CHANGELOG_MODE:-full}"
+  check_placeholder "PACK_CHANGELOG_MODE"
+  check_placeholder "PACK_CHECKSUM_EXCLUDE"
 
   find_pack_root
   find_zip
