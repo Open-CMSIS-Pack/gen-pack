@@ -1,3 +1,6 @@
+[![Maintainability](https://qlty.sh/gh/Open-CMSIS-Pack/projects/gen-pack/maintainability.svg)](https://qlty.sh/gh/Open-CMSIS-Pack/projects/gen-pack)
+[![Code Coverage](https://qlty.sh/gh/Open-CMSIS-Pack/projects/gen-pack/coverage.svg)](https://qlty.sh/gh/Open-CMSIS-Pack/projects/gen-pack)
+
 # Bash library for gen-pack scripts
 
 ## About
@@ -274,3 +277,4 @@ Arguments:
 ## License
 
 This library is made available as-is under Apache-2.0 license.
+
