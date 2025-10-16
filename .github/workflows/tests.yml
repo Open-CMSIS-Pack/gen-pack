@@ -73,12 +73,14 @@ jobs:
           token: ${{ secrets.QLTY_COVERAGE_TOKEN }}
           files: ${{github.workspace}}/test/cov/all/kcov-merged/cov.xml
           skip-errors: false
+          format: cobertura
+          verbose: true
 
   tests:
     runs-on: ${{ matrix.os }}
     timeout-minutes: 5
     strategy:
-      fail-fast: false
+      fail-fast: true
       matrix:
         os: [ macos-14, macos-15-intel, ubuntu-22.04, ubuntu-24.04, ubuntu-22.04-arm, ubuntu-24.04-arm, windows-2022 ]
         include:
