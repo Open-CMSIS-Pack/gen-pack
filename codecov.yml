@@ -1,6 +1,0 @@
-ignore:
-  - template/
-  - test/
-  - README.md
-  - LICENSE
-  - codecov.yml
