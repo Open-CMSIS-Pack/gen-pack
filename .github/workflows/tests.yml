@@ -7,23 +7,35 @@ on:
   release:
     types: [published]
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
 jobs:
   lint:
     runs-on: ubuntu-22.04
     timeout-minutes: 5
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - name: Harden the runner (Audit all outbound calls)
+        uses: step-security/harden-runner@f4a75cfd619ee5ce8d5b864b0d183aff3c69b55a # v2.13.1
         with:
-          fetch-depth: 0     
-        
+          egress-policy: audit
+
+      - name: Checkout
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        with:
+          fetch-depth: 0
+
       - name: Install Ubuntu deps
         run: |
           sudo apt-get update
           sudo apt-get install \
             shellcheck
 
-      - uses: ammaraskar/gcc-problem-matcher@master
+      - uses: ammaraskar/gcc-problem-matcher@0f9c86f9e693db67dacf53986e1674de5f2e5f28 # master
 
       - name: Run ShellCheck
         run: |
@@ -31,12 +43,17 @@ jobs:
 
   cov:
     runs-on: ubuntu-22.04
-    timeout-minutes: 5 
+    timeout-minutes: 5
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - name: Harden Runner
+        uses: step-security/harden-runner@f4a75cfd619ee5ce8d5b864b0d183aff3c69b55a # v2.13.1
         with:
-          fetch-depth: 0     
+          egress-policy: audit
+
+      - name: Checkout
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        with:
+          fetch-depth: 0
           submodules: recursive
 
       - name: Install Ubuntu deps
@@ -50,27 +67,12 @@ jobs:
         run: |
           ./test/run_cov.sh
 
-      - name: Upload Report to Codecov
-        uses: Wandalen/wretry.action@master
+      - name: Publish coverage report to QLTY
+        uses: qltysh/qlty-action/coverage@a19242102d17e497f437d7466aa01b528537e899 # v1
         with:
-          action: codecov/codecov-action@v4
-          with: |
-            token: ${{ secrets.CODECOV_TOKEN }}
-            files: test/cov/all/kcov-merged/cov.xml
-            name: Unittests
-            fail_ci_if_error: true
-          attempt_limit: 3
-          attempt_delay: 5000
-
-      - name: Publish code coverage to CodeClimate
-        uses: paambaati/codeclimate-action@v9.0.0
-        env:
-          CC_TEST_REPORTER_ID: ${{ secrets.CC_TEST_REPORTER_ID }}
-        with:
-          coverageLocations: |
-            ${{github.workspace}}/test/cov/all/kcov-merged/cov.xml:cobertura
-          prefix: ${{github.workspace}}//
-          debug: true
+          token: ${{ secrets.QLTY_COVERAGE_TOKEN }}
+          files: ${{github.workspace}}/test/cov/all/kcov-merged/cov.xml
+          skip-errors: false
 
   tests:
     runs-on: ${{ matrix.os }}
@@ -111,8 +113,13 @@ jobs:
     env:
        CMSIS_PACK_ROOT: ${{ github.workspace }}/.packs/
     steps:
+      - name: Harden the runner (Audit all outbound calls)
+        uses: step-security/harden-runner@f4a75cfd619ee5ce8d5b864b0d183aff3c69b55a # v2.13.1
+        with:
+          egress-policy: audit
+
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
         with:
           submodules: recursive
 
