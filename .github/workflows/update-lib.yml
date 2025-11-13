@@ -48,10 +48,11 @@ jobs:
 
       - name: Update all scripts
         run: |
+          set -x
           version="${{ steps.query-latest-release.outputs.result }}"
           IFS=$'\n' read -rd '' -a scripts_array <<<"${{ steps.search-scripts.outputs.result }}"
           for script in "${scripts_array[@]}"; do
-            echo "Updating script: $script"
+            echo "Updating script: ${script}"
             sed -i.bak -E "s/(REQUIRED_GEN_PACK_LIB=)\"(.*)\"/\1\"${version}\"/g" "${script}"
           done
 
