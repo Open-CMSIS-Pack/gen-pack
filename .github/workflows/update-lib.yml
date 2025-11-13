@@ -34,8 +34,8 @@ jobs:
           script: |
             const globber = await glob.create(process.env.PATTERN);
             const files = await globber.glob();
-            console.log(`Found files: ${files}`);
-            return files;
+            console.log(`Found files:\n${files.join('\n')}`);
+            return files.join('\n');
           result-encoding: string
 
       - name: Query latest gen-pack lib release version
