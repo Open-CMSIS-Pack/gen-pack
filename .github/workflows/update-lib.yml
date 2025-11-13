@@ -28,9 +28,11 @@ jobs:
       - name: Search scripts to check
         id: search-scripts
         uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8.0.0
+        env:
+          PATTERN: ${{ inputs.pattern }}
         with:
           script: |
-            const globber = await glob.create(inputs.pattern);
+            const globber = await glob.create(process.env.PATTERN);
             const files = await globber.glob();
             console.log(`Found files: ${files}`);
             return files;
