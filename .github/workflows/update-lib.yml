@@ -40,6 +40,8 @@ jobs:
 
       - name: Query latest gen-pack lib release version
         id: query-latest-release
+        env:
+            GH_TOKEN: ${{ github.token }}
         run: |
           LATEST_TAG="$(gh release -R Open-CMSIS-Pack/gen-pack list -L 1 --json tagName | jq -r '.[].tagName')"
           echo "result=${LATEST_TAG//v}" >> $GITHUB_OUTPUT
