@@ -1,0 +1,64 @@
+name: Update gen-pack scripts
+
+on:
+  workflow_call:
+    inputs:
+      pattern:
+        required: false
+        default: | 
+          **/gen_pack.sh
+          **/gen_doc.sh
+        type: string
+        description: Glob pattern to search for scripts to check
+
+jobs:
+  update-workflows:
+    runs-on: ubuntu-latest    
+    permissions:
+      contents: write
+    steps:
+      - name: Harden the runner
+        uses: step-security/harden-runner@95d9a5deda9de15063e7595e9719c11c38c90ae2 # v2.13.2
+        with:
+          egress-policy: audit
+
+      - name: Checkout repository
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+ 
+      - name: Search scripts to check
+        id: search-scripts
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8.0.0
+        with:
+          script: |
+            const pattern = inputs.pattern;
+            const glob = require('@actions/glob');
+            const globber = await glob.create(pattern);
+            const files = await globber.glob();
+            console.log(`Found files: ${files}`);
+            return files;
+          result-encoding: string
+
+      - name: Query latest gen-pack lib release version
+        id: query-latest-release
+        run: |
+          LATEST_TAG="$(gh release -R Open-CMSIS-Pack/gen-pack list -L 1 --json tagName | jq -r '.[].tagName')"
+          echo "result=${LATEST_TAG//v}" >> $GITHUB_OUTPUT
+
+      - name: Update all scripts
+        run: |
+          version="${{ steps.query-latest-release.outputs.result }}"
+          IFS=$'\n' read -rd '' -a scripts_array <<<"${{ steps.search-scripts.outputs.result }}"
+          for script in "${scripts_array[@]}"; do
+            echo "Updating script: $script"
+            sed -i.bak -E "s/(REQUIRED_GEN_PACK_LIB=)\"(.*)\"/\1\"${version}\"/g" "${script}"
+          done
+
+      - name: Create pull request
+        uses: peter-evans/create-pull-request@271a8d0340265f705b14b6d32b9829c1cb33d45e # v7.0.8
+        with:
+          commit-message: "Update gen-pack scripts to use gen-pack lib v${{ steps.query-latest-release.outputs.result }}"
+          branch: update-gen-pack-scripts
+          delete-branch: true
+          title: "🤖 Update gen-pack scripts to use gen-pack lib v${{ steps.query-latest-release.outputs.result }}"
+          body: |
+            Updates all gen-pack scripts references to the latest version
