@@ -8,7 +8,7 @@
 # SPDX-License-Identifier: Apache-2.0
 #
 
-# shellcheck disable=SC2317
+# shellcheck disable=SC2317,SC2329
 
 DIRNAME="$(realpath "$(dirname "$0")")"
 

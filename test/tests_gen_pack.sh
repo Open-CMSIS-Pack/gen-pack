@@ -8,7 +8,7 @@
 # SPDX-License-Identifier: Apache-2.0
 #
 
-# shellcheck disable=SC2317
+# shellcheck disable=SC2317,SC2329
 
 . "$(dirname "$0")/../gen-pack"
 . "$(dirname "$0")/helper"

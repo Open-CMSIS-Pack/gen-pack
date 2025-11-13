@@ -153,6 +153,16 @@ jobs:
             gnu-tar \
             grep
 
+      - name: Set up Python 3
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: Verify Python
+        run: |
+          python3 --version
+          python3 -m http.server --help
+
       - name: Install CMSIS-Toolbox
         shell: bash
         run: |
