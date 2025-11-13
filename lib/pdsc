@@ -59,6 +59,24 @@ function pdsc_name {
 }
 
 #
+# Retrieve the latest release version from a pdsc file, i.e.
+# version attribute of first <release>..</release>
+#
+# Usage: pdsc_release_version <pdsc>
+#   <pdsc>    The pdsc file
+#
+function pdsc_release_version {
+  local first
+  first=$(grep "<release [^>]*version=" "$1" | head -n 1)
+  if [[ -n "${first}" ]]; then
+    sed -E "s/.*version=\"([^\"]*)\".*/\1/" <<< "${first}"
+    return 0
+  fi
+  echo_err "No release description found in $1!"
+  return 1
+}
+
+#
 # Retrieve the latest release description from a pdsc file, i.e.
 # text between (not including) first <release>..</release>
 # if release has no date attribute.
@@ -159,6 +177,19 @@ function pdsc_cache_file {
 }
 
 #
+# Get pdsc filename in .Local dir
+# 
+# Usage: pdsc_local_file <pdsc>
+#   <pdsc>   Name of a pack description file in format <vendor>.<name>.pdsc
+#
+function pdsc_local_file {
+  local localdir="${CMSIS_PACK_ROOT}/.Local"
+  local pdsc="${1}"
+  pdsc=$(basename "${pdsc}")
+  echo "${localdir}/${pdsc}"
+}
+
+#
 # Lookup URL for a given pdsc file in a pack index file
 # 
 # Usage: _pidx_lookup_url <pidx> <vendor> <name>
@@ -246,6 +277,7 @@ function pdsc_url {
 
 #
 # Fetch a list of PDSC files into the .Web folder
+# PDSC files in the .Local folder are preferred if they have a higher version
 #
 # Usage: fetch_pdsc_files <outvar> <pdsc> [...]
 #   <outvar>   Variable to place output array with all local pdsc files to
@@ -261,10 +293,27 @@ function fetch_pdsc_files {
     remove_write_protect "${webdir}"
   fi
   for dep in "$@"; do
-    local depurl depfile
+    local depurl depfile localfile localVersion webversion
     depurl="$(pdsc_url "${dep}")"    
     if is_url "${depurl}"; then
       depfile="$(pdsc_cache_file "${dep}")"
+      localfile="$(pdsc_local_file "${dep}")"
+      if [ -f "${localfile}" ]; then
+        localVersion=$(pdsc_release_version "${localfile}")
+        echo_v "Local pdsc file '${localfile}' found at version ${localVersion} ..."
+        if [ -f "${depfile}" ]; then  
+          webversion=$(pdsc_release_version "${depfile}")
+          echo_v "Web cached pdsc file '${depfile}' found at version ${webversion} ..."
+          
+          if [[ "${localVersion}" > "${webversion}" ]]; then
+            echo_v "Using local pdsc file '${localfile}' ..."
+            depfile="${localfile}"
+          fi
+        else
+          echo_v "Using local pdsc file '${localfile}' ..."
+          depfile="${localfile}"
+        fi
+      fi
       if [ ! -f "${depfile}" ]; then
         curl_download "${depurl}" "${depfile}"
         if [[ "${webdir_write_protect}" == "yes" ]]; then

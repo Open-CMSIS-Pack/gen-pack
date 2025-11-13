@@ -8,7 +8,7 @@
 # SPDX-License-Identifier: Apache-2.0
 #
 
-# shellcheck disable=SC2317
+# shellcheck disable=SC2317,SC2329
 
 shopt -s expand_aliases
 
@@ -78,6 +78,46 @@ test_pdsc_name() {
   local name
   name=$(pdsc_name "$(pwd)/ARM.GenPack.pdsc")
   assertEquals "GenPack" "$name"
+}
+
+test_pdsc_release_version() {
+      cat > "ARM.GenPack.pdsc" <<EOF
+<?xml version="1.0" encoding="UTF-8"?>
+<package schemaVersion="1.7.7" xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocation="https://url.to/schema/PACK.xsd">
+  <vendor>ARM</vendor>
+  <name>GenPack</name>
+  <description>Test pack for GenPack library</description>
+  <url>http://www.keil.com/pack/</url>
+  <license>LICENSE</license>
+
+  <releases>
+    <release version="2.0.0">
+      Active development...
+      - Dev change log 1
+      - Dev change log 2
+    </release>
+    <release version="1.0.0" date="2023-05-03">
+      Release 1.0.0
+      - Change log 1
+      - Change log 2
+    </release>
+  </releases>
+
+  <conditions>
+    ...
+  </conditions>
+
+  <components>
+   ...
+  </components>
+
+  ...
+</package>
+EOF
+
+  version=$(pdsc_release_version "ARM.GenPack.pdsc")
+  assertEquals 0 $?
+  assertEquals "2.0.0" "$version"
 }
 
 test_pdsc_release_desc() {
@@ -542,6 +582,7 @@ test_pdsc_url_without_index() {
 test_fetch_pdsc_files() {
   CMSIS_PACK_ROOT="path/to/packs"
   local webdir="${CMSIS_PACK_ROOT}/.Web"
+  local localdir="${CMSIS_PACK_ROOT}/.Local"
 
   mkdir -p "${webdir}"
   cat > "${webdir}/index.pidx" <<EOF
@@ -557,11 +598,82 @@ test_fetch_pdsc_files() {
 </pindex>
 </index>
 EOF
+  cat > "${webdir}/Manually.Deprecated.pdsc" <<EOF
+<?xml version="1.0" encoding="UTF-8"?>
+<package schemaVersion="1.7.7" xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocation="https://url.to/schema/PACK.xsd">
+  <vendor>Manually</vendor>
+  <name>Deprecated</name>
+  <description>Test pack for GenPack library</description>
+  <url>http://www.keil.com/pack/</url>
+  <license>LICENSE</license>
+
+  <releases>
+    <release version="5.9.0" date="2022-05-02">
+      CMSIS-Core(M): 5.6.0
+      CMSIS-DSP: 1.10.0 (see revision history for details)
+    </release>
+    <release version="5.8.0" date="2021-06-24">
+      CMSIS-Core(M): 5.5.0 (see revision history for details)
+      CMSIS-Core(A): 1.2.1 (see revision history for details)
+    </release>
+  </releases>
+
+  <conditions>
+    ...
+  </conditions>
+
+  <components>
+   ...
+  </components>
+
+  ...
+</package>
+EOF
+
+  mkdir -p "${localdir}"
+  touch "${localdir}/Manually.Installed.pdsc"
+  cat > "${localdir}/Manually.Deprecated.pdsc" <<EOF
+<?xml version="1.0" encoding="UTF-8"?>
+<package schemaVersion="1.7.7" xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" xs:noNamespaceSchemaLocation="https://url.to/schema/PACK.xsd">
+  <vendor>Manually</vendor>
+  <name>Deprecated</name>
+  <description>Test pack for GenPack library</description>
+  <url>http://www.keil.com/pack/</url>
+  <license>LICENSE</license>
+
+  <releases>
+    <release version="5.8.0" date="2021-06-24">
+      CMSIS-Core(M): 5.5.0 (see revision history for details)
+      CMSIS-Core(A): 1.2.1 (see revision history for details)
+    </release>
+  </releases>
+
+  <conditions>
+    ...
+  </conditions>
+
+  <components>
+   ...
+  </components>
+
+  ...
+</package>
+EOF
+
+  cp "${webdir}/Manually.Deprecated.pdsc" "${localdir}/Manually.Superseded.pdsc"
+  cp "${localdir}/Manually.Deprecated.pdsc" "${webdir}/Manually.Superseded.pdsc"
 
   chmod -R a-w "${CMSIS_PACK_ROOT}"
 
-  local deps=("ARM.CMSIS.pdsc" "ARM.Test.pdsc" "ARM.Nourl.pdsc" "path/to/Local.Pack.pdsc")
-
+  local deps=(
+    "ARM.CMSIS.pdsc"
+    "ARM.Test.pdsc"
+    "ARM.Nourl.pdsc"
+    "Manually.Installed.pdsc"
+    "Manually.Deprecated.pdsc"
+    "Manually.Superseded.pdsc"
+    "path/to/Local.Pack.pdsc"
+  )
   local result fetched=()
   result=$(fetch_pdsc_files fetched "${deps[@]}")
 
@@ -569,6 +681,9 @@ EOF
   assertContains "${result}" "curl_download https://url.to/ARM.Test.pdsc path/to/packs/.Web/ARM.Test.pdsc"
   assertContains "${result}" "curl_download https://www.keil.com/pack/ARM.Nourl.pdsc path/to/packs/.Web/ARM.Nourl.pdsc"
   assertNotContains "${result}" "Local.Pack.pdsc"
+  assertNotContains "${result}" "Manually.Installed.pdsc"
+  assertNotContains "${result}" "Manually.Deprecated.pdsc"
+  assertNotContains "${result}" "Manually.Superseded.pdsc"
 
   if has_write_protect "${CMSIS_PACK_ROOT}" > /dev/null; then
     assertTrue "[ ! -w path/to/packs/.Web/ARM.CMSIS.pdsc ]"
@@ -581,6 +696,9 @@ EOF
   assertContains "${fetched[*]}" "path/to/packs/.Web/ARM.Test.pdsc"
   assertContains "${fetched[*]}" "path/to/packs/.Web/ARM.Nourl.pdsc"
   assertContains "${fetched[*]}" "path/to/Local.Pack.pdsc"
+  assertContains "${fetched[*]}" "path/to/packs/.Local/Manually.Installed.pdsc"
+  assertContains "${fetched[*]}" "path/to/packs/.Web/Manually.Deprecated.pdsc"
+  assertContains "${fetched[*]}" "path/to/packs/.Local/Manually.Superseded.pdsc"
 
   chmod -R a+w "${CMSIS_PACK_ROOT}"
 }

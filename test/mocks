@@ -24,11 +24,20 @@ start_http_server() {
   local dir=${2:-.}
   local -n outvar=${3:pid}
 
+  echo "Starting HTTP server on port ${port}, serving directory '${dir}'"
   python3 -m http.server "${port}" --directory "${dir}" &
   # shellcheck disable=SC2034
   outvar=$!
 
-  sleep 1
+  until curl -sSf http://localhost:${port} 1> /dev/null 2>&1; do
+    echo "Waiting for server..."
+    sleep 2
+
+    if ! ps -p "${outvar}" > /dev/null; then
+      echo "ERROR: Failed to start HTTP server" >&2
+      return 1
+    fi
+  done
 }
 
 #
@@ -38,6 +47,7 @@ start_http_server() {
 #   <pid>  PID of the server process
 #
 stop_http_server() {
+  echo "Stopping HTTP server with PID ${1}"
   if ps -p "${1}" > /dev/null; then
     kill -s TERM "${1}"
     sleep 1

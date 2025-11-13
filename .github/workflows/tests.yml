@@ -84,10 +84,14 @@ jobs:
     strategy:
       fail-fast: true
       matrix:
-        os: [ macos-14, macos-15-intel, ubuntu-22.04, ubuntu-24.04, ubuntu-22.04-arm, ubuntu-24.04-arm, windows-2022 ]
+        os: [ macos-14, macos-15, macos-26, ubuntu-22.04, ubuntu-24.04, ubuntu-22.04-arm, ubuntu-24.04-arm, windows-2022, windows-2025 ]
         include:
-          - os: macos-15-intel
-            target: darwin-amd64
+          - os: macos-26
+            target: darwin-arm64
+            archiveext: tar.gz
+            unarcmd: tar -xzf
+          - os: macos-15
+            target: darwin-arm64
             archiveext: tar.gz
             unarcmd: tar -xzf
           - os: macos-14
@@ -111,6 +115,10 @@ jobs:
             archiveext: tar.gz
             unarcmd: tar -xzf
           - os: windows-2022
+            target: windows-amd64
+            archiveext: zip
+            unarcmd: 7z x
+          - os: windows-2025
             target: windows-amd64
             archiveext: zip
             unarcmd: 7z x
@@ -145,10 +153,20 @@ jobs:
             gnu-tar \
             grep
 
+      - name: Set up Python 3
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: Verify Python
+        run: |
+          python3 --version
+          python3 -m http.server --help
+
       - name: Install CMSIS-Toolbox
         shell: bash
         run: |
-          curl -L https://github.com/Open-CMSIS-Pack/cmsis-toolbox/releases/download/2.7.0/cmsis-toolbox-${{ matrix.target }}.${{ matrix.archiveext }} -o cmsis-toolbox-${{ matrix.target }}.${{ matrix.archiveext }}
+          curl -L https://github.com/Open-CMSIS-Pack/cmsis-toolbox/releases/download/2.12.0/cmsis-toolbox-${{ matrix.target }}.${{ matrix.archiveext }} -o cmsis-toolbox-${{ matrix.target }}.${{ matrix.archiveext }}
           ${{ matrix.unarcmd }} cmsis-toolbox-${{ matrix.target }}.${{ matrix.archiveext }}
           echo "$(pwd)/cmsis-toolbox-${{ matrix.target }}/bin" >> $GITHUB_PATH
 
