@@ -1,4 +1,4 @@
-name: Update gen-pack scripts
+name: Update gen-pack library
 
 on:
   workflow_call:
@@ -16,7 +16,8 @@ on:
         description: Glob pattern to search for scripts to check
 
 jobs:
-  update-workflows:
+  update-gen-pack-library:
+    name: Update gen-pack library
     runs-on: ubuntu-latest    
     permissions:
       contents: write
