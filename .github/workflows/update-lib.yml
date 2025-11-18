@@ -2,6 +2,10 @@ name: Update gen-pack scripts
 
 on:
   workflow_call:
+    secrets:
+      TOKEN_ACCESS:
+        required: true
+        description: Token with permissions to open PRs
     inputs:
       pattern:
         required: false
@@ -61,6 +65,7 @@ jobs:
       - name: Create pull request
         uses: peter-evans/create-pull-request@271a8d0340265f705b14b6d32b9829c1cb33d45e # v7.0.8
         with:
+          token: ${{ secrets.TOKEN_ACCESS }}
           commit-message: "Update gen-pack scripts to use gen-pack lib v${{ steps.query-latest-release.outputs.result }}"
           branch: update-gen-pack-scripts
           delete-branch: true
