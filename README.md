@@ -1,3 +1,4 @@
+[![License](https://img.shields.io/github/license/Open-CMSIS-Pack/gen-pack?label=License)](https://github.com/Open-CMSIS-Pack/gen-pack/blob/main/LICENSE)
 [![Maintainability](https://qlty.sh/gh/Open-CMSIS-Pack/projects/gen-pack/maintainability.svg)](https://qlty.sh/gh/Open-CMSIS-Pack/projects/gen-pack)
 [![Code Coverage](https://qlty.sh/gh/Open-CMSIS-Pack/projects/gen-pack/coverage.svg)](https://qlty.sh/gh/Open-CMSIS-Pack/projects/gen-pack)
 
@@ -316,3 +317,4 @@ security reasons. Hence, one needs to register Personal Access Token as a reposi
 ## License
 
 This library is made available as-is under Apache-2.0 license.
+
