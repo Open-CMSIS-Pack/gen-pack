@@ -7,7 +7,7 @@
 # SPDX-License-Identifier: Apache-2.0
 #
 
-GEN_PACK_LIB_VERSION="0.12.0"
+GEN_PACK_LIB_VERSION="0.12.1"
 GEN_PACK_LIB_SOURCE="$(realpath "$(dirname "${BASH_SOURCE[0]}")")"
 GEN_PACK_SCRIPT_SOURCE="$(dirname "$(readlink -f "$0")")"
 
@@ -123,7 +123,7 @@ function delete_files {
     echo_log "${PACK_DELETE_FILES}"
     echo_log " "
     for f in ${PACK_DELETE_FILES}; do
-      find "$(dirname "$1/$f")" -name "$(basename "$1/$f")" -exec rm -rf "{}" +
+      find "$(dirname "$1/$f")" -maxdepth 1 -name "$(basename "$1/$f")" -exec rm -rf "{}" +
     done
   else
     echo_log "PACK_DELETE_FILES is empty, no files to be removed."
