@@ -196,6 +196,29 @@ test_delete_files() {
   assertFalse "[ -f \"${PACK_BUILD}/input3/file33.txt\" ]"
 }
 
+test_delete_files_non_recursive() {
+  mkdir -p "${PACK_BUILD}/examples/blinky"
+  mkdir -p "${PACK_BUILD}/examples/rtos"
+
+  touch "${PACK_BUILD}/README.md"
+  touch "${PACK_BUILD}/CONTRIBUTE.md"
+  touch "${PACK_BUILD}/examples/README.md"
+  touch "${PACK_BUILD}/examples/blinky/README.md"
+  touch "${PACK_BUILD}/examples/rtos/README.md"
+
+  PACK_DELETE_FILES="
+    *.md
+  "
+
+  delete_files "${PACK_BUILD}"
+
+  assertFalse "File 'README.md' not deleted"                          "[ -f \"${PACK_BUILD}/README.md\" ]"
+  assertFalse "File 'CONTRIBUTE.md' not deleted"                      "[ -f \"${PACK_BUILD}/CONTRIBUTE.md\" ]"
+  assertTrue  "File 'examples/README.md' unexpectedly deleted"        "[ -f \"${PACK_BUILD}/examples/README.md\" ]"
+  assertTrue  "File 'examples/blinky/README.md' unexpectedly deleted" "[ -f \"${PACK_BUILD}/examples/blinky/README.md\" ]"
+  assertTrue  "File 'examples/rtos/README.md' unexpectedly deleted"   "[ -f \"${PACK_BUILD}/examples/rtos/README.md\" ]"
+}
+
 test_apply_patches() {
   createTestData
 

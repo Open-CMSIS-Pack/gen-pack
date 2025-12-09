@@ -123,7 +123,7 @@ function delete_files {
     echo_log "${PACK_DELETE_FILES}"
     echo_log " "
     for f in ${PACK_DELETE_FILES}; do
-      find "$(dirname "$1/$f")" -name "$(basename "$1/$f")" -exec rm -rf "{}" +
+      find "$(dirname "$1/$f")" -maxdepth 1 -name "$(basename "$1/$f")" -exec rm -rf "{}" +
     done
   else
     echo_log "PACK_DELETE_FILES is empty, no files to be removed."
