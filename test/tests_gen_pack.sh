@@ -2,7 +2,7 @@
 #
 # Open-CMSIS-Pack gen-pack Bash library
 #
-# Copyright (c) 2022-2025 Arm Limited. All rights reserved.
+# Copyright (c) 2022-2026 Arm Limited. All rights reserved.
 #
 # Provided as-is without warranty under Apache 2.0 License
 # SPDX-License-Identifier: Apache-2.0
@@ -179,12 +179,15 @@ test_delete_files() {
   cp -r --parents "input3" "${PACK_BUILD}"
 
   PACK_DELETE_FILES="
+    ../**/file*.txt
     input1/file11.txt
     input2/file22.txt
     input3/file33.txt
   "
-  delete_files "${PACK_BUILD}"
+  OUTPUT=$(delete_files "${PACK_BUILD}" 2>&1)
+  echo "${OUTPUT}"
 
+  assertContains "${OUTPUT}" "Skipping '../**/file*.txt'"
   assertFalse "[ -f \"${PACK_BUILD}/input1/file11.txt\" ]"
   assertTrue  "[ -f \"${PACK_BUILD}/input1/file12.txt\" ]"
   assertTrue  "[ -f \"${PACK_BUILD}/input1/file13.txt\" ]"
@@ -217,6 +220,29 @@ test_delete_files_non_recursive() {
   assertTrue  "File 'examples/README.md' unexpectedly deleted"        "[ -f \"${PACK_BUILD}/examples/README.md\" ]"
   assertTrue  "File 'examples/blinky/README.md' unexpectedly deleted" "[ -f \"${PACK_BUILD}/examples/blinky/README.md\" ]"
   assertTrue  "File 'examples/rtos/README.md' unexpectedly deleted"   "[ -f \"${PACK_BUILD}/examples/rtos/README.md\" ]"
+}
+
+test_delete_files_recursive() {
+  mkdir -p "${PACK_BUILD}/examples/blinky"
+  mkdir -p "${PACK_BUILD}/examples/rtos"
+
+  touch "${PACK_BUILD}/README.md"
+  touch "${PACK_BUILD}/CONTRIBUTE.md"
+  touch "${PACK_BUILD}/examples/README.md"
+  touch "${PACK_BUILD}/examples/blinky/README.md"
+  touch "${PACK_BUILD}/examples/rtos/README.md"
+
+  PACK_DELETE_FILES="
+    **/*.md
+  "
+
+  delete_files "${PACK_BUILD}"
+
+  assertFalse "File 'README.md' not deleted"                  "[ -f \"${PACK_BUILD}/README.md\" ]"
+  assertFalse "File 'CONTRIBUTE.md' not deleted"              "[ -f \"${PACK_BUILD}/CONTRIBUTE.md\" ]"
+  assertFalse  "File 'examples/README.md' not deleted"        "[ -f \"${PACK_BUILD}/examples/README.md\" ]"
+  assertFalse  "File 'examples/blinky/README.md' not deleted" "[ -f \"${PACK_BUILD}/examples/blinky/README.md\" ]"
+  assertFalse  "File 'examples/rtos/README.md' not deleted"   "[ -f \"${PACK_BUILD}/examples/rtos/README.md\" ]"
 }
 
 test_apply_patches() {

@@ -1,20 +1,20 @@
 #
 # Open-CMSIS-Pack gen-pack Bash library
 #
-# Copyright (c) 2022-2025 Arm Limited. All rights reserved.
+# Copyright (c) 2022-2026 Arm Limited. All rights reserved.
 #
 # Provided as-is without warranty under Apache 2.0 License
 # SPDX-License-Identifier: Apache-2.0
 #
 
-GEN_PACK_LIB_VERSION="0.12.1"
+GEN_PACK_LIB_VERSION="0.13.0"
 GEN_PACK_LIB_SOURCE="$(realpath "$(dirname "${BASH_SOURCE[0]}")")"
 GEN_PACK_SCRIPT_SOURCE="$(dirname "$(readlink -f "$0")")"
 
 SCRIPT="${SCRIPT:-$(basename "$0")}"
 LOG_PREFIX="${LOG_PREFIX:-"$(tput setaf 4 2>/dev/null)${SCRIPT}>$(tput sgr0 2>/dev/null) "}"
 
-shopt -s expand_aliases
+shopt -s expand_aliases globstar
 
 if [ "${BASH_VERSION%%.*}" -lt 5 ]; then
   echo "${LOG_PREFIX}gen-pack requires Bash version 5 or later." >&2
@@ -97,12 +97,12 @@ function add_files {
     echo_log Adding files to pack:
     echo_log "${PACK_BASE_FILES}"
     echo_log " "
-    for f in ${PACK_BASE_FILES}; do
-      d=$(realpath --relative-to="$(pwd)" "$f")
-      if [[ $f = ../* ]]; then
-        cp -r "$f" "$1"
+    for pattern in ${PACK_BASE_FILES}; do
+      d=$(realpath --relative-to="$(pwd)" "$pattern")
+      if [[ $pattern = ../* ]]; then
+        cp -r "$pattern" "$1"
       else
-        cp -f --parents "$f" "$1/"
+        cp -f --parents "$pattern" "$1/"
       fi
     done
   else
@@ -117,13 +117,31 @@ function add_files {
 #  <build>   The temporary build folder, typically PACK_BUILD
 #
 function delete_files {
+  local build="$1"
   # Delete files
   if [ -n "${PACK_DELETE_FILES}" ]; then
     echo_log Deleting files from pack:
     echo_log "${PACK_DELETE_FILES}"
     echo_log " "
-    for f in ${PACK_DELETE_FILES}; do
-      find "$(dirname "$1/$f")" -maxdepth 1 -name "$(basename "$1/$f")" -exec rm -rf "{}" +
+
+    local patterns
+    split_and_trim patterns "${PACK_DELETE_FILES}"
+
+    for pattern in "${patterns[@]}"; do
+      if ! is_subpath_of "${build}" "${build}/${pattern}"; then
+        echo_err "Skipping '${pattern}' as it resolves to outside the build folder."
+        continue
+      fi
+      # shellcheck disable=SC2206
+      local files=("${build}/"${pattern})
+      for file in "${files[@]}"; do
+          if is_subpath_of "${build}" "${file}"; then
+            echo_v "Removing '${file}' ..."
+            rm -rf "${file}"
+          else
+            echo_err "Skipping '${file}' as it resolves to outside the build folder."
+          fi
+      done
     done
   else
     echo_log "PACK_DELETE_FILES is empty, no files to be removed."
