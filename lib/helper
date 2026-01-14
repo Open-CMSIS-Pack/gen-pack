@@ -1,7 +1,7 @@
 #
 # Open-CMSIS-Pack gen-pack Bash library
 #
-# Copyright (c) 2022-2024 Arm Limited. All rights reserved.
+# Copyright (c) 2022-2026 Arm Limited. All rights reserved.
 #
 # Provided as-is without warranty under Apache 2.0 License
 # SPDX-License-Identifier: Apache-2.0
@@ -71,6 +71,46 @@ function check_placeholder {
     echo_log "Remove placeholders from gen-pack settings!"
     exit 1
   fi
+}
+
+#
+# Convert multiline input into an array
+# with trimmed leading/trailing whitespaces and non-empty lines
+#
+# Usage: split_and_trim <result_array> <input_string>
+#  <result_array>   Name of the array variable to store the result
+#  <input_string>   Multiline string input
+#
+function split_and_trim {
+  local -n result=$1
+  local input=$2
+  local line
+
+  result=()
+  while IFS= read -r line; do
+    # Trim whitespace
+    line="${line#"${line%%[![:space:]]*}"}"
+    line="${line%"${line##*[![:space:]]}"}"
+    # Add non-empty lines
+    [[ -n "$line" ]] && result+=("$line")
+  done <<< "$input"
+}
+
+#
+# Check if a path is a sibling of another path
+#
+# Usage: is_subpath_of <base_dir> <target_dir>
+#  <base_dir>     Base directory
+#  <target_dir>   Target directory to check
+#
+function is_subpath_of {
+  local base_dir target_dir
+  base_dir=$(realpath -m "$1")
+  target_dir=$(realpath -m "$2")
+  case "${target_dir}" in
+    "${base_dir}"/*) return 0;;
+  esac
+  return 1
 }
 
 #

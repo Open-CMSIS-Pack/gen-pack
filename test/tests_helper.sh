@@ -2,7 +2,7 @@
 #
 # Open-CMSIS-Pack gen-pack Bash library
 #
-# Copyright (c) 2022-2025 Arm Limited. All rights reserved.
+# Copyright (c) 2022-2026 Arm Limited. All rights reserved.
 #
 # Provided as-is without warranty under Apache 2.0 License
 # SPDX-License-Identifier: Apache-2.0
@@ -78,6 +78,37 @@ test_check_placeholder() {
   assertFalse $?
   assertContains "${output}" "Variable 'VAR_WITH_PLACEHOLDER' contains placeholder"
   assertContains "${output}" "Remove placeholders from gen-pack settings!"
+}
+
+test_split_and_trim() {
+  MULTILINE_VAR="
+    some text
+    **/glob/pattern.txt
+    path/to/fileName.dat
+  "
+
+  split_and_trim RESULT_ARRAY "${MULTILINE_VAR}"
+  assertEquals 3 "${#RESULT_ARRAY[@]}"
+  assertEquals "some text"             "${RESULT_ARRAY[0]}"
+  assertEquals "**/glob/pattern.txt"   "${RESULT_ARRAY[1]}"
+  assertEquals "path/to/fileName.dat"  "${RESULT_ARRAY[2]}"
+}
+
+test_is_subpath_of() {
+  output=$(is_subpath_of "/base/dir" "/base/dir/sub/dir/file.txt")
+  assertTrue $?
+
+  output=$(is_subpath_of "/base/dir" "/base/dir/file.txt")
+  assertTrue $?
+
+  output=$(is_subpath_of "/base/dir" "/base/dir/../file.txt")
+  assertFalse $?
+
+  output=$(is_subpath_of "/base/dir" "/base/otherdir/file.txt")
+  assertFalse $?
+
+  output=$(is_subpath_of "/base/dir" "/other/base/dir/file.txt")
+  assertFalse $?
 }
 
 test_is_url() {
