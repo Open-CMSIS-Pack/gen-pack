@@ -70,7 +70,7 @@ jobs:
           ./test/run_cov.sh
 
       - name: Publish coverage report to QLTY
-        uses: qltysh/qlty-action/coverage@a19242102d17e497f437d7466aa01b528537e899 # v1
+        uses: qltysh/qlty-action/coverage@a19242102d17e497f437d7466aa01b528537e899 # v2.2.0
         with:
           token: ${{ secrets.QLTY_COVERAGE_TOKEN }}
           files: ${{github.workspace}}/test/cov/all/kcov-merged/cov.xml
@@ -154,7 +154,7 @@ jobs:
             grep
 
       - name: Set up Python 3
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
         with:
           python-version: '3.x'
 
