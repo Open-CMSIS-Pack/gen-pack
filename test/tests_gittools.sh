@@ -500,4 +500,221 @@ test_git_changelog_fail_release() {
   assertContains "${changelog}"  "Changelog generation for tag 'v0.0.1' failed!"
 }
 
+# Verify that all stable tags are returned in version-descending order and that
+# a pre-release tag whose SHA does not match HEAD is silently dropped.
+test_git_collect_tags() {
+  UTILITY_GIT="git_mock"
+
+  declare -A GIT_MOCK_REVLIST
+  GIT_MOCK_REVLIST["HEAD"]="deadbeef"
+  # refs/tags/v1.5.0-dev is absent from GIT_MOCK_REVLIST so rev-list returns ""
+  # which differs from HEADSHA -> pre-release tag is excluded
+
+  mapfile -t tags < <(git_collect_tags "v")
+
+  # Expected: 5 stable tags in descending semver order; v1.5.0-dev absent.
+  assertEquals 5 "${#tags[@]}"
+  assertEquals "refs/tags/v1.5.0" "${tags[0]}"
+  assertEquals "refs/tags/v1.2.4" "${tags[1]}"
+  assertEquals "refs/tags/v1.2.3" "${tags[2]}"
+  assertEquals "refs/tags/v0.9.0" "${tags[3]}"
+  assertEquals "refs/tags/v0.0.1" "${tags[4]}"
+}
+
+# Verify that a pre-release tag pointing to HEAD is included while another
+# pre-release tag pointing to a different commit is excluded.
+test_git_collect_tags_prerelease_at_head() {
+  UTILITY_GIT="git_mock"
+
+  GIT_MOCK_REFS=(            \
+    "refs/tags/v1.5.0-rc0"  \
+    "refs/tags/v1.5.0-dev"  \
+    "refs/tags/v1.2.4"      \
+    "refs/tags/v1.2.3"      \
+    "refs/tags/v0.9.0"      \
+    "refs/tags/v0.0.1"      \
+  )
+  declare -A GIT_MOCK_REVLIST
+  GIT_MOCK_REVLIST["HEAD"]="deadbeef"
+  GIT_MOCK_REVLIST["refs/tags/v1.5.0-rc0"]="deadbeef"
+  # refs/tags/v1.5.0-dev not set -> excluded
+
+  mapfile -t tags < <(git_collect_tags "v")
+
+  # Expected: v1.5.0-rc0 retained (at HEAD); v1.5.0-dev dropped (not at HEAD).
+  assertEquals 5 "${#tags[@]}"
+  assertEquals "refs/tags/v1.5.0-rc0" "${tags[0]}"
+  assertEquals "refs/tags/v1.2.4"     "${tags[1]}"
+  assertEquals "refs/tags/v1.2.3"     "${tags[2]}"
+  assertEquals "refs/tags/v0.9.0"     "${tags[3]}"
+  assertEquals "refs/tags/v0.0.1"     "${tags[4]}"
+}
+
+# Verify that a pre-release tag whose SHA differs from HEAD is excluded even
+# when it is the only candidate tag in that position.
+test_git_collect_tags_prerelease_not_at_head() {
+  UTILITY_GIT="git_mock"
+
+  GIT_MOCK_REFS=(           \
+    "refs/tags/v1.5.0-dev"  \
+    "refs/tags/v1.2.4"      \
+    "refs/tags/v1.2.3"      \
+    "refs/tags/v0.9.0"      \
+    "refs/tags/v0.0.1"      \
+  )
+  declare -A GIT_MOCK_REVLIST
+  GIT_MOCK_REVLIST["HEAD"]="deadbeef"
+  GIT_MOCK_REVLIST["refs/tags/v1.5.0-dev"]="cafebabe"
+
+  mapfile -t tags < <(git_collect_tags "v")
+
+  # Expected: v1.5.0-dev dropped; only the 4 stable tags remain.
+  assertEquals 4 "${#tags[@]}"
+  assertEquals "refs/tags/v1.2.4" "${tags[0]}"
+  assertEquals "refs/tags/v1.2.3" "${tags[1]}"
+  assertEquals "refs/tags/v0.9.0" "${tags[2]}"
+  assertEquals "refs/tags/v0.0.1" "${tags[3]}"
+}
+
+# For an annotated tag the annotation message and taggerdate are used directly;
+# no GitHub CLI lookup occurs.
+test_git_tag_desc_annotated_tag() {
+  UTILITY_GIT="git_mock"
+
+  local desc date
+  git_tag_desc "v1.5.0" "tag" desc date 2>/dev/null
+
+  # Expected: annotation body and taggerdate returned as-is.
+  assertEquals "Change log text for release version v1.5.0" "${desc}"
+  assertEquals "2022-08-03" "${date}"
+}
+
+# When an annotated tag has no taggerdate the function falls back to the
+# committerdate of the underlying commit object.
+test_git_tag_desc_annotated_tag_no_taggerdate() {
+  UTILITY_GIT="git_mock"
+
+  # v0.9.0 has no taggerdate in git_mock -> falls back to committerdate "2021-07-29"
+  local desc date
+  git_tag_desc "v0.9.0" "tag" desc date 2>/dev/null
+
+  # Expected: commit message used for desc; committerdate used for date.
+  assertEquals "Commit message for v0.9.0" "${desc}"
+  assertEquals "2021-07-29" "${date}"
+}
+
+# For a commit tag with mode=full, when a GitHub release exists with a non-empty
+# body, that body and the published date override the git annotation.
+test_git_tag_desc_commit_full_with_gh_release() {
+  UTILITY_GIT="git_mock"
+  UTILITY_GHCLI="ghcli_mock"
+
+  # v0.9.0 is a commit tag; ghcli_mock returns a release description for it
+  local desc date
+  git_tag_desc "v0.9.0" "commit" desc date 2>/dev/null
+
+  # Expected: GitHub release body and publishedAt date returned.
+  assertEquals "Release description for version v0.9.0" "${desc}"
+  assertEquals "2021-07-29" "${date}"
+}
+
+# For a commit tag with mode=full, when no GitHub release exists the function
+# falls back to the commit message and committerdate.
+test_git_tag_desc_commit_full_no_gh_release() {
+  UTILITY_GIT="git_mock"
+  UTILITY_GHCLI="ghcli_mock"
+
+  # v0.0.1: ghcli_mock returns 1 (no GitHub release) -> mode=full falls back to commit message
+  local desc date
+  git_tag_desc "v0.0.1" "commit" desc date 2>/dev/null
+
+  # Expected: commit message and committerdate returned; exit code 0.
+  assertEquals "Commit message for v0.0.1" "${desc}"
+  assertEquals "2021-07-29" "${date}"
+}
+
+# For a commit tag with mode=release, when no GitHub release exists the function
+# must fail rather than fall back to the commit message.
+test_git_tag_desc_commit_release_mode_no_gh_release() {
+  UTILITY_GIT="git_mock"
+  UTILITY_GHCLI="ghcli_mock"
+  PACK_CHANGELOG_MODE="release"
+
+  # v0.0.1: ghcli_mock returns 1 (no GitHub release) -> mode=release -> fails
+  local desc date
+  git_tag_desc "v0.0.1" "commit" desc date 2>/dev/null
+
+  # Expected: non-zero exit code; no fallback to commit message.
+  assertNotEquals 0 $?
+}
+
+# With mode=tag only annotated tags are accepted; a commit tag must fail even
+# when a GitHub release is available for it.
+test_git_tag_desc_commit_tag_mode() {
+  UTILITY_GIT="git_mock"
+  UTILITY_GHCLI="ghcli_mock"
+  PACK_CHANGELOG_MODE="tag"
+
+  # type=commit with mode=tag always fails regardless of gh availability
+  local desc date
+  git_tag_desc "v0.9.0" "commit" desc date 2>/dev/null
+
+  # Expected: non-zero exit code; GitHub CLI not consulted.
+  assertNotEquals 0 $?
+}
+
+# For a commit tag with mode=full, when a GitHub release exists but its body is
+# empty the git annotation message is kept while the GH published date is used.
+test_git_tag_desc_commit_full_empty_gh_body() {
+  UTILITY_GIT="git_mock"
+
+  ghcli_empty_body_mock() {
+    if [ "$1" = "release" ] && [ "$2" = "view" ]; then
+      if [[ " $* " =~ " --json body " ]]; then
+        echo ""
+      elif [[ " $* " =~ " --json publishedAt " ]]; then
+        echo "2022-01-15"
+      fi
+      return 0
+    fi
+    return 1
+  }
+  UTILITY_GHCLI="ghcli_empty_body_mock"
+
+  # Empty GH release body + mode=full -> desc stays as git tag annotation message
+  local desc date
+  git_tag_desc "v1.2.3" "commit" desc date 2>/dev/null
+
+  # Expected: git annotation body retained; GH publishedAt used as date.
+  assertEquals "Change log text for release version v1.2.3" "${desc}"
+  assertEquals "2022-01-15" "${date}"
+}
+
+# For a commit tag with mode=release, an empty GitHub release body is treated
+# as a missing description and the function must fail.
+test_git_tag_desc_commit_release_mode_empty_gh_body() {
+  UTILITY_GIT="git_mock"
+  PACK_CHANGELOG_MODE="release"
+
+  ghcli_empty_body_mock() {
+    if [ "$1" = "release" ] && [ "$2" = "view" ]; then
+      if [[ " $* " =~ " --json body " ]]; then
+        echo ""
+      elif [[ " $* " =~ " --json publishedAt " ]]; then
+        echo "2022-01-15"
+      fi
+      return 0
+    fi
+    return 1
+  }
+  UTILITY_GHCLI="ghcli_empty_body_mock"
+
+  # Empty GH release body + mode=release -> fails
+  local desc date
+  git_tag_desc "v1.2.3" "commit" desc date 2>/dev/null
+
+  # Expected: non-zero exit code; no fallback to commit message.
+  assertNotEquals 0 $?
+}
+
 . "$(dirname "$0")/shunit2/shunit2"
