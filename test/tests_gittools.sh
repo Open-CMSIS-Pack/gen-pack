@@ -500,6 +500,29 @@ test_git_changelog_fail_release() {
   assertContains "${changelog}"  "Changelog generation for tag 'v0.0.1' failed!"
 }
 
+test_git_changelog_pdsc_with_after() {
+  UTILITY_GIT="git_mock"
+  UTILITY_GHCLI="ghcli_mock"
+
+  GIT_MOCK_DESCRIBE="v1.5.0-3-g1abcdef"
+  declare -A GIT_MOCK_REVLIST
+  GIT_MOCK_REVLIST["HEAD"]="deadbeef"
+
+  # --after 1.2.3 means only versions strictly above 1.2.3 appear
+  changelog=$(git_changelog -f pdsc -p v -a "1.2.3")
+
+  read -r -d '' expected <<EOF
+<release version="1.5.0" date="2022-08-03" tag="v1.5.0">
+  Change log text for release version v1.5.0
+</release>
+<release version="1.2.4" date="2022-06-27" tag="v1.2.4">
+  Change log text for release version v1.2.4
+</release>
+EOF
+
+  assertEquals "${expected}" "${changelog}"
+}
+
 # Verify that all stable tags are returned in version-descending order and that
 # a pre-release tag whose SHA does not match HEAD is silently dropped.
 test_git_collect_tags() {

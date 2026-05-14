@@ -284,7 +284,7 @@ function git_tag_desc {
 #   release     Tag annotations, or release descriptions (in order)
 #   tag         Tag annotations only
 #
-# Usage: git_changelog [-f <fmt>] [-d [<msg>]] [-p <prefix>]
+# Usage: git_changelog [-f <fmt>] [-d [<msg>]] [-p <prefix>] [-a <version>]
 #   <fmt>       The output format, defaults to text:
 #               text    Plain text
 #               pdsc    Pack description XML, i.e. <releases>..</releases>
@@ -292,11 +292,13 @@ function git_tag_desc {
 #               html    Doxygen HTML table
 #   <msg>       Create devdrop release with optional message.
 #   <prefix>    Prefix to filter Git tags to be considered as releases
+#   <version>   Skip any release with version less than or equal to this value (exclusive)
 #
 function git_changelog {
   local FORMAT="text"
   local DEVDROP=""
   local PREFIX=""
+  local AFTER=""
 
   while [[ $# -gt 0 ]]; do
     case $1 in
@@ -315,6 +317,10 @@ function git_changelog {
       '-p'|'--prefix')
         shift
         PREFIX="$1"
+      ;;
+      '-a'|'--after')
+        shift
+        AFTER="$1"
       ;;
       *)
       ;;
@@ -340,6 +346,14 @@ function git_changelog {
     TYPE=$("${UTILITY_GIT}" for-each-ref --format "%(objecttype)" "${TAG}")
     TAG="${TAG#refs/tags/}"
     local VER="${TAG#"${PREFIX}"}"
+    if [[ -n "${AFTER}" ]]; then
+      local _lowest
+      _lowest=$(printf '%s\n%s\n' "${VER}" "${AFTER}" | sort -V | head -n1)
+      if [[ "${_lowest}" == "${VER}" ]]; then
+        echo_v "Skipping tag '${TAG}' (version '${VER}' is not above version '${AFTER}')."
+        continue
+      fi
+    fi
     local DESC DATE
     git_tag_desc "${TAG}" "${TYPE}" DESC DATE || exit 1
     "git_changelog_${FORMAT}" "${VER}" "${DATE}" "${DESC}" "${TAG}"
