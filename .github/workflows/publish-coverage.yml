@@ -1,0 +1,42 @@
+name: publish_coverage
+
+on:
+  workflow_run:
+    workflows: [gen_pack]
+    types: [completed]
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-22.04
+    if: >-
+      ${{
+        github.event.workflow_run.conclusion == 'success' &&
+        contains(fromJSON('["pull_request","push","release","workflow_dispatch"]'), github.event.workflow_run.event)
+      }}
+    timeout-minutes: 5
+    steps:
+      - name: Harden the runner (Audit all outbound calls)
+        uses: step-security/harden-runner@a5ad31d6a139d249332a2605b85202e8c0b78450 # v2.19.1
+        with:
+          egress-policy: audit
+
+      - name: Download coverage artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: cov-xml
+          path: coverage-report
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ github.token }}
+
+      - name: Publish coverage report to QLTY
+        uses: qltysh/qlty-action/coverage@a19242102d17e497f437d7466aa01b528537e899 # v2.2.0
+        with:
+          token: ${{ secrets.QLTY_COVERAGE_TOKEN }}
+          files: coverage-report/cov.xml
+          skip-errors: false
+          format: cobertura
+          verbose: true
