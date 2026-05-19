@@ -37,7 +37,7 @@ jobs:
           sudo apt-get install \
             shellcheck
 
-      - uses: ammaraskar/gcc-problem-matcher@cb2e3f949c41b7818628f35f8484a9b0acf90cf9
+      - uses: ammaraskar/gcc-problem-matcher@cb2e3f949c41b7818628f35f8484a9b0acf90cf9 # pinned commit
 
       - name: Run ShellCheck
         run: |
