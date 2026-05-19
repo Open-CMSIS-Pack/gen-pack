@@ -31,39 +31,54 @@ jobs:
           run-id: ${{ github.event.workflow_run.id }}
           github-token: ${{ github.token }}
 
-      - name: Validate coverage artifact
-        shell: python
+      - name: Install XML validation deps
         run: |
-          from pathlib import Path
-          import xml.etree.ElementTree as ET
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends \
+            libxml2-utils
 
-          cov_path = Path("coverage-report/cov.xml")
-          cov_data = cov_path.read_bytes()
+      - name: Validate coverage artifact
+        shell: bash
+        run: |
+          set -euo pipefail
 
-          if not cov_data:
-              raise SystemExit(f"{cov_path} is empty")
+          cov_path=coverage-report/cov.xml
+          test -s "${cov_path}"
 
-          if len(cov_data) > 10 * 1024 * 1024:
-              raise SystemExit(f"{cov_path} exceeds the 10 MiB size limit")
+          if [ "$(wc -c < "${cov_path}")" -gt $((10 * 1024 * 1024)) ]; then
+            echo "${cov_path} exceeds the 10 MiB size limit" >&2
+            exit 1
+          fi
 
-          header = cov_data[:4096].lower()
-          for marker in (b"<!doctype", b"<!entity"):
-              if marker in header:
-                  raise SystemExit(f"{cov_path} contains unsupported XML declarations")
+          if grep -Eiq '<!DOCTYPE|<!ENTITY' "${cov_path}"; then
+            echo "${cov_path} contains unsupported XML declarations" >&2
+            exit 1
+          fi
 
-          root = ET.fromstring(cov_data)
-          if root.tag.rsplit("}", 1)[-1] != "coverage":
-              raise SystemExit(f"{cov_path} is not a Cobertura coverage report")
+          root_name=$(xmllint --nonet --xpath 'local-name(/*)' "${cov_path}")
+          if [ "${root_name}" != "coverage" ]; then
+            echo "${cov_path} is not a Cobertura coverage report" >&2
+            exit 1
+          fi
 
-          for attr_name in ("line-rate", "branch-rate"):
-              value = float(root.attrib[attr_name])
-              if not 0.0 <= value <= 1.0:
-                  raise SystemExit(f"{cov_path} has an invalid {attr_name}: {value}")
+          line_rate=$(xmllint --nonet --xpath 'string(/*/@line-rate)' "${cov_path}")
+          branch_rate=$(xmllint --nonet --xpath 'string(/*/@branch-rate)' "${cov_path}")
+          lines_covered=$(xmllint --nonet --xpath 'string(/*/@lines-covered)' "${cov_path}")
+          lines_valid=$(xmllint --nonet --xpath 'string(/*/@lines-valid)' "${cov_path}")
 
-          for attr_name in ("lines-covered", "lines-valid"):
-              value = int(root.attrib[attr_name])
-              if value < 0:
-                  raise SystemExit(f"{cov_path} has an invalid {attr_name}: {value}")
+          python3 - "${line_rate}" "${branch_rate}" "${lines_covered}" "${lines_valid}" <<'PY'
+          import sys
+
+          for attr_name, value in zip(("line-rate", "branch-rate"), sys.argv[1:3]):
+              rate = float(value)
+              if not 0.0 <= rate <= 1.0:
+                  raise SystemExit(f"{attr_name} must be between 0.0 and 1.0, got {rate}")
+
+          for attr_name, value in zip(("lines-covered", "lines-valid"), sys.argv[3:5]):
+              count = int(value)
+              if count < 0:
+                  raise SystemExit(f"{attr_name} must be zero or greater, got {count}")
+          PY
 
       - name: Publish coverage report to QLTY
         uses: qltysh/qlty-action/coverage@a19242102d17e497f437d7466aa01b528537e899 # v2.2.0
