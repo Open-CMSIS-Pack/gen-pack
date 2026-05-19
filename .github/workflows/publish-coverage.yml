@@ -31,6 +31,40 @@ jobs:
           run-id: ${{ github.event.workflow_run.id }}
           github-token: ${{ github.token }}
 
+      - name: Validate coverage artifact
+        shell: python
+        run: |
+          from pathlib import Path
+          import xml.etree.ElementTree as ET
+
+          cov_path = Path("coverage-report/cov.xml")
+          cov_data = cov_path.read_bytes()
+
+          if not cov_data:
+              raise SystemExit(f"{cov_path} is empty")
+
+          if len(cov_data) > 10 * 1024 * 1024:
+              raise SystemExit(f"{cov_path} exceeds the 10 MiB size limit")
+
+          header = cov_data[:4096].lower()
+          for marker in (b"<!doctype", b"<!entity"):
+              if marker in header:
+                  raise SystemExit(f"{cov_path} contains unsupported XML declarations")
+
+          root = ET.fromstring(cov_data)
+          if root.tag.rsplit("}", 1)[-1] != "coverage":
+              raise SystemExit(f"{cov_path} is not a Cobertura coverage report")
+
+          for attr_name in ("line-rate", "branch-rate"):
+              value = float(root.attrib[attr_name])
+              if not 0.0 <= value <= 1.0:
+                  raise SystemExit(f"{cov_path} has an invalid {attr_name}: {value}")
+
+          for attr_name in ("lines-covered", "lines-valid"):
+              value = int(root.attrib[attr_name])
+              if value < 0:
+                  raise SystemExit(f"{cov_path} has an invalid {attr_name}: {value}")
+
       - name: Publish coverage report to QLTY
         uses: qltysh/qlty-action/coverage@a19242102d17e497f437d7466aa01b528537e899 # v2.2.0
         with:
