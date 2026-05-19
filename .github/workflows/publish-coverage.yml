@@ -43,10 +43,11 @@ jobs:
           set -euo pipefail
 
           cov_path=coverage-report/cov.xml
+          size_limit_bytes=$((10 * 1024 * 1024))
           test -s "${cov_path}"
 
-          if [ "$(wc -c < "${cov_path}")" -gt $((10 * 1024 * 1024)) ]; then
-            echo "${cov_path} exceeds the 10 MiB size limit" >&2
+          if [ "$(wc -c < "${cov_path}")" -gt "${size_limit_bytes}" ]; then
+            echo "${cov_path} exceeds the ${size_limit_bytes}-byte size limit" >&2
             exit 1
           fi
 
@@ -70,12 +71,18 @@ jobs:
           import sys
 
           for attr_name, value in zip(("line-rate", "branch-rate"), sys.argv[1:3]):
-              rate = float(value)
+              try:
+                  rate = float(value)
+              except ValueError as exc:
+                  raise SystemExit(f"{attr_name} must be numeric, got {value!r}") from exc
               if not 0.0 <= rate <= 1.0:
                   raise SystemExit(f"{attr_name} must be between 0.0 and 1.0, got {rate}")
 
           for attr_name, value in zip(("lines-covered", "lines-valid"), sys.argv[3:5]):
-              count = int(value)
+              try:
+                  count = int(value)
+              except ValueError as exc:
+                  raise SystemExit(f"{attr_name} must be an integer, got {value!r}") from exc
               if count < 0:
                   raise SystemExit(f"{attr_name} must be zero or greater, got {count}")
           PY
