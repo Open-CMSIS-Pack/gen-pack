@@ -44,14 +44,15 @@ jobs:
 
           cov_path=coverage-report/cov.xml
           size_limit_bytes=$((10 * 1024 * 1024))
+          size_limit_label='10 MiB'
           test -s "${cov_path}"
 
           if [ "$(wc -c < "${cov_path}")" -gt "${size_limit_bytes}" ]; then
-            echo "${cov_path} exceeds the ${size_limit_bytes}-byte size limit" >&2
+            echo "${cov_path} exceeds the ${size_limit_label} size limit" >&2
             exit 1
           fi
 
-          if grep -Eiq '<!DOCTYPE|<!ENTITY' "${cov_path}"; then
+          if grep -Eiq '<!DOCTYPE|<!ELEMENT|<!ENTITY' "${cov_path}"; then
             echo "${cov_path} contains unsupported XML declarations" >&2
             exit 1
           fi
