@@ -58,7 +58,7 @@ jobs:
 
           root_name=$(xmllint --nonet --xpath 'local-name(/*)' "${cov_path}")
           if [ "${root_name}" != "coverage" ]; then
-            echo "${cov_path} is not a Cobertura coverage report" >&2
+            echo "${cov_path} is not a Cobertura coverage report: expected root element coverage, got ${root_name}" >&2
             exit 1
           fi
 
