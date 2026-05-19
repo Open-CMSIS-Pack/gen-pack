@@ -37,7 +37,7 @@ jobs:
           sudo apt-get install \
             shellcheck
 
-      - uses: ammaraskar/gcc-problem-matcher@0f9c86f9e693db67dacf53986e1674de5f2e5f28 # master
+      - uses: ammaraskar/gcc-problem-matcher@cb2e3f949c41b7818628f35f8484a9b0acf90cf9 # pinned commit
 
       - name: Run ShellCheck
         run: |
@@ -70,7 +70,7 @@ jobs:
           ./test/run_cov.sh
 
       - name: Upload coverage report artifact
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: cov-xml
           path: ${{ github.workspace }}/test/cov/all/kcov-merged/cov.xml
