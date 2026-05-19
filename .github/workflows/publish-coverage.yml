@@ -68,6 +68,13 @@ jobs:
           lines_covered=$(xmllint --nonet --xpath 'string(/*/@lines-covered)' "${cov_path}")
           lines_valid=$(xmllint --nonet --xpath 'string(/*/@lines-valid)' "${cov_path}")
 
+          for attr_name in line_rate branch_rate lines_covered lines_valid; do
+            if [ -z "${!attr_name}" ]; then
+              echo "${cov_path} is missing required coverage XML attribute ${attr_name//_/-}" >&2
+              exit 1
+            fi
+          done
+
           python3 - "${line_rate}" "${branch_rate}" "${lines_covered}" "${lines_valid}" <<'PY'
           import sys
 
@@ -78,17 +85,17 @@ jobs:
               try:
                   rate = float(value)
               except ValueError as exc:
-                  raise SystemExit(f"{attr_name} must be numeric, got {value!r}") from exc
+                  raise SystemExit(f"coverage XML attribute {attr_name} must be numeric, got {value!r}") from exc
               if not 0.0 <= rate <= 1.0:
-                  raise SystemExit(f"{attr_name} must be between 0.0 and 1.0, got {rate}")
+                  raise SystemExit(f"coverage XML attribute {attr_name} must be between 0.0 and 1.0, got {rate}")
 
           for attr_name, value in zip(("lines-covered", "lines-valid"), sys.argv[3:5]):
               try:
                   count = int(value)
               except ValueError as exc:
-                  raise SystemExit(f"{attr_name} must be an integer, got {value!r}") from exc
+                  raise SystemExit(f"coverage XML attribute {attr_name} must be an integer, got {value!r}") from exc
               if count < 0:
-                  raise SystemExit(f"{attr_name} must be zero or greater, got {count}")
+                  raise SystemExit(f"coverage XML attribute {attr_name} must be zero or greater, got {count}")
           PY
 
       - name: Publish coverage report to QLTY
