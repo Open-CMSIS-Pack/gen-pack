@@ -69,13 +69,14 @@ jobs:
         run: |
           ./test/run_cov.sh
 
-      - name: Upload coverage report artifact
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      - name: Publish coverage report to QLTY
+        uses: qltysh/qlty-action/coverage@a19242102d17e497f437d7466aa01b528537e899 # v2.2.0
         with:
-          name: cov-xml
-          path: ${{ github.workspace }}/test/cov/all/kcov-merged/cov.xml
-          if-no-files-found: error
-          retention-days: 7
+          oidc: true
+          files: ${{github.workspace}}/test/cov/all/kcov-merged/cov.xml
+          skip-errors: false
+          format: cobertura
+          verbose: true
 
   tests:
     runs-on: ${{ matrix.os }}
@@ -185,11 +186,3 @@ jobs:
           mkdir -p ${TMPDIR}
           ./test/run_all.sh
 
-      - name: Publish coverage report to QLTY
-        uses: qltysh/qlty-action/coverage@a19242102d17e497f437d7466aa01b528537e899 # v2.2.0
-        with:
-          oidc: true
-          files: coverage-report/cov.xml
-          skip-errors: false
-          format: cobertura
-          verbose: true
