@@ -44,11 +44,10 @@ jobs:
 
           cov_path=coverage-report/cov.xml
           size_limit_bytes=$((10 * 1024 * 1024))
-          size_limit_label='10 MiB'
           test -s "${cov_path}"
 
           if [ "$(wc -c < "${cov_path}")" -gt "${size_limit_bytes}" ]; then
-            echo "${cov_path} exceeds the ${size_limit_label} size limit" >&2
+            echo "${cov_path} exceeds the 10 MiB size limit" >&2
             exit 1
           fi
 
@@ -78,7 +77,8 @@ jobs:
           python3 - "${line_rate}" "${branch_rate}" "${lines_covered}" "${lines_valid}" <<'PY'
           import sys
 
-          if len(sys.argv) != 5:
+          EXPECTED_ARG_COUNT = 5
+          if len(sys.argv) != EXPECTED_ARG_COUNT:
               raise SystemExit(f"expected 4 coverage attributes, got {len(sys.argv) - 1}")
 
           for attr_name, value in zip(("line-rate", "branch-rate"), sys.argv[1:3]):
