@@ -187,6 +187,96 @@ function git_changelog_html_tail {
 }
 
 #
+# Collect release tags merged into HEAD for a given prefix.
+# Pre-release tags (matching <prefix>*-*) are included only when they point to HEAD.
+# Output: one full refname per line, version-sorted descending.
+#
+# Usage: git_collect_tags <prefix>
+#   <prefix>   Tag prefix to filter on.
+#
+function git_collect_tags {
+  local PREFIX="$1"
+  local HEADSHA
+  HEADSHA=$("${UTILITY_GIT}" rev-list -n 1 "HEAD")
+
+  local -a TAGS
+  mapfile -t TAGS < <(\
+    "${UTILITY_GIT}" -c 'versionsort.suffix=-' for-each-ref --format "%(refname)" --sort="-v:refname" "refs/tags/${PREFIX}*" --merged \
+  )
+  for index in "${!TAGS[@]}"; do
+    if [[ "${TAGS[${index}]}" =~ ${PREFIX}.*-.*$ ]]; then
+      if [[ $("${UTILITY_GIT}" rev-list -n 1 "${TAGS[${index}]}") != "${HEADSHA}" ]]; then
+        unset -v 'TAGS[${index}]'
+      fi
+    fi
+  done
+  printf '%s\n' "${TAGS[@]}"
+}
+
+#
+# Resolve the description and date for a single git tag.
+# For annotated tags the annotation message and tag date are used.
+# For commit tags the GitHub release description and publish date are used
+# when available, falling back to the commit message when PACK_CHANGELOG_MODE
+# is "full".
+#
+# Usage: git_tag_desc <tag> <type> <desc_var> <date_var>
+#   <tag>       Tag name (without refs/tags/ prefix).
+#   <type>      Object type returned by git for-each-ref: "tag" or "commit".
+#   <desc_var>  Name of the variable to receive the description text.
+#   <date_var>  Name of the variable to receive the date string.
+#
+function git_tag_desc {
+  local tag="$1"
+  local type="$2"
+  local -n _desc="$3"
+  local -n _date="$4"
+
+  _desc=$("${UTILITY_GIT}" tag -l -n99 --format "%(contents)" "${tag}")
+  _date=$("${UTILITY_GIT}" tag -l -n99 --format "%(taggerdate:short)" "${tag}")
+  if [[ -z "${_date}" ]]; then
+    _date=$("${UTILITY_GIT}" tag -l -n99 --format "%(committerdate:short)" "${tag}")
+  fi
+
+  if [[ "${type}" == "tag" ]]; then
+    echo_v "Changelog for tag '${tag}' taken from annotation message."
+    return 0
+  fi
+
+  if [[ "${type}" == "commit" ]] && [[ "${PACK_CHANGELOG_MODE}" != "tag" ]]; then
+    if "${UTILITY_GHCLI}" release view "${tag}" >/dev/null 2>/dev/null; then
+      local release
+      release=$("${UTILITY_GHCLI}" release view "${tag}" --json "body" -t "{{ .body }}")
+      if [[ -n "${release}" ]]; then
+        _desc="${release}"
+        echo_v "Changelog for tag '${tag}' taken from GitHub release description."
+      elif [[ "${PACK_CHANGELOG_MODE}" == "full" ]]; then
+        echo_v "Changelog for tag '${tag}' taken from commit message."
+      else
+        echo_err "Changelog generation for tag '${tag}' failed!"
+        echo_log " => Tag has no annotation message."
+        echo_log " => GitHub release description is empty."
+        return 1
+      fi
+      _date=$("${UTILITY_GHCLI}" release view "${tag}" --json "publishedAt" -t "{{ timefmt \"2006-01-02\" .publishedAt }}")
+      return 0
+    fi
+    if [[ "${PACK_CHANGELOG_MODE}" == "full" ]]; then
+      echo_v "Changelog for tag '${tag}' taken from commit message."
+      return 0
+    fi
+    echo_err "Changelog generation for tag '${tag}' failed!"
+    echo_log " => Tag has no annotation message."
+    echo_log " => GitHub release description could not be queried."
+    return 1
+  fi
+
+  echo_err "Changelog generation for tag '${tag}' failed!"
+  echo_log " => Tag has no annotation message."
+  return 1
+}
+
+#
 # Generate changelog from Git history
 #
 # Setting PACK_CHANGELOG_MODE can be used to steer how the changelog text is retrieved:
@@ -194,19 +284,21 @@ function git_changelog_html_tail {
 #   release     Tag annotations, or release descriptions (in order)
 #   tag         Tag annotations only
 #
-# Usage: git_changelog [-f <fmt>] [-d [<msg>]] [-p <prefix>]
-#   <fmt>       The outout format, defaults to text:
+# Usage: git_changelog [-f <fmt>] [-d [<msg>]] [-p <prefix>] [-a <version>]
+#   <fmt>       The output format, defaults to text:
 #               text    Plain text
 #               pdsc    Pack description XML, i.e. <releases>..</releases>
 #               dxy     Doxygen Markdown table
 #               html    Doxygen HTML table
-#   <msg>       Create devdrop release with option message.
+#   <msg>       Create devdrop release with optional message.
 #   <prefix>    Prefix to filter Git tags to be considered as releases
+#   <version>   Skip any release with version less than or equal to this value (exclusive)
 #
 function git_changelog {
   local FORMAT="text"
   local DEVDROP=""
   local PREFIX=""
+  local AFTER=""
 
   while [[ $# -gt 0 ]]; do
     case $1 in
@@ -226,27 +318,21 @@ function git_changelog {
         shift
         PREFIX="$1"
       ;;
+      '-a'|'--after')
+        shift
+        AFTER="$1"
+      ;;
       *)
       ;;
     esac
     shift # past argument
   done
 
-  local HEADSHA
-  HEADSHA=$("${UTILITY_GIT}" rev-list -n 1 "HEAD")
-  local LATEST  
+  local LATEST
   LATEST=$(git_describe "${PREFIX}")
 
-  mapfile -t TAGS < <(\
-    "${UTILITY_GIT}" -c 'versionsort.suffix=-' for-each-ref --format "%(refname)" --sort="-v:refname" "refs/tags/${PREFIX}*" --merged \
-  )
-  for index in "${!TAGS[@]}"; do 
-    if [[ "${TAGS[${index}]}" =~ ${PREFIX}.*-.*$ ]]; then
-      if [[ $("${UTILITY_GIT}" rev-list -n 1 "${TAGS[${index}]}") != "${HEADSHA}" ]]; then
-        unset -v 'TAGS[${index}]'
-      fi
-    fi
-  done
+  local -a TAGS
+  mapfile -t TAGS < <(git_collect_tags "${PREFIX}")
 
   "git_changelog_${FORMAT}_head"
 
@@ -257,47 +343,20 @@ function git_changelog {
   local TAG
   for TAG in "${TAGS[@]}"; do
     local TYPE
-    local DESC
-    local DATE
-    TYPE="$("${UTILITY_GIT}" for-each-ref --format "%(objecttype)" "${TAG}")"
+    TYPE=$("${UTILITY_GIT}" for-each-ref --format "%(objecttype)" "${TAG}")
     TAG="${TAG#refs/tags/}"
-    DESC="$("${UTILITY_GIT}" tag -l -n99 --format "%(contents)" "${TAG}")"
-    DATE="$("${UTILITY_GIT}" tag -l -n99 --format "%(taggerdate:short)" "${TAG}")"
-    if [[ -z "$DATE" ]]; then
-      DATE="$( "${UTILITY_GIT}" tag -l -n99 --format "%(committerdate:short)" "${TAG}")"
-    fi
-    if [ "${TYPE}" = "tag" ]; then
-      echo_v "Changelog for tag '${TAG}' taken from annotation message."
-    elif [ "${TYPE}" = "commit" ] && [ "${PACK_CHANGELOG_MODE}" != "tag" ]; then
-      if "${UTILITY_GHCLI}" release view "${TAG}" >/dev/null 2>/dev/null; then
-        local RELEASE
-        RELEASE="$("${UTILITY_GHCLI}" release view "${TAG}" --json "body" -t "{{ .body }}")"
-        if [ -n "${RELEASE}" ]; then
-          local DESC="${RELEASE}"
-          echo_v "Changelog for tag '${TAG}' taken from GitHub release description."
-        elif [ "${PACK_CHANGELOG_MODE}" = "full" ]; then
-          echo_v "Changelog for tag '${TAG}' taken from commit message."
-        else
-          echo_err "Changelog generation for tag '${TAG}' failed!"
-          echo_log " => Tag has no annotation message."
-          echo_log " => GitHub release description is empty."
-          exit 1
-        fi
-        DATE="$("${UTILITY_GHCLI}" release view "${TAG}" --json "publishedAt" -t "{{ timefmt \"2006-01-02\" .publishedAt }}")"
-      elif [ "${PACK_CHANGELOG_MODE}" = "full" ]; then
-        echo_v "Changelog for tag '${TAG}' taken from commit message."
-      else
-        echo_err "Changelog generation for tag '${TAG}' failed!"
-        echo_log " => Tag has no annotation message."
-        echo_log " => GitHub release description could not be queried."
-        exit 1
+    local VER="${TAG#"${PREFIX}"}"
+    if [[ -n "${AFTER}" ]]; then
+      local _lowest
+      _lowest=$(printf '%s\n%s\n' "${VER}" "${AFTER}" | sort -V | head -n1)
+      if [[ "${_lowest}" == "${VER}" ]]; then
+        echo_v "Skipping tag '${TAG}' (version '${VER}' is not above version '${AFTER}')."
+        continue
       fi
-    else
-      echo_err "Changelog generation for tag '${TAG}' failed!"
-      echo_log " => Tag has no annotation message."
-      exit 1
     fi
-    "git_changelog_$FORMAT" "${TAG#"${PREFIX}"}" "${DATE}" "${DESC}" "${TAG}"
+    local DESC DATE
+    git_tag_desc "${TAG}" "${TYPE}" DESC DATE || exit 1
+    "git_changelog_${FORMAT}" "${VER}" "${DATE}" "${DESC}" "${TAG}"
   done
 
   "git_changelog_${FORMAT}_tail"

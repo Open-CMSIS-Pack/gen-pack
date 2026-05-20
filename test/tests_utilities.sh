@@ -153,7 +153,19 @@ test_find_packchk_by_env() {
 #!/usr/bin/env bash
 echo "packchk \$*"
 if [[ "\$*" =~ "--help" ]]; then
-  echo "--disable-validation"
+  cat <<EOH
+packchk 1.4.4 (C) 2012-2025 Arm Ltd. and Contributors
+
+Usage:
+  packchk [-V] [--version] [-h] [--help]
+          [OPTIONS...] <PDSC file>
+
+packchk options:
+  -V, --version               Print version
+  -h, --help                  Print usage
+      --disable-validation    Disable the pdsc validation against the PACK.xsd.
+      --pedantic              Return with error value on warning
+EOH
 fi
 EOF
   chmod +x packchk
@@ -162,6 +174,33 @@ EOF
 
   assertEquals "$(cwd)/packchk" "${UTILITY_PACKCHK}"
   assertEquals "0" "${UTILITY_PACKCHK_HAS_SCHEMACHECK}"
+}
+
+test_find_packchk_without_schemacheck() {
+  cat > packchk <<EOF
+#!/usr/bin/env bash
+echo "packchk \$*"
+if [[ "\$*" =~ "--help" ]]; then
+  cat <<EOH
+packchk 1.4.4 (C) 2012-2025 Arm Ltd. and Contributors
+
+Usage:
+  packchk [-V] [--version] [-h] [--help]
+          [OPTIONS...] <PDSC file>
+
+packchk options:
+  -V, --version               Print version
+  -h, --help                  Print usage
+      --pedantic              Return with error value on warning
+EOH
+fi
+EOF
+  chmod +x packchk
+
+  find_packchk
+
+  assertEquals "$(cwd)/packchk" "${UTILITY_PACKCHK}"
+  assertEquals "1" "${UTILITY_PACKCHK_HAS_SCHEMACHECK}"
 }
 
 test_find_packchk_by_pack() {
