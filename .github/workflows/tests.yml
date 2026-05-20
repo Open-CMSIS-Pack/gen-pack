@@ -45,7 +45,7 @@ jobs:
 
   cov:
     runs-on: ubuntu-22.04
-    timeout-minutes: 5
+    timeout-minutes: 10
     permissions:
       contents: read
       id-token: write
@@ -72,7 +72,26 @@ jobs:
         run: |
           ./test/run_cov.sh
 
+      - name: Enforce minimum coverage (75%)
+        continue-on-error: true
+        run: |
+          echo "Checking if test coverage is above 75%"
+          rate=$(sed -n 's/.*line-rate="\([0-9.]*\)".*/\1/p' test/cov/all/kcov-merged/cov.xml | head -n1)
+          percent=$(awk "BEGIN { printf(\"%.0f\", $rate * 100) }")
+          echo "Line-rate: $rate ($percent%)"
+          if [ "$percent" -lt 75 ]; then
+            echo "Coverage below 75%! Failing."
+            exit 1
+          fi
+          echo "Coverage OK."
+
       - name: Publish coverage report to QLTY
+        if: >-
+          ${{ github.repository == 'Open-CMSIS-Pack/gen-pack' &&
+              github.workflow != 'Release' &&
+              github.event.pull_request.user.login != 'dependabot[bot]' &&
+              (github.event_name != 'pull_request' ||
+               github.event.pull_request.head.repo.fork == false) }}
         uses: qltysh/qlty-action/coverage@a19242102d17e497f437d7466aa01b528537e899 # v2.2.0
         with:
           oidc: true
