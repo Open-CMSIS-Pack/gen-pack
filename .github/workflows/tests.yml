@@ -16,6 +16,9 @@ concurrency:
 permissions:
   contents: read
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
   lint:
     runs-on: ubuntu-22.04
@@ -45,7 +48,7 @@ jobs:
 
   cov:
     runs-on: ubuntu-22.04
-    timeout-minutes: 10
+    timeout-minutes: 5
     permissions:
       contents: read
       id-token: write
@@ -72,26 +75,35 @@ jobs:
         run: |
           ./test/run_cov.sh
 
-      - name: Enforce minimum coverage (75%)
-        continue-on-error: true
+      - name: Upload coverage HTML report
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: coverage-html
+          path: ${{github.workspace}}/test/cov/all/kcov-merged
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Enforce minimum coverage
+        env:
+          MIN_LINE_COVERAGE: "74"
         run: |
-          echo "Checking if test coverage is above 75%"
+          echo "Checking if test coverage is above $MIN_LINE_COVERAGE%"
           rate=$(sed -n 's/.*line-rate="\([0-9.]*\)".*/\1/p' test/cov/all/kcov-merged/cov.xml | head -n1)
           percent=$(awk "BEGIN { printf(\"%.0f\", $rate * 100) }")
           echo "Line-rate: $rate ($percent%)"
-          if [ "$percent" -lt 75 ]; then
-            echo "Coverage below 75%! Failing."
+          if [ "$percent" -lt "$MIN_LINE_COVERAGE" ]; then
+            echo "Coverage below $MIN_LINE_COVERAGE%! Failing."
             exit 1
           fi
           echo "Coverage OK."
 
       - name: Publish coverage report to QLTY
         if: >-
-          ${{ github.repository == 'Open-CMSIS-Pack/gen-pack' &&
-              github.workflow != 'Release' &&
-              github.event.pull_request.user.login != 'dependabot[bot]' &&
-              (github.event_name != 'pull_request' ||
-               github.event.pull_request.head.repo.fork == false) }}
+          (success() || failure()) &&
+          github.repository == 'Open-CMSIS-Pack/gen-pack' &&
+          github.workflow != 'Release' &&
+          github.event.pull_request.user.login != 'dependabot[bot]' &&
+          (github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false)
         uses: qltysh/qlty-action/coverage@a19242102d17e497f437d7466aa01b528537e899 # v2.2.0
         with:
           oidc: true
