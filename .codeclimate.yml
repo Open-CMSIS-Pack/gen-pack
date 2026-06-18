@@ -1,5 +1,0 @@
-plugins:
-  markdownlint:
-    enabled: true
-  shellcheck:
-    enabled: true
