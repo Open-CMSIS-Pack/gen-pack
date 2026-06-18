@@ -16,6 +16,9 @@ concurrency:
 permissions:
   contents: read
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
   lint:
     runs-on: ubuntu-22.04
@@ -55,7 +58,7 @@ jobs:
         with:
           egress-policy: audit
 
-      - name: Checkout
+      - name: Checkout Repository
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           fetch-depth: 0
@@ -72,7 +75,49 @@ jobs:
         run: |
           ./test/run_cov.sh
 
+      - name: Install XML validation deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends \
+            libxml2-utils
+
+      - name: Validate coverage artifact
+        shell: bash
+        run: |
+          bash .github/scripts/validate-cobertura-xml.sh test/cov/all/kcov-merged/cov.xml
+
+      - name: Upload coverage HTML report
+        id: upload_coverage_html
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: coverage-html
+          path: ${{github.workspace}}/test/cov/all/kcov-merged
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Enforce minimum coverage
+        env:
+          MIN_LINE_COVERAGE: "75"
+          COVERAGE_HTML_ARTIFACT_URL: ${{ steps.upload_coverage_html.outputs.artifact-url }}
+        run: |
+          echo "Checking if test coverage is above $MIN_LINE_COVERAGE%"
+          rate=$(sed -n 's/.*line-rate="\([0-9.]*\)".*/\1/p' test/cov/all/kcov-merged/cov.xml | head -n1)
+          percent=$(awk "BEGIN { printf(\"%.0f\", $rate * 100) }")
+          echo "Line-rate: $rate ($percent%)"
+          if [ "$percent" -lt "$MIN_LINE_COVERAGE" ]; then
+            echo "Coverage below $MIN_LINE_COVERAGE%! Failing."
+            echo "Check Coverage HTML artifact: $COVERAGE_HTML_ARTIFACT_URL"
+            exit 1
+          fi
+          echo "Coverage OK."
+
       - name: Publish coverage report to QLTY
+        if: >-
+          (success() || failure()) &&
+          github.repository == 'Open-CMSIS-Pack/gen-pack' &&
+          github.workflow != 'Release' &&
+          github.event.pull_request.user.login != 'dependabot[bot]' &&
+          (github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false)
         uses: qltysh/qlty-action/coverage@a19242102d17e497f437d7466aa01b528537e899 # v2.2.0
         with:
           oidc: true
