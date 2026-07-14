@@ -118,7 +118,7 @@ jobs:
           github.workflow != 'Release' &&
           github.event.pull_request.user.login != 'dependabot[bot]' &&
           (github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false)
-        uses: qltysh/qlty-action/coverage@fd52dc852530a708d68c3b7342f8d33d1df4cd55 # v2.2.1
+        uses: qltysh/qlty-action/coverage@08a0a862c159eae9b9003081da6663d96efef637 # v2.3.0
         with:
           oidc: true
           files: ${{github.workspace}}/test/cov/all/kcov-merged/cov.xml
