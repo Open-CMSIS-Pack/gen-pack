@@ -25,12 +25,12 @@ jobs:
     timeout-minutes: 5
     steps:
       - name: Harden the runner (Audit all outbound calls)
-        uses: step-security/harden-runner@bf7454d06d71f1098171f2acdf0cd4708d7b5920 # v2.20.0
+        uses: step-security/harden-runner@dc2769abcc0fcfbadfc1df54081c1608579ef6b2 # v2.22.2
         with:
           egress-policy: audit
 
       - name: Checkout
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
           persist-credentials: false
@@ -56,12 +56,12 @@ jobs:
       id-token: write
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@bf7454d06d71f1098171f2acdf0cd4708d7b5920 # v2.20.0
+        uses: step-security/harden-runner@dc2769abcc0fcfbadfc1df54081c1608579ef6b2 # v2.22.2
         with:
           egress-policy: audit
 
       - name: Checkout Repository
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
           submodules: recursive
@@ -91,7 +91,7 @@ jobs:
 
       - name: Upload coverage HTML report
         id: upload_coverage_html
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: coverage-html
           path: ${{github.workspace}}/test/cov/all/kcov-merged
@@ -121,7 +121,7 @@ jobs:
           github.workflow != 'Release' &&
           github.event.pull_request.user.login != 'dependabot[bot]' &&
           (github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false)
-        uses: qltysh/qlty-action/coverage@08a0a862c159eae9b9003081da6663d96efef637 # v2.3.0
+        uses: qltysh/qlty-action/coverage@c9b09987143d1e4ac955f4803c7bea742102feb5 # v2.4.0
         with:
           oidc: true
           files: ${{github.workspace}}/test/cov/all/kcov-merged/cov.xml
@@ -177,12 +177,12 @@ jobs:
        CMSIS_PACK_ROOT: ${{ github.workspace }}/.packs/
     steps:
       - name: Harden the runner (Audit all outbound calls)
-        uses: step-security/harden-runner@bf7454d06d71f1098171f2acdf0cd4708d7b5920 # v2.20.0
+        uses: step-security/harden-runner@dc2769abcc0fcfbadfc1df54081c1608579ef6b2 # v2.22.2
         with:
           egress-policy: audit
 
       - name: Checkout
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           submodules: recursive
           persist-credentials: false
@@ -206,7 +206,7 @@ jobs:
             grep
 
       - name: Set up Python 3
-        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: '3.x'
 
