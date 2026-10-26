@@ -1,0 +1,15 @@
+{
+  "name": "Ubuntu-22.04",
+  "build": { "dockerfile": "dockerfile" },
+
+  "customizations": {
+    "vscode": {
+      "extensions": [  
+        "iliazeus.vscode-ansi",
+        "mads-hartmann.bash-ide-vscode",
+        "timonwong.shellcheck",
+        "ms-azuretools.vscode-docker"
+      ]
+    }
+  }
+}
