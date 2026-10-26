@@ -1,0 +1,276 @@
+#
+# Open-CMSIS-Pack gen-pack Bash library
+# Copyright (c) 2026 Arm Limited. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
+
+# Check that hooks, patches, and validation preserved the exact input PDSC.
+function verify_release_pdsc {
+  local checksum
+  checksum=$("${UTILITY_SHA1SUM}" "${PACK_DESCRIPTION_FILE}") || return 1
+  if [[ ${checksum%% *} != "$1" ]] || ! cmp -s "${PACK_DESCRIPTION_FILE}" "${PACK_BUILD_DESCRIPTION_FILE}"; then
+    echo_err "Changelog mode 'pdsc' requires an unchanged PDSC; a hook or patch modified it."
+    return 1
+  fi
+}
+
+# Locate the first /package/releases/release opening tag without reserializing XML.
+# Input XML is validated with xmllint first. Comments and CDATA are skipped.
+# Usage: release_find_entry <document> <offset_var> <opening_tag_var>
+# These nameref assignments return values to the caller.
+# shellcheck disable=SC2034
+function release_find_entry {
+  local remaining="$1"
+  local -n output_offset="$2"
+  local -n output_open="$3"
+  local offset=0
+  local path=""
+  local before token name
+  local token_pattern="^<([^\"'>]|\"[^\"]*\"|'[^']*')*>"
+  local name_pattern='^</?([[:alnum:]_:-]+)'
+
+  while [[ ${remaining} == *'<'* ]]; do
+    before="${remaining%%<*}"
+    offset=$((offset + ${#before}))
+    remaining="${remaining:${#before}}"
+
+    case ${remaining} in
+      '<!--'*) token="${remaining%%-->*}-->" ;;
+      '<![CDATA['*) token="${remaining%%]]>*}]]>" ;;
+      '<?'*) token="${remaining%%\?>*}?>" ;;
+      *)
+        if [[ ! ${remaining} =~ ${token_pattern} ]]; then
+          return 1
+        fi
+        token="${BASH_REMATCH[0]}"
+      ;;
+    esac
+
+    if [[ ${token} =~ ${name_pattern} ]]; then
+      name="${BASH_REMATCH[1]}"
+      if [[ ${token} == '</'* ]]; then
+        path="${path%/*}"
+      else
+        if [[ ${path}/${name} == /package/releases/release ]]; then
+          output_offset=${offset}
+          output_open="${token}"
+          return 0
+        fi
+        if [[ ${token} != */\> ]]; then
+          path="${path}/${name}"
+        fi
+      fi
+    fi
+
+    offset=$((offset + ${#token}))
+    remaining="${remaining:${#token}}"
+  done
+  echo_err "No /package/releases/release entry found."
+  return 1
+}
+
+# Set or remove an attribute in an opening-tag variable, escaping XML values.
+# Usage: release_set_attribute <opening_tag_var> <name> <value>
+function release_set_attribute {
+  local -n opening_tag_ref="$1"
+  local name="$2"
+  local value="$3"
+  local pattern="[[:space:]]+${name}[[:space:]]*=[[:space:]]*(\"[^\"]*\"|'[^']*')"
+  if [[ ${opening_tag_ref} =~ ${pattern} ]]; then
+    opening_tag_ref="${opening_tag_ref/"${BASH_REMATCH[0]}"/}"
+  fi
+  if [[ -n ${value} ]]; then
+    # Disable replacement expansion so '&' is always literal on newer Bash.
+    value=${value//&/\&amp;}
+    value=${value//\</\&lt;}
+    value=${value//\>/\&gt;}
+    value=${value//\"/\&quot;}
+    local ending='>'
+    if [[ ${opening_tag_ref} == */\> ]]; then
+      ending='/>'
+    fi
+    opening_tag_ref="${opening_tag_ref%"${ending}"} ${name}=\"${value}\"${ending}"
+  fi
+}
+
+# Check an ISO calendar date without relying on platform-specific date flags.
+function release_valid_date {
+  local value="$1"
+  if [[ ! ${value} =~ ^([0-9]{4})-([0-9]{2})-([0-9]{2})$ ]]; then
+    return 1
+  fi
+  local year=$((10#${BASH_REMATCH[1]}))
+  local month=$((10#${BASH_REMATCH[2]}))
+  local day=$((10#${BASH_REMATCH[3]}))
+  local days=(0 31 28 31 30 31 30 31 31 30 31 30 31)
+  if (( year % 400 == 0 || (year % 4 == 0 && year % 100 != 0) )); then
+    days[2]=29
+  fi
+  (( year > 0 && month >= 1 && month <= 12 && day >= 1 && day <= days[month] ))
+}
+
+# Validate Git operations before changing the PDSC; other tracked files must be clean.
+# Requires UTILITY_GIT to be initialized by the caller.
+function release_check_git {
+  local pdsc="$1"
+  local tag_name="$2"
+  local -n root_ref="$3"
+  local -n path_ref="$4"
+  root_ref=$("${UTILITY_GIT}" -C "$(dirname "${pdsc}")" rev-parse --show-toplevel) || return 1
+  path_ref=$(realpath --relative-to="${root_ref}" "${pdsc}") || return 1
+  "${UTILITY_GIT}" -C "${root_ref}" ls-files --error-unmatch -- "${path_ref}" >/dev/null || return 1
+  if ! "${UTILITY_GIT}" -C "${root_ref}" diff --quiet -- . ":(exclude)${path_ref}" ||
+     ! "${UTILITY_GIT}" -C "${root_ref}" diff --cached --quiet -- . ":(exclude)${path_ref}"; then
+    echo_err "Only the PDSC may have tracked changes when committing a release."
+    return 1
+  fi
+  if [[ ${RELEASE_TAG} == 1 ]]; then
+    "${UTILITY_GIT}" check-ref-format "refs/tags/${tag_name}" || return 1
+    if "${UTILITY_GIT}" -C "${root_ref}" show-ref --verify --quiet "refs/tags/${tag_name}"; then
+      echo_err "Tag '${tag_name}' already exists."
+      return 1
+    fi
+  fi
+}
+
+# Write annotation text without the release element's surrounding XML indentation.
+function release_tag_message {
+  local file="$1"
+  local -a lines
+  mapfile -t lines < "${file}"
+  local first=0
+  local last=${#lines[@]}
+  while (( first < last )) && [[ -z ${lines[first]//[[:space:]]/} ]]; do
+    first=$((first + 1))
+  done
+  while (( last > first )) && [[ -z ${lines[last-1]//[[:space:]]/} ]]; do
+    last=$((last - 1))
+  done
+  local indent="${lines[first]%%[![:space:]]*}"
+  local index
+  for (( index=first; index<last; index++ )); do
+    printf '%s\n' "${lines[index]#"${indent}"}"
+  done
+}
+
+# Prepare a source release or prepend its next development release, optionally committing and tagging.
+# Runs in a subshell so temporary-file cleanup and shell options stay local.
+# Requires UTILITY_XMLLINT and, for Git operations, UTILITY_GIT from the caller.
+release_update_pdsc() (
+  shopt -u patsub_replacement 2>/dev/null || true
+  local pdsc="$1"
+  local document entry_start entry_open
+  local release_root release_path tag_name=""
+  local temporary="" message_file=""
+  trap 'rm -f -- "${temporary}" "${message_file}"' EXIT
+
+  "${UTILITY_XMLLINT}" --nonet --noout "${pdsc}" || return 1
+  # DTD expansion is unnecessary for PDSC release metadata.
+  if [[ $("${UTILITY_XMLLINT}" --nonet --xpath 'count(/package/releases/release)' "${pdsc}") == 0 ]]; then
+    echo_err "The PDSC must contain a release entry."
+    return 1
+  fi
+  IFS= read -r -d '' document < "${pdsc}" || true
+  release_find_entry "${document}" entry_start entry_open || return 1
+
+  local xpath='/package/releases/release[1]'
+  local current_version has_date version release_date
+  current_version=$("${UTILITY_XMLLINT}" --nonet --xpath "string(${xpath}/@version)" "${pdsc}") || return 1
+  has_date=$("${UTILITY_XMLLINT}" --nonet --xpath "count(${xpath}/@date)" "${pdsc}") || return 1
+  local identifier='(0|[1-9][0-9]*|[0-9]*[A-Za-z-][0-9A-Za-z-]*)'
+  local semver="^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)(-${identifier}(\\.${identifier})*)?(\\+[0-9A-Za-z-]+(\\.[0-9A-Za-z-]+)*)?$"
+  if [[ ! ${current_version} =~ ${semver} ]]; then
+    echo_err "Invalid release version '${current_version}'."
+    return 1
+  fi
+
+  local original_open="${entry_open}"
+  local updated
+  if [[ ${RELEASE_MODE} == prepare ]]; then
+    if [[ ${has_date} != 0 ]]; then
+      echo_err "Prepare requires an undated first release entry."
+      return 1
+    fi
+    version="${RELEASE_VERSION:-${current_version%%[-+]*}}"
+    release_date="${RELEASE_DATE:-$(date +%F)}"
+    if [[ ! ${version} =~ ${semver} ]] || ! release_valid_date "${release_date}"; then
+      echo_err "Invalid release version or date; use SemVer and YYYY-MM-DD."
+      return 1
+    fi
+    if [[ ${RELEASE_TAG} == 1 ]]; then
+      tag_name="${RELEASE_TAG_NAME:-${CHANGELOG}${version}}"
+    fi
+    release_set_attribute entry_open version "${version}"
+    release_set_attribute entry_open date "${release_date}"
+    release_set_attribute entry_open url "${RELEASE_URL}"
+    release_set_attribute entry_open tag "${tag_name}"
+    updated="${document:0:entry_start}${entry_open}${document:entry_start+${#original_open}}"
+  else
+    if [[ ${has_date} == 0 ]]; then
+      echo_err "Mode 'finalize' requires a dated first release entry."
+      return 1
+    fi
+    local base="${current_version%%[-+]*}"
+    local major minor patch
+    IFS=. read -r major minor patch <<< "${base}"
+    version="${RELEASE_VERSION:-${major}.${minor}.$((10#${patch} + 1))}"
+    version="${version%-dev}-dev"
+    if [[ ! ${version} =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)-dev$ ]] ||
+       [[ $(printf '%s\n%s\n' "${base}" "${version%-dev}" | sort -V | head -n1) != "${base}" ]] ||
+       [[ ${version%-dev} == "${base}" ]]; then
+      echo_err "The next development version must be higher than '${base}'."
+      return 1
+    fi
+    local next_open="<release version=\"${version}\">"
+    if [[ ${RELEASE_TAG} == 1 ]]; then
+      tag_name="${RELEASE_TAG_NAME:-${CHANGELOG}${version}}"
+      release_set_attribute next_open tag "${tag_name}"
+    fi
+    local line_prefix="${document:0:entry_start}"
+    local indent="${line_prefix##*$'\n'}"
+    if [[ ${indent} == *[!$' \t']* ]]; then
+      indent=""
+    fi
+    local newline=$'\n'
+    if [[ ${document} == *$'\r\n'* ]]; then
+      newline=$'\r\n'
+    fi
+    local new_entry="${next_open}${newline}${indent}  Active development ...${newline}${indent}</release>${newline}${indent}"
+    updated="${document:0:entry_start}${new_entry}${document:entry_start}"
+  fi
+
+  if [[ ${RELEASE_COMMIT} == 1 ]]; then
+    release_check_git "${pdsc}" "${tag_name}" release_root release_path || return 1
+  fi
+  temporary=$(mktemp "${pdsc}.XXXXXX") || return 1
+  cp -p "${pdsc}" "${temporary}" || return 1
+  printf '%s' "${updated}" > "${temporary}" || return 1
+  "${UTILITY_XMLLINT}" --nonet --noout "${temporary}" || return 1
+
+  if [[ ${RELEASE_TAG} == 1 ]]; then
+    message_file=$(mktemp) || return 1
+    "${UTILITY_XMLLINT}" --nonet --xpath "string(${xpath})" "${temporary}" > "${message_file}" || return 1
+    local notes
+    notes=$(release_tag_message "${message_file}") || return 1
+    printf '%s\n' "${notes}" > "${message_file}" || return 1
+  fi
+  mv -f "${temporary}" "${pdsc}" || return 1
+  echo_log "${RELEASE_MODE}: updated ${pdsc} to ${version}."
+
+  if [[ ${RELEASE_COMMIT} == 1 ]]; then
+    local message="Prepare release ${version}"
+    if [[ ${RELEASE_MODE} == finalize ]]; then
+      message="Start development of ${version}"
+    fi
+    if ! "${UTILITY_GIT}" -C "${release_root}" commit --only -m "${message}" -- "${release_path}"; then
+      echo_err "Commit failed; the updated PDSC is retained for inspection. No tag was created."
+      return 1
+    fi
+    if [[ ${RELEASE_TAG} == 1 ]]; then
+      if ! "${UTILITY_GIT}" -C "${release_root}" tag -a --cleanup=verbatim -F "${message_file}" -- "${tag_name}"; then
+        echo_err "Tag creation failed; the PDSC commit is retained."
+        return 1
+      fi
+    fi
+  fi
+)

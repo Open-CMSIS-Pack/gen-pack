@@ -2,7 +2,7 @@
 #
 # Open-CMSIS-Pack gen-pack Bash library
 #
-# Copyright (c) 2022-2023 Arm Limited. All rights reserved.
+# Copyright (c) 2022-2026 Arm Limited. All rights reserved.
 #
 # Provided as-is without warranty under Apache 2.0 License
 # SPDX-License-Identifier: Apache-2.0
@@ -68,6 +68,96 @@ test_integ_default() {
   assertContains "$pdsc" '<release version="1.0.0" date="2022-08-04" tag="v1.0.0">'
   assertContains "$pdsc" "Initial release 1.0.0"
   assertContains "$pdsc" "Active development ..."
+}
+
+# Exercise the PDSC release workflow with real packaging tools and Git.
+test_integ_pdsc_release_workflow() {
+  local -x PACK_CHANGELOG_MODE="pdsc"
+  local -x GIT_AUTHOR_NAME="Release Integration Test"
+  local -x GIT_AUTHOR_EMAIL="release-test@example.invalid"
+  local -x GIT_CONFIG_NOSYSTEM=1
+  local -x GIT_CONFIG_GLOBAL=/dev/null
+
+  cp -r "${DIRNAME}/test_integ_default" .
+  cd test_integ_default || return
+
+  # Step 1 - Prepare git repository with pdsc file
+  sed 's/Active development \.\.\./Integration release notes/' ARM.GenPack.pdsc > release.pdsc
+  mv release.pdsc ARM.GenPack.pdsc
+
+  git init -q
+  assertEquals "Git initialization failed" 0 $? || return
+
+  git add .
+  assertEquals "Fixture staging failed" 0 $? || return
+
+  git commit -qm "Initial release workflow fixture"
+  assertEquals "Initial commit failed" 0 $? || return
+
+  # Step 2 - Run the release preparation to set version and date in pdsc, commit, and tag
+  ./gen_pack.sh --mode prepare --version 1.2.3 --date 2026-10-26 --tag -c v
+  assertEquals "Release preparation failed" 0 $? || return
+
+  assertFalse "Prepare created a build directory" '[ -d build ]'
+  assertFalse "Prepare created an output directory" '[ -d output ]'
+  assertEquals tag "$(git cat-file -t v1.2.3)"
+  assertEquals 'Integration release notes' "$(git tag -l --format='%(contents)' v1.2.3)"
+  assertEquals "$(git rev-parse HEAD)" "$(git rev-list -n1 v1.2.3)"
+  assertEquals 1.2.3 "$(xmllint --xpath 'string(/package/releases/release[1]/@version)' ARM.GenPack.pdsc)"
+  assertEquals 2026-10-26 "$(xmllint --xpath 'string(/package/releases/release[1]/@date)' ARM.GenPack.pdsc)"
+  assertEquals v1.2.3 "$(xmllint --xpath 'string(/package/releases/release[1]/@tag)' ARM.GenPack.pdsc)"
+
+  local release_commit
+  local release_tag
+  release_commit=$(git rev-parse HEAD)
+  release_tag=$(git rev-parse v1.2.3)
+  git show v1.2.3:ARM.GenPack.pdsc > ../tagged-release.pdsc
+  assertEquals "Cannot read the release PDSC from its tag" 0 $? || return
+
+  # Step 3 - Run the default release build with changelog and keep the build directory
+  ./gen_pack.sh -c v --keep
+  assertEquals "Default release build failed" 0 $? || return
+
+  assertTrue "Pack archive missing" '[ -f output/ARM.GenPack.1.2.3.pack ]'
+  assertTrue "Build PDSC differs from the release tag" 'cmp -s ../tagged-release.pdsc build/ARM.GenPack.pdsc'
+  assertTrue "Build changed the source PDSC" 'cmp -s ../tagged-release.pdsc ARM.GenPack.pdsc'
+  assertEquals "Build created a commit" "${release_commit}" "$(git rev-parse HEAD)"
+  assertEquals "Build changed tracked files" '' "$(git status --porcelain)"
+
+  unzip -tq output/ARM.GenPack.1.2.3.pack
+  assertEquals "Archive CRC validation failed" 0 $? || return
+  unzip -q output/ARM.GenPack.1.2.3.pack -d ../unpacked-release
+  assertEquals "Cannot extract Pack archive" 0 $? || return
+
+  assertTrue "Archived PDSC differs from tag" 'cmp -s ../tagged-release.pdsc ../unpacked-release/ARM.GenPack.pdsc'
+  assertContains "Header patch was not packaged" "$(cat ../unpacked-release/inc/test.h)" 'void test();'
+  assertTrue "Checksum manifest is empty" '[ -s ../unpacked-release/ARM.GenPack.sha1 ]'
+  (
+    cd ../unpacked-release || exit 1
+    sha1sum --check --strict ARM.GenPack.sha1
+  )
+  assertEquals "Pack checksum verification failed" 0 $? || return
+
+  # Step 4 - Run post-release finalization
+  ./gen_pack.sh --mode finalize --tag -c v
+  assertEquals "Release finalization failed" 0 $? || return
+  
+  assertEquals 3 "$(git rev-list --count HEAD)"
+  assertEquals 'Start development of 1.2.4-dev' "$(git log -1 --format=%s)"
+  assertEquals tag "$(git cat-file -t v1.2.4-dev)"
+  assertEquals "$(git rev-parse HEAD)" "$(git rev-list -n1 v1.2.4-dev)"
+  assertEquals 'Active development ...' "$(git tag -l --format='%(contents)' v1.2.4-dev)"
+  assertEquals 1.2.4-dev "$(xmllint --xpath 'string(/package/releases/release[1]/@version)' ARM.GenPack.pdsc)"
+  assertEquals v1.2.4-dev "$(xmllint --xpath 'string(/package/releases/release[1]/@tag)' ARM.GenPack.pdsc)"
+  assertEquals 0 "$(xmllint --xpath 'count(/package/releases/release[1]/@date | /package/releases/release[1]/@url)' ARM.GenPack.pdsc)"
+  assertEquals "Finalize changed earlier releases" \
+    "$(xmllint --xpath '/package/releases/release' ../tagged-release.pdsc)" \
+    "$(xmllint --xpath '/package/releases/release[position()>1]' ARM.GenPack.pdsc)"
+  assertEquals "Finalize moved the release tag" "${release_tag}" "$(git rev-parse v1.2.3)"
+  git show v1.2.4-dev:ARM.GenPack.pdsc > ../tagged-dev.pdsc
+  assertEquals "Cannot read the development PDSC from its tag" 0 $? || return
+  assertTrue "Development tag differs from source PDSC" 'cmp -s ../tagged-dev.pdsc ARM.GenPack.pdsc'
+  assertEquals "Finalize left uncommitted changes" '' "$(git status --porcelain)"
 }
 
 test_integ_with_git_release() {

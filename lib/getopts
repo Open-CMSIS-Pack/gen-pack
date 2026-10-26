@@ -16,6 +16,13 @@ function getopts {
   VERBOSE=${VERBOSE:-0}
   PREPROCESS=${PREPROCESS:-1}
   POSTPROCESS=${POSTPROCESS:-1}
+  RELEASE_MODE=""
+  RELEASE_VERSION=""
+  RELEASE_DATE=""
+  RELEASE_URL=""
+  RELEASE_COMMIT=0
+  RELEASE_TAG=0
+  RELEASE_TAG_NAME=""
   POSITIONAL=()
   while [[ $# -gt 0 ]]
   do
@@ -31,11 +38,55 @@ function getopts {
         KEEP=0
       ;;
       '-c'|'--changelog')
+        if [[ $# -lt 2 || $2 == -* ]]; then
+          echo_err "Option '$1' requires a tag prefix (use '' for no prefix)."
+          return 1
+        fi
         shift
         export CHANGELOG=$1
       ;;
       '--no-changelog')
         unset CHANGELOG
+      ;;
+      '--mode'|'--version'|'--date'|'--url')
+        if [[ $# -lt 2 || $2 == -* || -z $2 ]]; then
+          echo_err "Option '$1' requires a value."
+          return 1
+        fi
+        case $1 in
+          '--mode') RELEASE_MODE="$2" ;;
+          '--version') RELEASE_VERSION="$2" ;;
+          '--date') RELEASE_DATE="$2" ;;
+          '--url') RELEASE_URL="$2" ;;
+        esac
+        shift
+      ;;
+      '--commit')
+        RELEASE_COMMIT=1
+      ;;
+      '--tag')
+        RELEASE_TAG=1
+        RELEASE_COMMIT=1
+        RELEASE_TAG_NAME=""
+        # A positional PDSC remains a PDSC, even immediately after --tag.
+        if [[ $# -gt 1 && $2 != -* && $2 != *.pdsc ]]; then
+          RELEASE_TAG_NAME="$2"
+          shift
+        fi
+      ;;
+      --tag=*)
+        RELEASE_TAG=1
+        RELEASE_COMMIT=1
+        RELEASE_TAG_NAME="${1#--tag=}"
+        if [[ -z ${RELEASE_TAG_NAME} ]]; then
+          echo_err "Use --tag without '=' to generate the tag name."
+          return 1
+        fi
+      ;;
+      '--')
+        shift
+        POSITIONAL+=("$@")
+        break
       ;;
       '-v'|'--verbose')
         VERBOSE=1
@@ -58,4 +109,29 @@ function getopts {
     esac
     shift # past argument
   done
+
+  case ${RELEASE_MODE} in
+    ''|'prepare'|'build'|'finalize') ;;
+    *)
+      echo_err "Invalid mode '${RELEASE_MODE}'; expected prepare, build, or finalize."
+      return 1
+    ;;
+  esac
+
+  if [[ ${PACK_CHANGELOG_MODE:-full} == pdsc ]]; then
+    RELEASE_MODE="${RELEASE_MODE:-build}"
+  elif [[ -n ${RELEASE_MODE} ]]; then
+    echo_err "Release modes require PACK_CHANGELOG_MODE='pdsc'."
+    return 1
+  fi
+
+  if [[ ${RELEASE_MODE} != prepare && -n ${RELEASE_DATE}${RELEASE_URL} ]] ||
+     [[ ${RELEASE_MODE} != prepare && ${RELEASE_MODE} != finalize && ( -n ${RELEASE_VERSION} || ${RELEASE_COMMIT} == 1 ) ]]; then
+    echo_err "Release options require a compatible --mode (prepare or finalize)."
+    return 1
+  fi
+  if [[ -n ${RELEASE_MODE} && ( ${#POSITIONAL[@]} -gt 1 || ${POSITIONAL[0]} == -* ) ]]; then
+    echo_err "Expected at most one PDSC path after release options."
+    return 1
+  fi
 }

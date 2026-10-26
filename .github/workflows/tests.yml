@@ -72,17 +72,12 @@ jobs:
           sudo apt-get update
           sudo apt-get install \
             dos2unix \
-            kcov
+            kcov \
+            libxml2-utils
 
       - name: Run kcov
         run: |
           ./test/run_cov.sh
-
-      - name: Install XML validation deps
-        run: |
-          sudo apt-get update
-          sudo apt-get install --no-install-recommends \
-            libxml2-utils
 
       - name: Validate coverage artifact
         shell: bash

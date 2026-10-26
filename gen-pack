@@ -56,6 +56,7 @@ echo "${LOG_PREFIX}Loading gen-pack library ${GEN_PACK_LIB_VERSION} from ${GEN_P
 . "${GEN_PACK_LIB_SOURCE}/lib/gittools"
 . "${GEN_PACK_LIB_SOURCE}/lib/logging"
 . "${GEN_PACK_LIB_SOURCE}/lib/helper"
+. "${GEN_PACK_LIB_SOURCE}/lib/release"
 
 #
 # Add directories listed in PACK_DIRS to build folder.
@@ -344,33 +345,48 @@ function create_sha1 {
 # Top level function to generate a pack.
 #
 function gen_pack {
-  getopts "$@"
+  getopts "$@" || exit 1
   set -- "${POSITIONAL[@]}" # restore positional parameters
 
-  echo_log "Starting CMSIS-Pack Generation: $(date)"
-  echo_log "  in $(pwd)"
-  echo_log ""
+  if [[ -n ${RELEASE_MODE} && $# -gt 0 && ! -f $1 ]]; then
+    echo_err "PDSC file '$1' does not exist."
+    exit 1
+  fi
 
-  check_shebang
-  check_locale
-
-  check_placeholder "PACK_DIRS"
-  check_placeholder "PACK_BASE_FILES"
-  check_placeholder "PACK_DELETE_FILES"
-  check_placeholder "PACK_PATCH_FILES"
-  check_placeholder "PACKCHK_DEPS"
+  local metadata_only=0
+  if [[ ${RELEASE_MODE} == prepare || ${RELEASE_MODE} == finalize ]]; then
+    metadata_only=1
+  fi
   PACK_CHANGELOG_MODE="${PACK_CHANGELOG_MODE:-full}"
-  check_placeholder "PACK_CHANGELOG_MODE"
-  check_placeholder "PACK_CHECKSUM_EXCLUDE"
 
-  find_pack_root
-  find_zip
-  find_packchk
-  find_xmllint
-  find_sha1sum
-  find_curl
-  if [ -n "${CHANGELOG+x}" ]; then
-    find_git
+  if [[ ${metadata_only} == 0 ]]; then
+    echo_log "Starting CMSIS-Pack Generation: $(date)"
+    echo_log "  in $(pwd)"
+    echo_log ""
+
+    check_shebang
+    check_locale
+
+    check_placeholder "PACK_DIRS"
+    check_placeholder "PACK_BASE_FILES"
+    check_placeholder "PACK_DELETE_FILES"
+    check_placeholder "PACK_PATCH_FILES"
+    check_placeholder "PACKCHK_DEPS"
+    check_placeholder "PACK_CHANGELOG_MODE"
+    check_placeholder "PACK_CHECKSUM_EXCLUDE"
+
+    find_pack_root
+    find_zip
+    find_packchk
+    find_sha1sum
+    find_curl
+    find_eol_converter
+  fi
+  find_xmllint || exit 1
+  if [[ ${RELEASE_COMMIT} == 1 || ( ${PACK_CHANGELOG_MODE} != pdsc && -n ${CHANGELOG+x} ) ]]; then
+    find_git || exit 1
+  fi
+  if [[ -n ${CHANGELOG+x} ]]; then
     case ${PACK_CHANGELOG_MODE} in
       'full'|'release')
         find_ghcli
@@ -378,16 +394,24 @@ function gen_pack {
       'tag')
         echo_v "Skipping ghcli"
       ;;
+      'pdsc')
+        echo_v "Taking changelog from source PDSC."
+      ;;
       *)
         echo_err "PACK_CHANGELOG_MODE has invalid value '${PACK_CHANGELOG_MODE}'!"
-        echo_log "  Valid options are: full, release, or tag."
+        echo_log "  Valid options are: full, release, tag, or pdsc."
         echo_log "  Defaulting to: full"
         PACK_CHANGELOG_MODE="full"
         find_ghcli
       ;;
     esac
   fi
-  find_eol_converter
+
+  if [[ ${metadata_only} == 1 ]]; then
+    PACK_DESCRIPTION_FILE=$(locate_pdsc "$1") || exit 1
+    release_update_pdsc "${PACK_DESCRIPTION_FILE}" || exit 1
+    return 0
+  fi
 
   echo_log " "
 
@@ -415,12 +439,18 @@ function gen_pack {
   mkdir -p "${PACK_BUILD}"
   mkdir -p "${PACK_OUTPUT}"
 
+  local source_pdsc_checksum=""
+  if [[ ${PACK_CHANGELOG_MODE} == pdsc ]]; then
+    source_pdsc_checksum=$("${UTILITY_SHA1SUM}" "${PACK_DESCRIPTION_FILE}") || exit 1
+    source_pdsc_checksum="${source_pdsc_checksum%% *}"
+  fi
+
   pushd "${PACK_BASEDIR}" >/dev/null || exit
 
   [[ ${PREPROCESS} == 1 && "$(type -t preprocess)" == "function" ]] && preprocess "${PACK_BUILD}"
 
-  if [ -n "${CHANGELOG+x}" ]; then
-    echo_log "Generating changelog with mode '${PACK_CHANGELOG_MODE}' ..."
+  if [[ ${PACK_CHANGELOG_MODE} != pdsc && -n ${CHANGELOG+x} ]]; then
+    echo_log "Using changelog mode '${PACK_CHANGELOG_MODE}' ..."
     pdsc_update_releases "${PACK_DESCRIPTION_FILE}" "${PACK_BUILD_DESCRIPTION_FILE}" "${CHANGELOG}"
   else
     cp "${PACK_DESCRIPTION_FILE}" "${PACK_BUILD_DESCRIPTION_FILE}"
@@ -432,6 +462,10 @@ function gen_pack {
   apply_patches "${PACK_BUILD}"
 
   [[ ${POSTPROCESS} == 1 && "$(type -t postprocess)" == "function" ]] && postprocess "${PACK_BUILD}"
+
+  if [[ ${PACK_CHANGELOG_MODE} == pdsc ]]; then
+    verify_release_pdsc "${source_pdsc_checksum}" || exit 1
+  fi
 
   check_schema "${PACK_BUILD_DESCRIPTION_FILE}"
   check_pack "${PACK_BUILD_DESCRIPTION_FILE}"
