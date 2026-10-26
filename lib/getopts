@@ -65,7 +65,7 @@ function getopts {
         RELEASE_COMMIT=1
       ;;
       '--tag')
-        RELEASE_TAG=1
+        export RELEASE_TAG=1
         RELEASE_COMMIT=1
         RELEASE_TAG_NAME=""
         # A positional PDSC remains a PDSC, even immediately after --tag.
@@ -75,7 +75,7 @@ function getopts {
         fi
       ;;
       --tag=*)
-        RELEASE_TAG=1
+        export RELEASE_TAG=1
         RELEASE_COMMIT=1
         RELEASE_TAG_NAME="${1#--tag=}"
         if [[ -z ${RELEASE_TAG_NAME} ]]; then
