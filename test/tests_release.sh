@@ -369,6 +369,7 @@ test_invalid_xml_and_version_leave_source_unchanged() {
 
 test_release_dispatch_skips_build_tools_and_hooks() {
   (
+    unset UTILITY_GIT
     find_pack_root() { exit 90; }
     preprocess() { exit 91; }
     postprocess() { exit 92; }
@@ -402,20 +403,44 @@ test_release_tools_are_available_before_dispatch() {
   done
 }
 
-test_missing_release_tools_prevent_dispatch() {
-  local missing_tool release_mode git_option
+test_missing_release_tools_leave_source_unchanged() {
+  local xmllint_path git_path
+  xmllint_path=$(command -v xmllint)
+  git_path=$(command -v git)
+
+  local missing_tool tool_state release_mode git_option output expected_error
   for missing_tool in xmllint git; do
-    for release_mode in prepare finalize; do
-      for git_option in --commit --tag; do
-        (
-          find_xmllint() { [[ ${missing_tool} != xmllint ]]; }
-          find_git() { [[ ${missing_tool} != git ]]; }
-          release_update_pdsc() { touch dispatched; }
-          gen_pack --mode "${release_mode}" "${git_option}" Pack.pdsc
-        )
-        assertNotEquals "Missing ${missing_tool} accepted for ${release_mode} ${git_option}" 0 $?
-        assertFalse 'test -e dispatched'
-        assertTrue 'cmp -s original.pdsc Pack.pdsc'
+    if [[ ${missing_tool} == xmllint ]]; then
+      expected_error="xmllint is required."
+    else
+      expected_error="Git is required."
+    fi
+
+    for tool_state in unset empty; do
+      for release_mode in prepare finalize; do
+        for git_option in --commit --tag; do
+          output=$(
+            unset UTILITY_XMLLINT UTILITY_GIT
+            find_xmllint() {
+              if [[ ${missing_tool} != xmllint ]]; then
+                UTILITY_XMLLINT="${xmllint_path}"
+              elif [[ ${tool_state} == empty ]]; then
+                UTILITY_XMLLINT=""
+              fi
+            }
+            find_git() {
+              if [[ ${missing_tool} != git ]]; then
+                UTILITY_GIT="${git_path}"
+              elif [[ ${tool_state} == empty ]]; then
+                UTILITY_GIT=""
+              fi
+            }
+            gen_pack --mode "${release_mode}" "${git_option}" Pack.pdsc 2>&1
+          )
+          assertNotEquals "Missing ${missing_tool} (${tool_state}) accepted for ${release_mode} ${git_option}" 0 $?
+          assertContains "${output}" "${expected_error}"
+          assertTrue 'cmp -s original.pdsc Pack.pdsc'
+        done
       done
     done
   done

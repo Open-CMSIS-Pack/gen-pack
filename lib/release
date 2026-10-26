@@ -154,8 +154,6 @@ function release_tag_message {
 }
 
 # Prepare a source release or prepend its next development release, optionally committing and tagging.
-# Runs in a subshell so temporary-file cleanup and shell options stay local.
-# Requires UTILITY_XMLLINT and, for Git operations, UTILITY_GIT from the caller.
 release_update_pdsc() (
   shopt -u patsub_replacement 2>/dev/null || true
   local pdsc="$1"
@@ -163,6 +161,16 @@ release_update_pdsc() (
   local release_root release_path tag_name=""
   local temporary="" message_file=""
   trap 'rm -f -- "${temporary}" "${message_file}"' EXIT
+
+  if [[ -z "${UTILITY_XMLLINT}" ]]; then
+    echo_err "xmllint is required."
+    return 1
+  fi
+
+  if [[ ${RELEASE_COMMIT} == 1 || ${RELEASE_TAG} == 1 ]] && [[ -z "${UTILITY_GIT}" ]]; then
+    echo_err "Git is required."
+    return 1
+  fi
 
   "${UTILITY_XMLLINT}" --nonet --noout "${pdsc}" || return 1
   # DTD expansion is unnecessary for PDSC release metadata.
