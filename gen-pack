@@ -382,9 +382,9 @@ function gen_pack {
     find_curl
     find_eol_converter
   fi
-  find_xmllint || exit 1
+  find_xmllint
   if [[ ${RELEASE_COMMIT} == 1 || ( ${PACK_CHANGELOG_MODE} != pdsc && -n ${CHANGELOG+x} ) ]]; then
-    find_git || exit 1
+    find_git
   fi
   if [[ -n ${CHANGELOG+x} ]]; then
     case ${PACK_CHANGELOG_MODE} in
@@ -407,18 +407,19 @@ function gen_pack {
     esac
   fi
 
-  if [[ ${metadata_only} == 1 ]]; then
-    PACK_DESCRIPTION_FILE=$(locate_pdsc "$1") || exit 1
-    release_update_pdsc "${PACK_DESCRIPTION_FILE}" || exit 1
-    return 0
-  fi
-
   echo_log " "
 
   PACK_DESCRIPTION_FILE=$(locate_pdsc "$1")
   fail_and_bail $?
   echo_log "PDSC       is located in ${PACK_DESCRIPTION_FILE}"
   echo_log " "
+
+  if [[ ${metadata_only} == 1 ]]; then
+    echo_log "Updating version history only"
+    release_update_pdsc "${PACK_DESCRIPTION_FILE}"
+    fail_and_bail $?
+    return 0
+  fi
 
   PACK_BASEDIR=$(dirname "${PACK_DESCRIPTION_FILE}")
   PACK_VENDOR=$(pdsc_vendor "${PACK_DESCRIPTION_FILE}")
