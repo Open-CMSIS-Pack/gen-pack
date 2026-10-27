@@ -322,6 +322,66 @@ test_commit_only() {
   assertEquals '' "$(git tag -l)"
 }
 
+test_release_in_subdirectory_with_spaces() {
+  mkdir 'package sources'
+  mv Pack.pdsc 'package sources/Pack.pdsc'
+  git init -q
+  git add 'package sources/Pack.pdsc'
+  git commit -qm Initial
+
+  (
+    cd 'package sources' || exit 1
+    release_test_run --mode prepare --tag -c v --date 2026-10-22
+  )
+  assertEquals 0 $?
+  assertEquals 2 "$(git rev-list --count HEAD)"
+  assertEquals tag "$(git cat-file -t v1.0.1)"
+  assertContains "$(git show 'v1.0.1:package sources/Pack.pdsc')" 'date="2026-10-22"'
+
+  (
+    cd 'package sources' || exit 1
+    release_test_run --mode finalize --tag -c v
+  )
+  assertEquals 0 $?
+  assertEquals 3 "$(git rev-list --count HEAD)"
+  assertEquals tag "$(git cat-file -t v1.0.2-dev)"
+  assertContains "$(git show 'v1.0.2-dev:package sources/Pack.pdsc')" 'version="1.0.2-dev"'
+  assertEquals '' "$(git status --porcelain -- 'package sources/Pack.pdsc')"
+}
+
+test_git_diff_errors_leave_source_unchanged() {
+  release_test_git
+  local git_path
+  git_path=$(command -v git)
+  local injected_diff_scope output
+
+  for injected_diff_scope in worktree index; do
+    output=$(
+      release_test_failing_git() {
+        if [[ $3 == diff ]]; then
+          if [[ ${injected_diff_scope} == worktree && " $* " != *' --cached '* ]] ||
+             [[ ${injected_diff_scope} == index && " $* " == *' --cached '* ]]; then
+            return 128
+          fi
+        fi
+        "${git_path}" "$@"
+      }
+
+      find_git() {
+        UTILITY_GIT=release_test_failing_git
+      }
+
+      release_test_run --mode prepare --tag -c v 2>&1
+    )
+    assertNotEquals "Git ${injected_diff_scope} error accepted" 0 $?
+    assertContains "${output}" "Git ${injected_diff_scope} diff check failed (exit 128)."
+    assertNotContains "${output}" 'Only the PDSC may have tracked changes'
+    assertTrue 'cmp -s original.pdsc Pack.pdsc'
+    assertEquals 1 "$(git rev-list --count HEAD)"
+    assertEquals '' "$(git tag -l)"
+  done
+}
+
 test_existing_tag_is_rejected_before_edit() {
   release_test_git
   git tag v1.0.1

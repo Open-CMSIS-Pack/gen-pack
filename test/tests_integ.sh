@@ -150,9 +150,10 @@ test_integ_pdsc_release_workflow() {
   assertEquals 1.2.4-dev "$(xmllint --xpath 'string(/package/releases/release[1]/@version)' ARM.GenPack.pdsc)"
   assertEquals v1.2.4-dev "$(xmllint --xpath 'string(/package/releases/release[1]/@tag)' ARM.GenPack.pdsc)"
   assertEquals 0 "$(xmllint --xpath 'count(/package/releases/release[1]/@date | /package/releases/release[1]/@url)' ARM.GenPack.pdsc)"
+  # Relative XPath expressions avoid Git Bash conversion to Windows paths.
   assertEquals "Finalize changed earlier releases" \
-    "$(xmllint --xpath '/package/releases/release' ../tagged-release.pdsc)" \
-    "$(xmllint --xpath '/package/releases/release[position()>1]' ARM.GenPack.pdsc)"
+    "$(xmllint --xpath 'package/releases/release' ../tagged-release.pdsc)" \
+    "$(xmllint --xpath 'package/releases/release[position()>1]' ARM.GenPack.pdsc)"
   assertEquals "Finalize moved the release tag" "${release_tag}" "$(git rev-parse v1.2.3)"
   git show v1.2.4-dev:ARM.GenPack.pdsc > ../tagged-dev.pdsc
   assertEquals "Cannot read the development PDSC from its tag" 0 $? || return

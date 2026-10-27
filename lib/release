@@ -116,14 +116,35 @@ function release_check_git {
   local tag_name="$2"
   local -n root_ref="$3"
   local -n path_ref="$4"
-  root_ref=$("${UTILITY_GIT}" -C "$(dirname "${pdsc}")" rev-parse --show-toplevel) || return 1
-  path_ref=$(realpath --relative-to="${root_ref}" "${pdsc}") || return 1
+  local pdsc_directory prefix
+  
+  pdsc_directory=$(dirname "${pdsc}")
+  root_ref=$("${UTILITY_GIT}" -C "${pdsc_directory}" rev-parse --show-toplevel) || return 1
+  prefix=$("${UTILITY_GIT}" -C "${pdsc_directory}" rev-parse --show-prefix) || return 1
+  path_ref="${prefix}$(basename "${pdsc}")"
+  
   "${UTILITY_GIT}" -C "${root_ref}" ls-files --error-unmatch -- "${path_ref}" >/dev/null || return 1
-  if ! "${UTILITY_GIT}" -C "${root_ref}" diff --quiet -- . ":(exclude)${path_ref}" ||
-     ! "${UTILITY_GIT}" -C "${root_ref}" diff --cached --quiet -- . ":(exclude)${path_ref}"; then
-    echo_err "Only the PDSC may have tracked changes when committing a release."
-    return 1
-  fi
+
+  local diff_scope diff_status
+  local -a diff_options
+  for diff_scope in worktree index; do
+    diff_options=(--quiet)
+    if [[ ${diff_scope} == index ]]; then
+      diff_options+=(--cached)
+    fi
+
+    diff_status=0
+    "${UTILITY_GIT}" -C "${root_ref}" diff "${diff_options[@]}" -- . ":(top,literal,exclude)${path_ref}" || diff_status=$?
+
+    if [[ ${diff_status} == 1 ]]; then
+      echo_err "Only the PDSC may have tracked changes when committing a release."
+      return 1
+    elif [[ ${diff_status} -gt 1 ]]; then
+      echo_err "Git ${diff_scope} diff check failed (exit ${diff_status})."
+      return 1
+    fi
+  done
+
   if [[ ${RELEASE_TAG} == 1 ]]; then
     "${UTILITY_GIT}" check-ref-format "refs/tags/${tag_name}" || return 1
     if "${UTILITY_GIT}" -C "${root_ref}" show-ref --verify --quiet "refs/tags/${tag_name}"; then
