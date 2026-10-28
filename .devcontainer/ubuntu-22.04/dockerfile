@@ -64,6 +64,6 @@ WORKDIR /home/${USERNAME}
 # Initialite CMSIS-Pack repo and add ARM.CMSIS pack
 
 RUN cpackget init https://www.keil.com/pack/index.pidx && \
-    cpackget add ARM.CMSIS
+    cpackget add -a ARM.CMSIS
 
 CMD [ "/bin/bash" ]
