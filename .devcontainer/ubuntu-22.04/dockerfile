@@ -1,0 +1,69 @@
+FROM ubuntu:22.04
+
+ARG TARGETOS
+ARG TARGETARCH
+ARG USERNAME=runner
+
+# Install system packages
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+RUN apt-get update && \
+    apt-get install -y \
+        curl \
+        dos2unix \
+        git \
+        kcov \
+        libxml2-utils \
+        locales \
+        sudo \
+        zip && \
+    apt-get clean autoclean && \
+    apt-get autoremove --yes && \
+    rm -rf /var/lib/apt/lists/*
+
+# Generate locale
+RUN echo "en_US.UTF-8 UTF-8" >> /etc/locale.gen && \
+    locale-gen
+
+# removing sh and pointing /bin/sh to /bin/bash
+RUN rm /bin/sh && \
+    ln -s /bin/bash /bin/sh
+
+# Install GitHub CLI
+
+RUN curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg -o /usr/share/keyrings/githubcli-archive-keyring.gpg && \
+    chmod go+r /usr/share/keyrings/githubcli-archive-keyring.gpg && \
+    echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" > /etc/apt/sources.list.d/github-cli.list && \
+    apt-get update && \
+    apt-get install gh -y && \
+    rm -rf /var/lib/apt/lists/*
+
+# Install CMSIS-Toolbox
+
+ARG TOOLBOX_DIST=cmsis-toolbox-${TARGETOS}-${TARGETARCH}
+ARG TOOLBOX_ARCHIVE=${TOOLBOX_DIST}.tar.gz
+
+RUN curl -LO https://github.com/Open-CMSIS-Pack/cmsis-toolbox/releases/download/2.15.0/${TOOLBOX_ARCHIVE} && \
+    tar -xvf ${TOOLBOX_ARCHIVE} && \
+    rm ${TOOLBOX_ARCHIVE} && \
+    mv ${TOOLBOX_DIST} /opt/cmsis-toolbox
+
+ENV PATH=$PATH:/opt/cmsis-toolbox/bin
+
+# Create user
+
+RUN groupadd --gid 1000 ${USERNAME} \
+    && useradd --uid 1000 --gid 1000 -m ${USERNAME} -s /bin/bash \
+    && echo ${USERNAME} ALL=\(root\) NOPASSWD:ALL > /etc/sudoers.d/${USERNAME} \
+    && chmod 0440 /etc/sudoers.d/${USERNAME}
+
+USER ${USERNAME}
+WORKDIR /home/${USERNAME}
+
+# Initialite CMSIS-Pack repo and add ARM.CMSIS pack
+
+RUN cpackget init https://www.keil.com/pack/index.pidx && \
+    cpackget add -a ARM.CMSIS
+
+CMD [ "/bin/bash" ]

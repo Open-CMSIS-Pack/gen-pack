@@ -213,7 +213,7 @@ jobs:
       - name: Install CMSIS-Toolbox
         shell: bash
         run: |
-          curl -L https://github.com/Open-CMSIS-Pack/cmsis-toolbox/releases/download/2.12.0/cmsis-toolbox-${{ matrix.target }}.${{ matrix.archiveext }} -o cmsis-toolbox-${{ matrix.target }}.${{ matrix.archiveext }}
+          curl -L https://github.com/Open-CMSIS-Pack/cmsis-toolbox/releases/download/2.15.0/cmsis-toolbox-${{ matrix.target }}.${{ matrix.archiveext }} -o cmsis-toolbox-${{ matrix.target }}.${{ matrix.archiveext }}
           ${{ matrix.unarcmd }} cmsis-toolbox-${{ matrix.target }}.${{ matrix.archiveext }}
           echo "$(pwd)/cmsis-toolbox-${{ matrix.target }}/bin" >> $GITHUB_PATH
 
