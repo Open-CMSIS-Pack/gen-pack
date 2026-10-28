@@ -399,6 +399,37 @@ test_invalid_tag_is_rejected_before_edit() {
   assertEquals 1 "$(git rev-list --count HEAD)"
 }
 
+test_leading_hyphen_tags_are_rejected_before_edit() {
+  release_test_git
+  local release_mode tag_source output original_head original_index
+
+  for release_mode in prepare finalize; do
+    if [[ ${release_mode} == finalize ]]; then
+      release_test_run --mode prepare --commit
+      assertEquals 0 $? || return
+    fi
+
+    cp Pack.pdsc before.pdsc
+    original_head=$(git rev-parse HEAD)
+    original_index=$(git write-tree)
+
+    for tag_source in explicit prefix; do
+      if [[ ${tag_source} == explicit ]]; then
+        output=$(release_test_run --mode "${release_mode}" --tag=-bad 2>&1)
+      else
+        output=$(CHANGELOG=- release_test_run --mode "${release_mode}" --tag 2>&1)
+      fi
+
+      assertNotEquals "Leading hyphen accepted for ${release_mode} (${tag_source})" 0 $?
+      assertContains "${output}" 'must not begin with a hyphen'
+      assertTrue 'cmp -s before.pdsc Pack.pdsc'
+      assertEquals "${original_head}" "$(git rev-parse HEAD)"
+      assertEquals "${original_index}" "$(git write-tree)"
+      assertEquals '' "$(git tag -l)"
+    done
+  done
+}
+
 test_failed_commit_retains_pdsc_without_tag() {
   release_test_git
   printf '#!/bin/sh\nexit 1\n' > .git/hooks/pre-commit

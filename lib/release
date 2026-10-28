@@ -146,6 +146,11 @@ function release_check_git {
   done
 
   if [[ ${RELEASE_TAG} == 1 ]]; then
+    # git tag rejects leading hyphens even when the full ref is valid.
+    if [[ ${tag_name} == -* ]]; then
+      echo_err "Tag '${tag_name}' must not begin with a hyphen."
+      return 1
+    fi
     "${UTILITY_GIT}" check-ref-format "refs/tags/${tag_name}" || return 1
     if "${UTILITY_GIT}" -C "${root_ref}" show-ref --verify --quiet "refs/tags/${tag_name}"; then
       echo_err "Tag '${tag_name}' already exists."
