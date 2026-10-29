@@ -65,14 +65,15 @@ PACK_PATCH_FILES="
 #   <list pdsc files here>
 # "
 
-# Optional: restrict fallback modes for changelog generation
+# Optional: select the changelog source and Git fallback modes
 # Default: full
 # Values:
 # - full      Tag annotations, release descriptions, or commit messages (in order)
 # - release   Tag annotations, or release descriptions (in order)
 # - tag       Tag annotations only
+# - pdsc      Changelog in PDSC file is preserved
 #
-# PACK_CHANGELOG_MODE="<full|release|tag>"
+# PACK_CHANGELOG_MODE="<full|release|tag|pdsc>"
 
 #
 # custom pre-processing steps

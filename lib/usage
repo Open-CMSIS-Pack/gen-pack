@@ -9,14 +9,25 @@
 
 function usage {
 cat << EOF
-Usage: $(basename "$0") [-h] [-k] [-c <prefix>] [-v] [<pdsc>]
+Usage: $(basename "$0") [options] [<pdsc>]
 
 Arguments:
   -h, --help                      Print this usage message and exit.
   -k, --[no-]keep                 Keep build directory.
-  -c, --[no-]changelog <prefix>   Generate changelog. Tags are filtered for <prefix>.
+  -c, --changelog <prefix>        Tag prefix; generate changelog for Git source modes.
+  --no-changelog                  Disable Git changelog generation and clear prefix.
+  --mode <mode>                   prepare: set release metadata
+                                  build: use exact PDSC
+                                  finalize: prepend next development
+                                  Requires PACK_CHANGELOG_MODE=pdsc; default: build.
+  --version <version>             Override release version (prepare/finalize).
+  --date <YYYY-MM-DD>             Release date (prepare; default: today, local time).
+  --url <url>                     Release URL (prepare; default: no URL).
+  --commit                        Commit the PDSC change (prepare/finalize).
+  --tag [<name>]                  Commit and create annotated tag (prepare/finalize).
+                                  Default name: <prefix><version>. Also: --tag=<name>.
   --[no-]preprocess               Run custom preprocess function if implemented.
-  --[no-]postproces               Run custom postprocess function if implemented.
+  --[no-]postprocess              Run custom postprocess function if implemented.
   -v, --verbose                   Print verbose log output.
   <pdsc>                          The pack description to generate the pack for.
 EOF

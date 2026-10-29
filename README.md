@@ -210,17 +210,34 @@ can use the same relative file names as within the `.pdsc` file.
 
 1. Prepare variable `PACK_CHANGELOG_MODE`
 
-   Replace `<full|release|tag>` for `PACK_CHANGELOG_MODE` with either of these choices.
-   It defaults to `full`. This setting is only effective when generating the changelog from Git history.
-   It affects the fallback solutions used to retrieve the changelog text from git:
+   Replace `<full|release|tag|pdsc>` for `PACK_CHANGELOG_MODE` with one of these choices.
+   It defaults to `full`. This setting selects the changelog source and the allowed Git fallbacks:
 
-   `full` allows fallback to GitHub release description or commit message.
+   `full` uses tag annotations with fallback to GitHub release descriptions or commit messages.
 
-   `release` allows fallback to GitHub release description only.
+   `release` uses tag annotations with fallback to GitHub release descriptions only.
 
    `tag` forces tag annotation messages to be used without any fallback.
 
-   If no changelog text can be retrieved pack generation is aborted.
+   `pdsc` keeps the PDSC release history unchanged
+
+   ```sh
+   PACK_CHANGELOG_MODE="pdsc"
+   ```
+
+   For `PACK_CHANGELOG_MODE="pdsc"` one can use `--mode [prepare|build|finalize]` to
+   run the 3-steps pack release.
+
+   `prepare` bumps the latest release tag in the pdsc file to the release, combine with
+   `--version`, `--date`, and `--url` to set release tag attributes specifically. Add
+   `--commit` and `--tag` to automatically commit the updated pdsc and set the release
+   version tag.
+
+   `build` just generates the pack archive as usual, can be omitted as its the default.
+
+   `finalize` adds a new `-dev` release tag on top of the releases history. Combine with
+   `version` to set a specific version attribute. Add `--commit` and `--tag` to automatically
+   commit the updated pdsc and set the dev version tag.
 
 1. Prepare variable `PACK_CHECKSUM_EXCLUDE`
 
@@ -274,6 +291,71 @@ Arguments:
   -v, --verbose                   Print verbose log output.
   <pdsc>                          The pack description to generate the pack for.
 ```
+
+## Source-PDSC release workflow
+
+To keep the tagged source PDSC identical to the PDSC shipped in a pack,
+set `PACK_CHANGELOG_MODE="pdsc"` in your `gen_pack.sh` script. This enables the
+three release modes below; omitting `--mode` defaults to `build`. The Git source
+modes (`full`, `release`, and `tag`) retain the existing build behavior and reject
+explicit release modes.
+
+```sh
+# Prepare the first, undated release entry; keep its prepared changelog text.
+./gen_pack.sh --mode prepare --version 1.2.3 --date 2026-10-22 \
+  --url https://example.com/releases/1.2.3 --tag -c v
+
+# Build from that exact PDSC; --mode build is the default for pdsc.
+./gen_pack.sh
+
+# After publishing, start development of 1.2.4-dev and commit the change.
+./gen_pack.sh --mode finalize --commit
+```
+
+- `prepare` updates the first `<release>` in the source PDSC. It must have no
+  `date` attribute. `--version` overrides its version; otherwise all prerelease and
+  build suffixes are removed. `--date` defaults to today's local calendar date.
+  `--url` is optional; without it, the entry has no release URL. Existing release
+  notes and older releases are preserved.
+- `build` is the default when `PACK_CHANGELOG_MODE="pdsc"`. It uses the source
+  PDSC unchanged, even if `DEFAULT_ARGS` contains `-c`.
+  Existing build hooks and patches still run. If they change the source or built
+  PDSC, generation fails before archiving. No Git or GitHub CLI is needed for
+  changelog generation in this mode.
+- `finalize` closes the release workflow and requires a dated first release.
+  It prepends a new undated entry
+  with the patch version incremented and `-dev` appended, and the text
+  `Active development ...`. Use `--version 1.3.0` or `--version 1.3.0-dev` to
+  override the next version; its base version must be higher than the release.
+  The new entry has no `date` or `url` attributes. With `--tag`, its `tag`
+  attribute names the new development tag; otherwise that attribute is omitted.
+
+Prepare and finalize require `xmllint` but do not run build hooks, `packchk`,
+or schema downloads. Without Git options, they only edit the PDSC. Use `--commit`
+to commit that change. Both modes accept `--tag [<name>]`, which includes the
+commit and creates an annotated tag with the updated PDSC's first release
+description as its message. For finalize, the tag points to the new development
+commit and uses the new entry's `Active development ...` text. An explicit tag
+name wins; otherwise the name is `<prefix><version>`, including the `-dev` suffix
+for finalize. `-c <prefix>` supplies the prefix (empty by default):
+
+```sh
+./gen_pack.sh --mode prepare --tag custom-release-name
+./gen_pack.sh --mode prepare --tag -c v
+./gen_pack.sh --mode prepare --tag -- Vendor.Pack.pdsc
+./gen_pack.sh --mode finalize --tag -c v
+```
+
+After `--tag`, a token ending in `.pdsc` is interpreted as the PDSC path. Use
+`--tag=<name>` to specify a tag name ending in `.pdsc`. Options may precede or
+follow the explicit tag name. The generated tag name is also stored in the
+updated PDSC's first release `tag` attribute; without `--tag`, that attribute is omitted.
+
+Automatic commits require the PDSC to be tracked and all other tracked files to
+be clean, including the index; unrelated untracked files are allowed. Existing
+tags are never replaced. A commit failure retains the edited PDSC for inspection;
+a tag failure retains the successful commit. No commits or tags are pushed.
+Publishing the release and invoking finalize remain the caller's responsibility.
 
 ## GitHub Integration
 
