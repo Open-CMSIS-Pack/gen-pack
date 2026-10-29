@@ -22,7 +22,7 @@ env:
 jobs:
   lint:
     runs-on: ubuntu-22.04
-    timeout-minutes: 5
+    timeout-minutes: 10
     steps:
       - name: Harden the runner (Audit all outbound calls)
         uses: step-security/harden-runner@dc2769abcc0fcfbadfc1df54081c1608579ef6b2 # v2.22.2
@@ -50,7 +50,7 @@ jobs:
 
   cov:
     runs-on: ubuntu-22.04
-    timeout-minutes: 5
+    timeout-minutes: 10
     permissions:
       contents: read
       id-token: write
@@ -126,7 +126,7 @@ jobs:
 
   tests:
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 5
+    timeout-minutes: 10
     strategy:
       fail-fast: true
       matrix:
