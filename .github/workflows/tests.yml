@@ -126,11 +126,11 @@ jobs:
 
   tests:
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 10
+    timeout-minutes: 15
     strategy:
       fail-fast: true
       matrix:
-        os: [ macos-14, macos-15, macos-26, ubuntu-22.04, ubuntu-24.04, ubuntu-22.04-arm, ubuntu-24.04-arm, windows-2022, windows-2025 ]
+        os: [ macos-15, macos-26, ubuntu-24.04, ubuntu-26.04, ubuntu-24.04-arm, ubuntu-26.04-arm, windows-2022, windows-2025, windows-11-arm ]
         include:
           - os: macos-26
             target: darwin-arm64
@@ -140,11 +140,7 @@ jobs:
             target: darwin-arm64
             archiveext: tar.gz
             unarcmd: tar -xzf
-          - os: macos-14
-            target: darwin-arm64
-            archiveext: tar.gz
-            unarcmd: tar -xzf
-          - os: ubuntu-22.04
+          - os: ubuntu-26.04
             target: linux-amd64
             archiveext: tar.gz
             unarcmd: tar -xzf
@@ -152,7 +148,7 @@ jobs:
             target: linux-amd64
             archiveext: tar.gz
             unarcmd: tar -xzf
-          - os: ubuntu-22.04-arm
+          - os: ubuntu-26.04-arm
             target: linux-arm64
             archiveext: tar.gz
             unarcmd: tar -xzf
@@ -166,6 +162,10 @@ jobs:
             unarcmd: 7z x
           - os: windows-2025
             target: windows-amd64
+            archiveext: zip
+            unarcmd: 7z x
+          - os: windows-11-arm
+            target: windows-arm64
             archiveext: zip
             unarcmd: 7z x
     env:
